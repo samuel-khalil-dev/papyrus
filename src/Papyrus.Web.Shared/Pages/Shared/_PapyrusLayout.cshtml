@@ -1,0 +1,131 @@
+@using Microsoft.Extensions.Options
+@inject IOptions<SiteOptions> SiteOptionsAccessor
+@{
+    var site = SiteOptionsAccessor.Value;
+    var siteName = string.IsNullOrWhiteSpace(site.Name) ? "Papyrus" : site.Name;
+    var title = ViewData["Title"] as string;
+    var pageTitle = string.IsNullOrWhiteSpace(title) ? siteName : $"{title} - {siteName}";
+    var description = ViewData["Description"] as string;
+    var canonical = ViewData["Canonical"] as string;
+    var publicBaseUrl = SiteUrl.ResolvePublicBase(site.PublicBaseUrl, Context.Request);
+    var ogImage = MediaUrl.Resolve(site.MediaBaseUrl, ViewData["OgImage"] as string, publicBaseUrl);
+    var ogType = ViewData["OgType"] as string ?? "website";
+    var ogUrl = canonical;
+    var isBlog = string.Equals(site.Kind, "blog", StringComparison.OrdinalIgnoreCase);
+    var footerHome = string.IsNullOrWhiteSpace(site.FooterHomeLabel)
+        ? (isBlog ? "Latest writing" : "Latest projects")
+        : site.FooterHomeLabel;
+    var feedUrl = string.IsNullOrWhiteSpace(site.PublicBaseUrl)
+        ? "/feed.xml"
+        : SiteUrl.Combine(site.PublicBaseUrl, "/feed.xml");
+    var crossSiteHref = isBlog ? site.PortfolioBaseUrl : site.BlogBaseUrl;
+    var crossSiteLabel = isBlog ? "Portfolio" : "Blog";
+}
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
+    <script src="~/_content/Papyrus.Web.Shared/js/papyrus-theme.js" asp-append-version="true"></script>
+    <title>@pageTitle</title>
+    @if (!string.IsNullOrWhiteSpace(description))
+    {
+        <meta name="description" content="@description" />
+        <meta property="og:description" content="@description" />
+        <meta name="twitter:description" content="@description" />
+    }
+    @if (!string.IsNullOrWhiteSpace(canonical))
+    {
+        <link rel="canonical" href="@canonical" />
+        <meta property="og:url" content="@canonical" />
+    }
+    <meta property="og:title" content="@(title ?? siteName)" />
+    <meta property="og:type" content="@ogType" />
+    <meta property="og:site_name" content="@siteName" />
+    @if (!string.IsNullOrWhiteSpace(ogImage))
+    {
+        <meta property="og:image" content="@ogImage" />
+        <meta name="twitter:image" content="@ogImage" />
+    }
+    <meta name="twitter:card" content="@(string.IsNullOrWhiteSpace(ogImage) ? "summary" : "summary_large_image")" />
+    <meta name="twitter:title" content="@(title ?? siteName)" />
+    <link rel="alternate" type="application/rss+xml" title="@siteName" href="@feedUrl" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/_content/Papyrus.Web.Shared/css/papyrus.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    @await RenderSectionAsync("Head", required: false)
+</head>
+<body class="site-shell">
+    <div class="site-background" aria-hidden="true">
+        <span class="site-background__orb site-background__orb--one"></span>
+        <span class="site-background__orb site-background__orb--two"></span>
+        <span class="site-background__grid" aria-hidden="true"></span>
+    </div>
+
+    <header class="site-header">
+        <nav class="site-nav">
+            <a class="site-nav__brand" asp-area="" asp-page="/Index">
+                <span class="site-nav__dot"></span>
+                @siteName
+            </a>
+            <div class="site-nav__actions">
+                <div class="site-nav__links">
+                <a class="site-nav__link" asp-area="" asp-page="/Index">Home</a>
+                <a class="site-nav__link" asp-area="" asp-page="/About">About</a>
+                @if (!string.IsNullOrWhiteSpace(crossSiteHref))
+                {
+                    <a class="site-nav__link" href="@crossSiteHref" target="_blank" rel="noopener noreferrer" aria-label="Open @crossSiteLabel site in a new tab" title="Open @crossSiteLabel site">@crossSiteLabel</a>
+                }
+                <a class="site-nav__link" asp-area="" asp-page="/Privacy">Privacy</a>
+                </div>
+                <button type="button" class="site-nav__theme" data-theme-toggle aria-label="Switch to light theme" aria-pressed="false">
+                    <span data-theme-icon>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a7 7 0 0 0 0 20"/></svg>
+                    </span>
+                    <span class="visually-hidden" data-theme-label>Switch to light theme</span>
+                </button>
+                <button type="button" class="site-nav__menu" data-nav-toggle aria-expanded="false" aria-controls="site-mobile-nav" aria-label="Open navigation menu">
+                    <span class="site-nav__menu-icon" aria-hidden="true"></span>
+                </button>
+            </div>
+            <div class="site-nav__mobile-panel" id="site-mobile-nav" data-mobile-nav>
+                <a class="site-nav__link" asp-area="" asp-page="/Index">Home</a>
+                <a class="site-nav__link" asp-area="" asp-page="/About">About</a>
+                @if (!string.IsNullOrWhiteSpace(crossSiteHref))
+                {
+                    <a class="site-nav__link" href="@crossSiteHref" target="_blank" rel="noopener noreferrer" aria-label="Open @crossSiteLabel site in a new tab" title="Open @crossSiteLabel site">@crossSiteLabel</a>
+                }
+                <a class="site-nav__link" asp-area="" asp-page="/Privacy">Privacy</a>
+            </div>
+        </nav>
+    </header>
+
+    <main role="main" class="site-content">
+        @RenderBody()
+    </main>
+
+    <footer class="site-footer">
+        <div class="site-footer__inner">
+            <p class="site-footer__copy">&copy; @DateTime.UtcNow.Year @siteName</p>
+            <div class="site-footer__links">
+                <a asp-area="" asp-page="/Index">@footerHome</a>
+                <a asp-area="" asp-page="/About">About</a>
+                @if (!string.IsNullOrWhiteSpace(crossSiteHref))
+                {
+                    <a href="@crossSiteHref" target="_blank" rel="noopener noreferrer" aria-label="Open @crossSiteLabel site in a new tab" title="Open @crossSiteLabel site">@crossSiteLabel</a>
+                }
+                <a asp-area="" asp-page="/Privacy">Privacy</a>
+                <a href="@feedUrl" target="_blank" rel="noopener noreferrer" aria-label="Open RSS feed in a new tab" title="RSS feed">RSS</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="~/_content/Papyrus.Web.Shared/js/papyrus.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

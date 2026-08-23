@@ -1,6 +1,70 @@
 @Papyrus.Api.Admin_HostAddress = http://localhost:5205
+@AdminApiKey = dev-admin-key
 
-GET {{Papyrus.Api.Admin_HostAddress}}/weatherforecast/
+GET {{Papyrus.Api.Admin_HostAddress}}/api/categories
+X-Admin-Api-Key: {{AdminApiKey}}
 Accept: application/json
+
+###
+
+GET {{Papyrus.Api.Admin_HostAddress}}/api/tags
+X-Admin-Api-Key: {{AdminApiKey}}
+Accept: application/json
+
+###
+
+GET {{Papyrus.Api.Admin_HostAddress}}/api/projects
+X-Admin-Api-Key: {{AdminApiKey}}
+Accept: application/json
+
+###
+
+GET {{Papyrus.Api.Admin_HostAddress}}/api/blog-posts
+X-Admin-Api-Key: {{AdminApiKey}}
+Accept: application/json
+
+###
+
+POST {{Papyrus.Api.Admin_HostAddress}}/api/categories
+X-Admin-Api-Key: {{AdminApiKey}}
+Content-Type: application/json
+
+{
+  "slug": "cloud-platforms",
+  "name": "Cloud Platforms",
+  "description": "Content about hosting, deployment, and cloud architecture.",
+  "isPublished": true
+}
+
+###
+
+POST {{Papyrus.Api.Admin_HostAddress}}/api/tags
+X-Admin-Api-Key: {{AdminApiKey}}
+Content-Type: application/json
+
+{
+  "slug": "aspire",
+  "name": "Aspire"
+}
+
+###
+
+POST {{Papyrus.Api.Admin_HostAddress}}/api/projects
+X-Admin-Api-Key: {{AdminApiKey}}
+Content-Type: application/json
+
+{
+  "slug": "my-devops-case-study",
+  "title": "My DevOps case study",
+  "summary": "A showcase project with a matching technical blog write-up.",
+  "description": "This project demonstrates the deployment and automation work I want to showcase publicly.",
+  "repositoryUrl": "https://github.com/example/repo",
+  "liveUrl": "https://example.com",
+  "categoryId": null,
+  "isFeatured": true,
+  "isPublished": true,
+  "publishedAt": "2026-01-01T12:00:00Z",
+  "tagIds": []
+}
 
 ###

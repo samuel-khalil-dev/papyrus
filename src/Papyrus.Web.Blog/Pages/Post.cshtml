@@ -1,0 +1,97 @@
+@page "{slug}"
+@model PostModel
+@{
+    ViewData["Title"] = Model.Post?.Title ?? "Post";
+}
+
+@if (Model.Post is null)
+{
+    <div class="empty-state">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+        <p>Post not found.</p>
+        <a asp-page="/Index" class="btn btn-link">Back to all posts</a>
+    </div>
+}
+else
+{
+    <div class="article-layout">
+        <header class="article-header">
+            <nav class="article-header__breadcrumbs">
+                <a asp-page="/Index">Blog</a>
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                <span>@(Model.Post.Category?.Name ?? Model.Post.Project?.Title ?? "Post")</span>
+            </nav>
+
+            <h1 class="article-header__title">@Model.Post.Title</h1>
+            <p class="article-header__subtitle">@Model.Post.Summary</p>
+            @if (Model.ResolvedCoverImageUrl is string coverUrl)
+            {
+                <img class="article-header__cover" src="@coverUrl" alt="@Model.Post.Title" />
+            }
+
+            <div class="article-header__meta">
+                <div class="article-header__info">
+                    <time datetime="@((Model.Post.PublishedAt ?? Model.Post.CreatedAt).ToString("yyyy-MM-dd"))">@(Model.Post.PublishedAt?.ToString("MMMM d, yyyy") ?? Model.Post.CreatedAt.ToString("MMMM d, yyyy"))</time>
+                    <span class="article-header__separator">·</span>
+                    <span>@Model.ReadingTimeMinutes min read</span>
+                    @if (Model.Post.Tags.Count > 0)
+                    {
+                        <span class="article-header__separator">·</span>
+                        <div class="article-header__tags">
+                            @foreach (var tag in Model.Post.Tags)
+                            {
+                                <a asp-page="/Index" asp-route-tag="@tag.Slug" class="article-header__tag">@tag.Name</a>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </header>
+
+        <div class="article-body">
+            <div class="article-content">
+                <div class="reading-progress" data-reading-progress role="progressbar" aria-label="Article reading progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <span class="reading-progress__bar" data-reading-progress-bar></span>
+                </div>
+                <div class="article-content__prose">@Html.Raw(Model.RenderedContent)</div>
+            </div>
+
+            <aside class="article-sidebar">
+                <div class="article-sidebar__card">
+                    <h3 class="article-sidebar__title">Browse by tag</h3>
+                    <div class="article-sidebar__tags">
+                        @foreach (var tag in Model.AllTags)
+                        {
+                            <a asp-page="/Index" asp-route-tag="@tag.Slug" class="article-sidebar__tag @(Model.Post.Tags.Any(t => t.Slug == tag.Slug) ? "article-sidebar__tag--active" : "")">@tag.Name</a>
+                        }
+                    </div>
+                </div>
+
+                @if (Model.RelatedPosts.Count > 0)
+                {
+                    <div class="article-sidebar__card">
+                        <h3 class="article-sidebar__title">Related posts</h3>
+                        <ul class="article-sidebar__list">
+                            @foreach (var related in Model.RelatedPosts)
+                            {
+                                <li>
+                                    <a asp-page="/Post" asp-route-slug="@related.Slug" class="article-sidebar__related">
+                                        <span class="article-sidebar__related-title">@related.Title</span>
+                                        <time datetime="@((related.PublishedAt ?? related.CreatedAt).ToString("yyyy-MM-dd"))">@(related.PublishedAt?.ToString("MMM d, yyyy") ?? related.CreatedAt.ToString("MMM d, yyyy"))</time>
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
+            </aside>
+        </div>
+
+        <nav class="article-footer">
+            <a asp-page="/Index" class="article-footer__back">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+                Back to all posts
+            </a>
+        </nav>
+    </div>
+}

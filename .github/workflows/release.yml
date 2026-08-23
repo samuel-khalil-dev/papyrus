@@ -1,0 +1,147 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository }}
+
+jobs:
+  dependency-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore dependencies
+        run: dotnet restore Papyrus.sln
+      - name: Fail on vulnerable NuGet packages
+        run: |
+          dotnet list Papyrus.sln package --vulnerable --include-transitive --format json > /tmp/vulnerabilities.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          document = json.loads(Path('/tmp/vulnerabilities.json').read_text())
+
+          def has_vulnerabilities(value):
+              if isinstance(value, dict):
+                  return any(
+                      (key.lower() == 'vulnerabilities' and bool(item))
+                      or has_vulnerabilities(item)
+                      for key, item in value.items()
+                  )
+              if isinstance(value, list):
+                  return any(has_vulnerabilities(item) for item in value)
+              return False
+
+          if has_vulnerabilities(document):
+              raise SystemExit('Vulnerable NuGet packages detected.')
+      - name: Scan repository for leaked secrets
+        uses: gitleaks/gitleaks-action@v2
+
+  images:
+    needs: dependency-scan
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: admin
+            dockerfile: Dockerfile.admin
+          - name: blog
+            dockerfile: Dockerfile.blog
+          - name: portfolio
+            dockerfile: Dockerfile.portfolio
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build release image
+        run: docker build --pull --file "${{ matrix.dockerfile }}" --tag "${{ env.IMAGE_PREFIX }}/${{ matrix.name }}:${{ github.ref_name }}" .
+      - name: Scan release image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.IMAGE_PREFIX }}/${{ matrix.name }}:${{ github.ref_name }}
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+      - name: Generate SPDX SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.IMAGE_PREFIX }}/${{ matrix.name }}:${{ github.ref_name }}
+          format: spdx-json
+          output-file: sbom-${{ matrix.name }}.spdx.json
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ matrix.name }}
+          path: sbom-${{ matrix.name }}.spdx.json
+          if-no-files-found: error
+      - name: Publish scanned image
+        run: docker push "${{ env.IMAGE_PREFIX }}/${{ matrix.name }}:${{ github.ref_name }}"
+
+  migrate:
+    needs: dependency-scan
+    runs-on: ubuntu-latest
+    environment: production-migrations
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Install EF Core CLI
+        run: dotnet tool install --global dotnet-ef --version 10.0.11
+      - name: Apply database migrations as the dedicated migration job
+        env:
+          CONNECTION_STRING: ${{ secrets.PRODUCTION_CONNECTION_STRING }}
+        run: |
+          test -n "$CONNECTION_STRING"
+          dotnet ef database update \
+            --project src/Papyrus.Infrastructure/Papyrus.Infrastructure.csproj \
+            --startup-project src/Papyrus.Api.Admin/Papyrus.Api.Admin.csproj \
+            --connection "$CONNECTION_STRING"
+
+  deploy:
+    needs: [images, migrate]
+    runs-on: self-hosted
+    environment: production
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Deploy only after migration and approval checks
+        env:
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+          PAPYRUS_ADMIN_IMAGE: ${{ env.IMAGE_PREFIX }}/admin:${{ github.ref_name }}
+          PAPYRUS_BLOG_IMAGE: ${{ env.IMAGE_PREFIX }}/blog:${{ github.ref_name }}
+          PAPYRUS_PORTFOLIO_IMAGE: ${{ env.IMAGE_PREFIX }}/portfolio:${{ github.ref_name }}
+        run: docker compose --file docker-compose.yml up --detach --remove-orphans

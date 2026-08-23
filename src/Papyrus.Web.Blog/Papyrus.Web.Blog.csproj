@@ -1,9 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
+    <ProjectReference Include="..\Papyrus.Contracts\Papyrus.Contracts.csproj" />
+    <ProjectReference Include="..\Papyrus.Application\Papyrus.Application.csproj" />
     <ProjectReference Include="..\Papyrus.Infrastructure\Papyrus.Infrastructure.csproj" />
     <ProjectReference Include="..\Papyrus.Core\Papyrus.Core.csproj" />
     <ProjectReference Include="..\Papyrus.ServiceDefaults\Papyrus.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\Papyrus.Web.Shared\Papyrus.Web.Shared.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

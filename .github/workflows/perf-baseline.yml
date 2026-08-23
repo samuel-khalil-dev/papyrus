@@ -1,0 +1,91 @@
+name: Performance baseline
+
+on:
+  workflow_dispatch:
+    inputs:
+      public_duration:
+        description: 'K6 public duration override (for example 20s)'
+        required: false
+        default: '20s'
+
+permissions:
+  contents: read
+
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    env:
+      ConnectionStrings__papyrus: Host=localhost;Port=5432;Database=papyrus_test;Username=postgres;Password=postgres
+      AdminApi__ApiKey: dev-admin-key
+      PAPYRUS_LOAD_ADMIN_URL: http://127.0.0.1:5205
+      PAPYRUS_LOAD_BLOG_URL: http://127.0.0.1:5075
+      PAPYRUS_LOAD_PORTFOLIO_URL: http://127.0.0.1:5024
+      PAPYRUS_LOAD_ADMIN_KEY: dev-admin-key
+      PAPYRUS_LOAD_TENANT_ID: main
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: papyrus_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d papyrus_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+          --health-start-period 10s
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: grafana/setup-k6-action@v1
+      - name: Restore
+        run: dotnet restore Papyrus.sln
+      - name: Build
+        run: dotnet build Papyrus.sln --configuration Release --no-restore /p:TreatWarningsAsErrors=true
+      - name: Start Admin API
+        run: |
+          ASPNETCORE_URLS=http://127.0.0.1:5205 dotnet run --project src/Papyrus.Api.Admin/Papyrus.Api.Admin.csproj --configuration Release --no-build > "$RUNNER_TEMP/papyrus-admin-baseline.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/papyrus-admin-baseline.pid"
+      - name: Start Blog site
+        run: |
+          ASPNETCORE_URLS=http://127.0.0.1:5075 dotnet run --project src/Papyrus.Web.Blog/Papyrus.Web.Blog.csproj --configuration Release --no-build > "$RUNNER_TEMP/papyrus-blog-baseline.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/papyrus-blog-baseline.pid"
+      - name: Start Portfolio site
+        run: |
+          ASPNETCORE_URLS=http://127.0.0.1:5024 dotnet run --project src/Papyrus.Web.Portfolio/Papyrus.Web.Portfolio.csproj --configuration Release --no-build > "$RUNNER_TEMP/papyrus-portfolio-baseline.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/papyrus-portfolio-baseline.pid"
+      - name: Wait for web hosts
+        run: |
+          for url in http://127.0.0.1:5205/health http://127.0.0.1:5075/ http://127.0.0.1:5024/; do
+            for attempt in {1..45}; do
+              if curl --fail --silent "$url" > /dev/null; then break; fi
+              sleep 1
+            done
+            curl --fail --silent "$url" > /dev/null
+          done
+      - name: Run query budget tests
+        env:
+          PAPYRUS_TEST_CONNECTION_STRING: Host=localhost;Port=5432;Database=papyrus_test;Username=postgres;Password=postgres
+        run: dotnet test src/Papyrus.Tests/Papyrus.Tests.csproj --configuration Release --no-build --no-restore --filter FullyQualifiedName~PerformanceBudgetTests --logger trx
+      - name: Run public baseline
+        run: k6 run --summary-export public-summary.json tests/load/k6/public-listing.js
+      - name: Run admin baseline
+        run: k6 run --summary-export admin-summary.json tests/load/k6/admin-write.js
+      - name: Upload baseline artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: papyrus-performance-baseline
+          path: '*-summary.json'
+          if-no-files-found: ignore
+      - name: Stop baseline web hosts
+        if: always()
+        run: |
+          for pid_file in "$RUNNER_TEMP"/papyrus-*-baseline.pid; do
+            if test -f "$pid_file"; then kill "$(cat "$pid_file")" || true; fi
+          done

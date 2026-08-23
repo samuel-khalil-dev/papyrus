@@ -1,0 +1,29 @@
+@using Microsoft.Extensions.Options
+@inject IOptions<SiteOptions> SiteOptionsAccessor
+@{
+    var site = SiteOptionsAccessor.Value;
+    var isBlog = string.Equals(site.Kind, "blog", StringComparison.OrdinalIgnoreCase);
+    var otherHref = isBlog ? site.PortfolioBaseUrl : site.BlogBaseUrl;
+    var otherLabel = isBlog ? "Papyrus Portfolio" : "Papyrus Blog";
+}
+
+<section class="hero-section">
+    <div class="hero-section__content">
+        <span class="hero-section__eyebrow">About</span>
+        <h1 class="hero-section__title">A personal site for writing and work</h1>
+        <p class="hero-section__subtitle">Papyrus is a small two-site home: long-form notes on the blog, and a curated set of projects on the portfolio.</p>
+    </div>
+    <div class="hero-section__glow" aria-hidden="true"></div>
+</section>
+
+<div class="article-layout">
+    <div class="article-content__prose">
+        <p>This is a personal site for implementation notes, lessons learned, and the work those notes come from. Nothing here is a product catalog — it is a record of building things and writing them down.</p>
+        <p><strong>Papyrus Blog</strong> is for long-form write-ups: project diaries, design decisions, and the thinking behind the code.</p>
+        <p><strong>Papyrus Portfolio</strong> is a curated showcase of development and DevOps work meant for professional presentation.</p>
+        @if (!string.IsNullOrWhiteSpace(otherHref))
+        {
+            <p>You are on @(isBlog ? "the blog" : "the portfolio"). The companion site is <a href="@otherHref">@otherLabel</a>.</p>
+        }
+    </div>
+</div>

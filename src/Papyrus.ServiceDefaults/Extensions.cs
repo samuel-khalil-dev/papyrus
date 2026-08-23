@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
@@ -7,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
+using Papyrus.ServiceDefaults.Telemetry;
 
 namespace Papyrus.ServiceDefaults;
 
@@ -46,6 +48,9 @@ public static class Extensions
 
     public static TBuilder ConfigureOpenTelemetry<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
+        TelemetryModule.ConfigureTracePropagation();
+        builder.Services.AddPapyrusTelemetry();
+
         builder.Logging.AddOpenTelemetry(logging =>
         {
             logging.IncludeFormattedMessage = true;
@@ -62,6 +67,7 @@ public static class Extensions
             .WithTracing(tracing =>
             {
                 tracing.AddSource(builder.Environment.ApplicationName)
+                    .AddSource(TelemetryActivitySource.Name)
                     .AddAspNetCoreInstrumentation(tracing =>
                         // Exclude health check requests from tracing
                         tracing.Filter = context =>
@@ -108,19 +114,29 @@ public static class Extensions
 
     public static WebApplication MapDefaultEndpoints(this WebApplication app)
     {
-        // Adding health checks endpoints to applications in non-development environments has security implications.
-        // See https://aka.ms/aspire/healthchecks for details before enabling these endpoints in non-development environments.
-        if (app.Environment.IsDevelopment())
+        // Keep these endpoints anonymous so load balancers and Aspire can probe them.
+        // Restrict access at the network/ingress layer if health details are sensitive.
+        app.MapHealthChecks(HealthEndpointPath, new HealthCheckOptions
         {
-            // All health checks must pass for app to be considered ready to accept traffic after starting
-            app.MapHealthChecks(HealthEndpointPath);
-
-            // Only health checks tagged with the "live" tag must pass for app to be considered alive
-            app.MapHealthChecks(AlivenessEndpointPath, new HealthCheckOptions
+            // Keep dependency names and exception details off the public response.
+            // The deployment ingress must restrict this endpoint to the orchestrator
+            // or an internal monitoring network (see DEPLOYMENT.md).
+            ResponseWriter = static async (context, report) =>
             {
-                Predicate = r => r.Tags.Contains("live")
-            });
-        }
+                context.Response.ContentType = "text/plain; charset=utf-8";
+                context.Response.StatusCode = report.Status == HealthStatus.Healthy ? StatusCodes.Status200OK : StatusCodes.Status503ServiceUnavailable;
+                await context.Response.WriteAsync(report.Status == HealthStatus.Healthy ? "Healthy" : "Unhealthy");
+            }
+        });
+        app.MapHealthChecks(AlivenessEndpointPath, new HealthCheckOptions
+        {
+            Predicate = r => r.Tags.Contains("live"),
+            ResponseWriter = static async (context, _) =>
+            {
+                context.Response.ContentType = "text/plain; charset=utf-8";
+                await context.Response.WriteAsync("Alive");
+            }
+        });
 
         return app;
     }
