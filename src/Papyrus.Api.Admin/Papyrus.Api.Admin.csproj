@@ -8,9 +8,15 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.11">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Papyrus.Contracts\Papyrus.Contracts.csproj" />
+    <ProjectReference Include="..\Papyrus.Application\Papyrus.Application.csproj" />
     <ProjectReference Include="..\Papyrus.Infrastructure\Papyrus.Infrastructure.csproj" />
     <ProjectReference Include="..\Papyrus.Core\Papyrus.Core.csproj" />
     <ProjectReference Include="..\Papyrus.ServiceDefaults\Papyrus.ServiceDefaults.csproj" />

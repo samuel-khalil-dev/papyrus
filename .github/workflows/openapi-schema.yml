@@ -1,0 +1,55 @@
+name: OpenAPI schema
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  openapi:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore Papyrus.sln
+
+      - name: Build admin API
+        run: dotnet build Papyrus.sln --configuration Release --no-restore
+
+      - name: Start admin API for OpenAPI generation
+        run: |
+          ASPNETCORE_URLS=http://127.0.0.1:5205 \
+          Papyrus__SkipDatabaseInitialization=true \
+          dotnet run --project src/Papyrus.Api.Admin/Papyrus.Api.Admin.csproj --configuration Release --no-build > "$RUNNER_TEMP/papyrus-api.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/papyrus-api.pid"
+
+      - name: Capture generated OpenAPI
+        run: |
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:5205/openapi/v1.json -o /tmp/openapi.json; then
+              break
+            fi
+            sleep 1
+          done
+          test -s /tmp/openapi.json
+          python -c "import json; d=json.load(open('/tmp/openapi.json', encoding='utf-8')); json.dump(d, open('/tmp/openapi.sorted.json','w',encoding='utf-8'), indent=2, sort_keys=True); open('/tmp/openapi.sorted.json','a',encoding='utf-8').write('\\n')"
+
+      - name: Compare committed OpenAPI artifact
+        run: diff --unified=3 docs/api/openapi.json /tmp/openapi.sorted.json
+
+      - name: Stop admin API
+        if: always()
+        run: |
+          if test -f "$RUNNER_TEMP/papyrus-api.pid"; then
+            kill "$(cat "$RUNNER_TEMP/papyrus-api.pid")" || true
+          fi

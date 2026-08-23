@@ -1,6 +1,9 @@
 # Build output
 [Bb]in/
 [Oo]bj/
+artifacts/
+**/node_modules/
+**/dist/
 
 # Visual Studio and VS Code local state
 .vs/
@@ -13,6 +16,7 @@
 *.userosscache
 *.suo
 *.rsuser
+*.sln.docstates
 
 # JetBrains Rider / ReSharper
 .idea/
@@ -24,6 +28,11 @@ TestResults/
 coverage/
 *.coverage
 *.coveragexml
+
+# Aspire and local tooling state
+.aspire/
+.dcp/
+*.http.user
 
 # NuGet and generated package files
 *.nupkg
@@ -37,11 +46,22 @@ packages/
 !.env.example
 appsettings.Local.json
 appsettings.*.Local.json
+appsettings.local.json
+appsettings.*.local.json
 secrets.json
 
-# Aspire and local tooling state
-.aspire/
-*.http.user
+# Local databases and database tooling files
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.mdf
+*.ldf
+
+# Uploaded media (keep the directory marker tracked)
+**/wwwroot/media/*
+!**/wwwroot/media/.gitkeep
 
 # OS-generated files
 .DS_Store
@@ -50,3 +70,4 @@ Desktop.ini
 
 # Logs
 *.log
+logs/

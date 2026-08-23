@@ -1,0 +1,226 @@
+=== blog-index-base ===
+-- @ef_filter__TenantId='main'
+-- @now='2026-08-25T21:49:49.7099739+00:00' (Nullable = true) (DbType = DateTime)
+SELECT b."TenantId", b."Id", b."CategoryId", b."ConcurrencyToken", b."ContentMarkdown", b."CoverImageUrl", b."CreatedAt", b."CreatedBy", b."DeleteReason", b."DeletedAt", b."DeletedBy", b."IsDeleted", b."IsFeatured", b."IsPublished", b."ProjectId", b."PublishedAt", b."Slug", b."Summary", b."Title", b."UpdatedAt", b."UpdatedBy"
+FROM "BlogPosts" AS b
+WHERE b."TenantId" = @ef_filter__TenantId AND NOT (b."IsDeleted") AND b."IsPublished" AND (b."PublishedAt" IS NULL OR b."PublishedAt" <= @now)
+=== blog-index-page ===
+-- @ef_filter__TenantId='main'
+-- @now='2026-08-25T21:49:49.7099739+00:00' (Nullable = true) (DbType = DateTime)
+-- @p2='6'
+-- @p='0'
+SELECT b0."Id", b0."Slug", b0."Title", b0."Summary", b0."CoverImageUrl", b0."IsFeatured", b0."PublishedAt", b0."CreatedAt", c0."TenantId" IS NULL OR c0."Id" IS NULL, c0."Slug", c0."Name", p0."TenantId" IS NULL OR p0."Id" IS NULL, p0."Id", p0."Slug", p0."Title", p0."Summary", p0."CoverImageUrl", p0."IsFeatured", p0."PublishedAt", p0."CreatedAt", b0."TenantId", c0."TenantId", c0."Id", p0."TenantId", s."Slug", s."Name", s."TenantId", s."BlogPostId", s."TagId", s."TenantId0", s."Id"
+FROM (
+    SELECT b."TenantId", b."Id", b."CategoryId", b."CoverImageUrl", b."CreatedAt", b."IsFeatured", b."ProjectId", b."PublishedAt", b."Slug", b."Summary", b."Title", COALESCE(b."PublishedAt", b."CreatedAt") AS c
+    FROM "BlogPosts" AS b
+    WHERE b."TenantId" = @ef_filter__TenantId AND NOT (b."IsDeleted") AND b."IsPublished" AND (b."PublishedAt" IS NULL OR b."PublishedAt" <= @now)
+    ORDER BY COALESCE(b."PublishedAt", b."CreatedAt") DESC
+    LIMIT @p2 OFFSET @p
+) AS b0
+LEFT JOIN (
+    SELECT c."TenantId", c."Id", c."Name", c."Slug"
+    FROM "ContentCategories" AS c
+    WHERE c."TenantId" = @ef_filter__TenantId AND NOT (c."IsDeleted")
+) AS c0 ON b0."TenantId" = c0."TenantId" AND b0."CategoryId" = c0."Id"
+LEFT JOIN (
+    SELECT p."TenantId", p."Id", p."CoverImageUrl", p."CreatedAt", p."IsFeatured", p."PublishedAt", p."Slug", p."Summary", p."Title"
+    FROM "Projects" AS p
+    WHERE p."TenantId" = @ef_filter__TenantId AND NOT (p."IsDeleted")
+) AS p0 ON b0."TenantId" = p0."TenantId" AND b0."ProjectId" = p0."Id"
+LEFT JOIN (
+    SELECT c2."Slug", c2."Name", b1."TenantId", b1."BlogPostId", b1."TagId", c2."TenantId" AS "TenantId0", c2."Id"
+    FROM "BlogPostTags" AS b1
+    INNER JOIN (
+        SELECT c1."TenantId", c1."Id", c1."Name", c1."Slug"
+        FROM "ContentTags" AS c1
+        WHERE c1."TenantId" = @ef_filter__TenantId AND NOT (c1."IsDeleted")
+    ) AS c2 ON b1."TenantId" = c2."TenantId" AND b1."TagId" = c2."Id"
+    WHERE b1."TenantId" = @ef_filter__TenantId
+) AS s ON b0."TenantId" = s."TenantId" AND b0."Id" = s."BlogPostId"
+ORDER BY b0.c DESC, b0."TenantId", b0."Id", c0."TenantId", c0."Id", p0."TenantId", p0."Id", s."Name", s."TenantId", s."BlogPostId", s."TagId", s."TenantId0"
+=== blog-index-featured ===
+-- @ef_filter__TenantId='main'
+-- @now='2026-08-25T21:49:49.7099739+00:00' (Nullable = true) (DbType = DateTime)
+-- @p='1'
+SELECT b0."Id", b0."Slug", b0."Title", b0."Summary", b0."CoverImageUrl", b0."IsFeatured", b0."PublishedAt", b0."CreatedAt", c0."TenantId" IS NULL OR c0."Id" IS NULL, c0."Slug", c0."Name", p0."TenantId" IS NULL OR p0."Id" IS NULL, p0."Id", p0."Slug", p0."Title", p0."Summary", p0."CoverImageUrl", p0."IsFeatured", p0."PublishedAt", p0."CreatedAt", b0."TenantId", c0."TenantId", c0."Id", p0."TenantId", s."Slug", s."Name", s."TenantId", s."BlogPostId", s."TagId", s."TenantId0", s."Id"
+FROM (
+    SELECT b."TenantId", b."Id", b."CategoryId", b."CoverImageUrl", b."CreatedAt", b."IsFeatured", b."ProjectId", b."PublishedAt", b."Slug", b."Summary", b."Title", COALESCE(b."PublishedAt", b."CreatedAt") AS c
+    FROM "BlogPosts" AS b
+    WHERE b."TenantId" = @ef_filter__TenantId AND NOT (b."IsDeleted") AND b."IsPublished" AND (b."PublishedAt" IS NULL OR b."PublishedAt" <= @now)
+    ORDER BY b."IsFeatured" DESC, COALESCE(b."PublishedAt", b."CreatedAt") DESC
+    LIMIT @p
+) AS b0
+LEFT JOIN (
+    SELECT c."TenantId", c."Id", c."Name", c."Slug"
+    FROM "ContentCategories" AS c
+    WHERE c."TenantId" = @ef_filter__TenantId AND NOT (c."IsDeleted")
+) AS c0 ON b0."TenantId" = c0."TenantId" AND b0."CategoryId" = c0."Id"
+LEFT JOIN (
+    SELECT p."TenantId", p."Id", p."CoverImageUrl", p."CreatedAt", p."IsFeatured", p."PublishedAt", p."Slug", p."Summary", p."Title"
+    FROM "Projects" AS p
+    WHERE p."TenantId" = @ef_filter__TenantId AND NOT (p."IsDeleted")
+) AS p0 ON b0."TenantId" = p0."TenantId" AND b0."ProjectId" = p0."Id"
+LEFT JOIN (
+    SELECT c2."Slug", c2."Name", b1."TenantId", b1."BlogPostId", b1."TagId", c2."TenantId" AS "TenantId0", c2."Id"
+    FROM "BlogPostTags" AS b1
+    INNER JOIN (
+        SELECT c1."TenantId", c1."Id", c1."Name", c1."Slug"
+        FROM "ContentTags" AS c1
+        WHERE c1."TenantId" = @ef_filter__TenantId AND NOT (c1."IsDeleted")
+    ) AS c2 ON b1."TenantId" = c2."TenantId" AND b1."TagId" = c2."Id"
+    WHERE b1."TenantId" = @ef_filter__TenantId
+) AS s ON b0."TenantId" = s."TenantId" AND b0."Id" = s."BlogPostId"
+ORDER BY b0."IsFeatured" DESC, b0.c DESC, b0."TenantId", b0."Id", c0."TenantId", c0."Id", p0."TenantId", p0."Id", s."Name", s."TenantId", s."BlogPostId", s."TagId", s."TenantId0"
+=== blog-tags ===
+-- @ef_filter__TenantId='main'
+-- @p='20'
+SELECT s."Slug", s."Name"
+FROM (
+    SELECT DISTINCT c0."Slug", c0."Name"
+    FROM "BlogPostTags" AS b
+    INNER JOIN (
+        SELECT b0."TenantId", b0."Id", b0."IsPublished"
+        FROM "BlogPosts" AS b0
+        WHERE b0."TenantId" = @ef_filter__TenantId AND NOT (b0."IsDeleted")
+    ) AS b1 ON b."TenantId" = b1."TenantId" AND b."BlogPostId" = b1."Id"
+    INNER JOIN (
+        SELECT c."TenantId", c."Id", c."Name", c."Slug"
+        FROM "ContentTags" AS c
+        WHERE c."TenantId" = @ef_filter__TenantId AND NOT (c."IsDeleted")
+    ) AS c0 ON b."TenantId" = c0."TenantId" AND b."TagId" = c0."Id"
+    WHERE b."TenantId" = @ef_filter__TenantId AND b1."IsPublished"
+) AS s
+ORDER BY s."Name"
+LIMIT @p
+=== portfolio-index-base ===
+-- @ef_filter__TenantId='main'
+-- @now='2026-08-25T21:49:49.7099739+00:00' (Nullable = true) (DbType = DateTime)
+SELECT p."TenantId", p."Id", p."CategoryId", p."ConcurrencyToken", p."CoverImageUrl", p."CreatedAt", p."CreatedBy", p."DeleteReason", p."DeletedAt", p."DeletedBy", p."Description", p."IsDeleted", p."IsFeatured", p."IsPublished", p."LiveUrl", p."PublishedAt", p."RepositoryUrl", p."Slug", p."Summary", p."Title", p."UpdatedAt", p."UpdatedBy"
+FROM "Projects" AS p
+WHERE p."TenantId" = @ef_filter__TenantId AND NOT (p."IsDeleted") AND p."IsPublished" AND (p."PublishedAt" IS NULL OR p."PublishedAt" <= @now)
+=== portfolio-index-page ===
+-- @ef_filter__TenantId='main'
+-- @now='2026-08-25T21:49:49.7099739+00:00' (Nullable = true) (DbType = DateTime)
+-- @p2='6'
+-- @p='0'
+SELECT p0."Id", p0."Slug", p0."Title", p0."Summary", p0."CoverImageUrl", p0."IsFeatured", p0."PublishedAt", p0."CreatedAt", c0."TenantId" IS NULL OR c0."Id" IS NULL, c0."Slug", c0."Name", p0."TenantId", c0."TenantId", c0."Id", s."Slug", s."Name", s."TenantId", s."ProjectId", s."TagId", s."TenantId0", s."Id"
+FROM (
+    SELECT p."TenantId", p."Id", p."CategoryId", p."CoverImageUrl", p."CreatedAt", p."IsFeatured", p."PublishedAt", p."Slug", p."Summary", p."Title", COALESCE(p."PublishedAt", p."CreatedAt") AS c
+    FROM "Projects" AS p
+    WHERE p."TenantId" = @ef_filter__TenantId AND NOT (p."IsDeleted") AND p."IsPublished" AND (p."PublishedAt" IS NULL OR p."PublishedAt" <= @now)
+    ORDER BY COALESCE(p."PublishedAt", p."CreatedAt") DESC
+    LIMIT @p2 OFFSET @p
+) AS p0
+LEFT JOIN (
+    SELECT c."TenantId", c."Id", c."Name", c."Slug"
+    FROM "ContentCategories" AS c
+    WHERE c."TenantId" = @ef_filter__TenantId AND NOT (c."IsDeleted")
+) AS c0 ON p0."TenantId" = c0."TenantId" AND p0."CategoryId" = c0."Id"
+LEFT JOIN (
+    SELECT c2."Slug", c2."Name", p1."TenantId", p1."ProjectId", p1."TagId", c2."TenantId" AS "TenantId0", c2."Id"
+    FROM "ProjectTags" AS p1
+    INNER JOIN (
+        SELECT c1."TenantId", c1."Id", c1."Name", c1."Slug"
+        FROM "ContentTags" AS c1
+        WHERE c1."TenantId" = @ef_filter__TenantId AND NOT (c1."IsDeleted")
+    ) AS c2 ON p1."TenantId" = c2."TenantId" AND p1."TagId" = c2."Id"
+    WHERE p1."TenantId" = @ef_filter__TenantId
+) AS s ON p0."TenantId" = s."TenantId" AND p0."Id" = s."ProjectId"
+ORDER BY p0.c DESC, p0."TenantId", p0."Id", c0."TenantId", c0."Id", s."Name", s."TenantId", s."ProjectId", s."TagId", s."TenantId0"
+=== portfolio-index-featured ===
+-- @ef_filter__TenantId='main'
+-- @now='2026-08-25T21:49:49.7099739+00:00' (Nullable = true) (DbType = DateTime)
+-- @p='1'
+SELECT p0."Id", p0."Slug", p0."Title", p0."Summary", p0."CoverImageUrl", p0."IsFeatured", p0."PublishedAt", p0."CreatedAt", c0."TenantId" IS NULL OR c0."Id" IS NULL, c0."Slug", c0."Name", p0."TenantId", c0."TenantId", c0."Id", s."Slug", s."Name", s."TenantId", s."ProjectId", s."TagId", s."TenantId0", s."Id"
+FROM (
+    SELECT p."TenantId", p."Id", p."CategoryId", p."CoverImageUrl", p."CreatedAt", p."IsFeatured", p."PublishedAt", p."Slug", p."Summary", p."Title", COALESCE(p."PublishedAt", p."CreatedAt") AS c
+    FROM "Projects" AS p
+    WHERE p."TenantId" = @ef_filter__TenantId AND NOT (p."IsDeleted") AND p."IsPublished" AND (p."PublishedAt" IS NULL OR p."PublishedAt" <= @now)
+    ORDER BY p."IsFeatured" DESC, COALESCE(p."PublishedAt", p."CreatedAt") DESC
+    LIMIT @p
+) AS p0
+LEFT JOIN (
+    SELECT c."TenantId", c."Id", c."Name", c."Slug"
+    FROM "ContentCategories" AS c
+    WHERE c."TenantId" = @ef_filter__TenantId AND NOT (c."IsDeleted")
+) AS c0 ON p0."TenantId" = c0."TenantId" AND p0."CategoryId" = c0."Id"
+LEFT JOIN (
+    SELECT c2."Slug", c2."Name", p1."TenantId", p1."ProjectId", p1."TagId", c2."TenantId" AS "TenantId0", c2."Id"
+    FROM "ProjectTags" AS p1
+    INNER JOIN (
+        SELECT c1."TenantId", c1."Id", c1."Name", c1."Slug"
+        FROM "ContentTags" AS c1
+        WHERE c1."TenantId" = @ef_filter__TenantId AND NOT (c1."IsDeleted")
+    ) AS c2 ON p1."TenantId" = c2."TenantId" AND p1."TagId" = c2."Id"
+    WHERE p1."TenantId" = @ef_filter__TenantId
+) AS s ON p0."TenantId" = s."TenantId" AND p0."Id" = s."ProjectId"
+ORDER BY p0."IsFeatured" DESC, p0.c DESC, p0."TenantId", p0."Id", c0."TenantId", c0."Id", s."Name", s."TenantId", s."ProjectId", s."TagId", s."TenantId0"
+=== portfolio-tags ===
+-- @ef_filter__TenantId='main'
+-- @p='20'
+SELECT s."Slug", s."Name"
+FROM (
+    SELECT DISTINCT c0."Slug", c0."Name"
+    FROM "ProjectTags" AS p
+    INNER JOIN (
+        SELECT p0."TenantId", p0."Id", p0."IsPublished"
+        FROM "Projects" AS p0
+        WHERE p0."TenantId" = @ef_filter__TenantId AND NOT (p0."IsDeleted")
+    ) AS p1 ON p."TenantId" = p1."TenantId" AND p."ProjectId" = p1."Id"
+    INNER JOIN (
+        SELECT c."TenantId", c."Id", c."Name", c."Slug"
+        FROM "ContentTags" AS c
+        WHERE c."TenantId" = @ef_filter__TenantId AND NOT (c."IsDeleted")
+    ) AS c0 ON p."TenantId" = c0."TenantId" AND p."TagId" = c0."Id"
+    WHERE p."TenantId" = @ef_filter__TenantId AND p1."IsPublished"
+) AS s
+ORDER BY s."Name"
+LIMIT @p
+=== blog-detail ===
+-- @ef_filter__TenantId='main'
+-- @now='2026-08-25T21:49:49.7099739+00:00' (Nullable = true) (DbType = DateTime)
+SELECT b."Id", b."Slug", b."Title", b."Summary", b."ContentMarkdown", b."CoverImageUrl", b."IsFeatured", b."PublishedAt", b."CreatedAt"
+FROM "BlogPosts" AS b
+WHERE b."TenantId" = @ef_filter__TenantId AND NOT (b."IsDeleted") AND b."IsPublished" AND (b."PublishedAt" IS NULL OR b."PublishedAt" <= @now) AND b."Slug" = 'sample'
+=== portfolio-detail ===
+-- @ef_filter__TenantId='main'
+-- @now='2026-08-25T21:49:49.7099739+00:00' (Nullable = true) (DbType = DateTime)
+SELECT p."Id", p."Slug", p."Title", p."Summary", p."Description", p."RepositoryUrl", p."LiveUrl", p."CoverImageUrl", p."IsFeatured", p."PublishedAt", p."CreatedAt"
+FROM "Projects" AS p
+WHERE p."TenantId" = @ef_filter__TenantId AND NOT (p."IsDeleted") AND p."IsPublished" AND (p."PublishedAt" IS NULL OR p."PublishedAt" <= @now) AND p."Slug" = 'sample'
+=== admin-categories-page ===
+-- @ef_filter__TenantId='main'
+-- @p1='20'
+-- @p='0'
+SELECT c."Id", c."Slug", c."Name", c."Description", c."IsPublished", c."CreatedAt", c."UpdatedAt"
+FROM "ContentCategories" AS c
+WHERE c."TenantId" = @ef_filter__TenantId AND NOT (c."IsDeleted")
+ORDER BY c."Name"
+LIMIT @p1 OFFSET @p
+=== admin-tags-page ===
+-- @ef_filter__TenantId='main'
+-- @p1='20'
+-- @p='0'
+SELECT c."Id", c."Slug", c."Name", c."CreatedAt", c."UpdatedAt"
+FROM "ContentTags" AS c
+WHERE c."TenantId" = @ef_filter__TenantId AND NOT (c."IsDeleted")
+ORDER BY c."Name"
+LIMIT @p1 OFFSET @p
+=== admin-projects-page ===
+-- @ef_filter__TenantId='main'
+-- @p1='20'
+-- @p='0'
+SELECT p."Id", p."Slug", p."Title", p."Summary", p."CoverImageUrl", p."IsFeatured", p."IsPublished", p."PublishedAt"
+FROM "Projects" AS p
+WHERE p."TenantId" = @ef_filter__TenantId AND NOT (p."IsDeleted")
+ORDER BY p."IsFeatured" DESC, COALESCE(p."PublishedAt", p."CreatedAt") DESC
+LIMIT @p1 OFFSET @p
+=== admin-blog-posts-page ===
+-- @ef_filter__TenantId='main'
+-- @p1='20'
+-- @p='0'
+SELECT b."Id", b."Slug", b."Title", b."Summary", b."IsFeatured", b."IsPublished", b."PublishedAt"
+FROM "BlogPosts" AS b
+WHERE b."TenantId" = @ef_filter__TenantId AND NOT (b."IsDeleted")
+ORDER BY COALESCE(b."PublishedAt", b."CreatedAt") DESC
+LIMIT @p1 OFFSET @p

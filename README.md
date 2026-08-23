@@ -1,73 +1,96 @@
 # Papyrus
 
-Papyrus is a .NET 10 modular monolith organized around vertical slices. The public Razor Pages modules and the centralized admin API share Core contracts and Infrastructure, while Aspire owns local orchestration.
+Papyrus is a personal site with multiple modules:
 
-## Create From Scratch
+- **Blog** for long-form technical write-ups, project notes, and working logs
+- **Portfolio** for a curated professional showcase of real development and DevOps work
+- **Admin API** for authenticated content management
 
-Run these commands from an empty directory. The Aspire template package is installed once per machine.
+## Current architecture
 
-```powershell
-dotnet new install Aspire.ProjectTemplates
-dotnet new sln -n Papyrus --format sln
+- .NET 10
+- Razor Pages for the public site
+- ASP.NET Core minimal API for admin operations
+- PostgreSQL + Entity Framework Core
+- Aspire for local orchestration
+- Multi-tenant content and media isolation, with `main` as the default tenant
+- React SPA admin UI with API-key authentication
+- Three multi-stage, non-root Docker images (Admin, Blog, Portfolio)
+- CI/CD workflows for validation, image scanning, SBOM generation, schema-diff checks, and release deployment
 
-dotnet new aspire-apphost -n Papyrus.AppHost -o src/Papyrus.AppHost -f net10.0
-dotnet new aspire-servicedefaults -n Papyrus.ServiceDefaults -o src/Papyrus.ServiceDefaults -f net10.0
-dotnet new classlib -n Papyrus.Core -o src/Papyrus.Core -f net10.0
-dotnet new classlib -n Papyrus.Infrastructure -o src/Papyrus.Infrastructure -f net10.0
-dotnet new webapp -n Papyrus.Web.Portfolio -o src/Papyrus.Web.Portfolio -f net10.0
-dotnet new webapp -n Papyrus.Web.Blog -o src/Papyrus.Web.Blog -f net10.0
-dotnet new webapi -n Papyrus.Api.Admin -o src/Papyrus.Api.Admin -f net10.0
+## Admin authentication
 
-dotnet sln Papyrus.sln add src/Papyrus.AppHost/Papyrus.AppHost.csproj src/Papyrus.ServiceDefaults/Papyrus.ServiceDefaults.csproj src/Papyrus.Core/Papyrus.Core.csproj src/Papyrus.Infrastructure/Papyrus.Infrastructure.csproj src/Papyrus.Web.Portfolio/Papyrus.Web.Portfolio.csproj src/Papyrus.Web.Blog/Papyrus.Web.Blog.csproj src/Papyrus.Api.Admin/Papyrus.Api.Admin.csproj
+The admin API uses an API key header:
 
-dotnet add src/Papyrus.Infrastructure/Papyrus.Infrastructure.csproj reference src/Papyrus.Core/Papyrus.Core.csproj
-dotnet add src/Papyrus.Web.Portfolio/Papyrus.Web.Portfolio.csproj reference src/Papyrus.Infrastructure/Papyrus.Infrastructure.csproj src/Papyrus.Core/Papyrus.Core.csproj src/Papyrus.ServiceDefaults/Papyrus.ServiceDefaults.csproj
-dotnet add src/Papyrus.Web.Blog/Papyrus.Web.Blog.csproj reference src/Papyrus.Infrastructure/Papyrus.Infrastructure.csproj src/Papyrus.Core/Papyrus.Core.csproj src/Papyrus.ServiceDefaults/Papyrus.ServiceDefaults.csproj
-dotnet add src/Papyrus.Api.Admin/Papyrus.Api.Admin.csproj reference src/Papyrus.Infrastructure/Papyrus.Infrastructure.csproj src/Papyrus.Core/Papyrus.Core.csproj src/Papyrus.ServiceDefaults/Papyrus.ServiceDefaults.csproj
-dotnet add src/Papyrus.AppHost/Papyrus.AppHost.csproj reference src/Papyrus.Api.Admin/Papyrus.Api.Admin.csproj src/Papyrus.Web.Portfolio/Papyrus.Web.Portfolio.csproj src/Papyrus.Web.Blog/Papyrus.Web.Blog.csproj
+- Header name: `X-Admin-Api-Key`
+- Development value: `dev-admin-key`
 
-dotnet add src/Papyrus.Infrastructure/Papyrus.Infrastructure.csproj package Microsoft.EntityFrameworkCore
-dotnet add src/Papyrus.Infrastructure/Papyrus.Infrastructure.csproj package Npgsql.EntityFrameworkCore.PostgreSQL
-dotnet add src/Papyrus.Infrastructure/Papyrus.Infrastructure.csproj package Finbuckle.MultiTenant.EntityFrameworkCore
-dotnet add src/Papyrus.Infrastructure/Papyrus.Infrastructure.csproj package Microsoft.AspNetCore.Identity.EntityFrameworkCore
-```
+The React admin UI is served at `/admin` and sends the configured API key in the
+`X-Admin-Api-Key` header. Its state-changing API operations remain protected by
+the admin authorization policy; there is no browser session cookie or server-side
+Razor login flow.
 
-## Layout
+## Content model
 
-```text
-Papyrus.sln
-README.md
-src/
-  Papyrus.AppHost/
-    Program.cs
-    Papyrus.AppHost.csproj
-  Papyrus.ServiceDefaults/
-    Extensions.cs
-    Papyrus.ServiceDefaults.csproj
-  Papyrus.Core/
-    MultiTenancy/ITenantEntity.cs
-    Papyrus.Core.csproj
-  Papyrus.Infrastructure/
-    PapyrusDbContext.cs
-    Papyrus.Infrastructure.csproj
-  Papyrus.Web.Portfolio/
-    Pages/
-    Program.cs
-    Papyrus.Web.Portfolio.csproj
-  Papyrus.Web.Blog/
-    Pages/
-    Program.cs
-    Papyrus.Web.Blog.csproj
-  Papyrus.Api.Admin/
-    Program.cs
-    Papyrus.Api.Admin.csproj
-```
+- `Project` represents portfolio work
+- `BlogPost` represents the detailed technical write-up
+- `ContentCategory` groups both projects and posts
+- `ContentTag` can be attached to both projects and posts
+- `ProjectTag` and `BlogPostTag` provide many-to-many links
 
-## Run
+## Running locally
 
 ```powershell
 dotnet build Papyrus.sln
 dotnet run --project src/Papyrus.AppHost/Papyrus.AppHost.csproj
 ```
 
-`Papyrus.Infrastructure/PapyrusDbContext.cs` implements Finbuckle's `IMultiTenantDbContext`, captures the current tenant from `IMultiTenantContextAccessor`, and calls `ConfigureMultiTenant()` during model creation. Add tenant resolution, connection-string selection, and tenant-scoped entities as each vertical slice is implemented.
+## Repository documentation
+
+- [`docs/`](docs/) is the documentation home, with navigation in [`docs/README.md`](docs/README.md).
+- [`docs/project/roadmap.md`](docs/project/roadmap.md) contains the phased engineering roadmap and definition of done.
+- [`memory-bank/`](memory-bank/) contains the project brief, technical context, system patterns, active context, and progress history.
+- [`docs/guides/deployment.md`](docs/guides/deployment.md) documents container deployment, configuration, migration ownership, and durable media requirements.
+
+## Repository structure
+
+```text
+.
+├── src/
+│   ├── Papyrus.Core/              # Domain model and markdown rendering
+│   ├── Papyrus.Application/       # Validated commands, queries, and public projections
+│   ├── Papyrus.Contracts/         # REST request/response DTOs and pagination contracts
+│   ├── Papyrus.Infrastructure/    # EF Core, PostgreSQL, migrations, and seed
+│   ├── Papyrus.Api.Admin/         # Admin API, SPA hosting, and media
+│   ├── Papyrus.Web.Blog/          # Public blog
+│   ├── Papyrus.Web.Portfolio/     # Public portfolio
+│   ├── Papyrus.Web.Shared/        # Shared public Razor components
+│   ├── Papyrus.AppHost/           # Aspire orchestration
+│   ├── Papyrus.ServiceDefaults/  # Shared service defaults
+│   └── Papyrus.Tests/             # Automated tests
+├── docs/                          # Architecture and security documentation
+├── memory-bank/                   # Persistent project context
+├── Papyrus.sln                    # Solution entry point
+├── Dockerfile.admin               # Admin container image
+├── Dockerfile.blog                # Blog container image
+└── Dockerfile.portfolio           # Portfolio container image
+```
+
+The solution contains 11 projects. `Papyrus.Application` and
+`Papyrus.Contracts` keep application workflows and REST shapes separate from
+the domain and infrastructure layers, while `Papyrus.Web.Shared` provides the
+shared public layout and site helpers. The three web services are deployed as
+separate multi-stage containers and coordinated with Docker Compose in
+production; the release workflow runs the dedicated database migration job
+before deployment.
+
+The current verification baseline is 40 passing xUnit tests and a clean
+warnings-as-errors build. Four EF migrations are applied, including the
+security/search trigram-index migration. Phases 0–5 are complete; Phase 6 is
+the next active but not-started phase. Phases 7 and 8 are not started.
+
+## Notes
+
+- The admin service owns database migration and seed execution; public services remain read-only.
+- Seed data is added for the main tenant when the admin API starts.
+- The public blog and portfolio pages read from the shared database model.

@@ -1,0 +1,133 @@
+@page "{slug}"
+@model ProjectModel
+@using Papyrus.Web.Shared
+@{
+    ViewData["Title"] = Model.Project?.Title ?? "Project";
+}
+
+@if (Model.Project is null)
+{
+    <div class="empty-state">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+        <p>Project not found.</p>
+        <a asp-page="/Index" class="btn btn-link">Back to all projects</a>
+    </div>
+}
+else
+{
+    <div class="project-layout">
+        <header class="project-header">
+            <nav class="project-header__breadcrumbs">
+                <a asp-page="/Index">Portfolio</a>
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                <span>@(Model.Project.Category?.Name ?? (Model.Project.IsFeatured ? "Featured" : "Project"))</span>
+            </nav>
+
+            <h1 class="project-header__title">@Model.Project.Title</h1>
+            <p class="project-header__subtitle">@Model.Project.Summary</p>
+            @if (Model.ResolvedCoverImageUrl is string coverUrl)
+            {
+                <img class="project-header__cover" src="@coverUrl" alt="@Model.Project.Title" />
+            }
+
+            <div class="project-header__meta">
+                <div class="project-header__info">
+                    <time datetime="@((Model.Project.PublishedAt ?? Model.Project.CreatedAt).ToString("yyyy-MM-dd"))">@(Model.Project.PublishedAt?.ToString("MMMM d, yyyy") ?? Model.Project.CreatedAt.ToString("MMMM d, yyyy"))</time>
+                    <span class="project-header__separator">·</span>
+                    <span>@Model.ReadingTimeMinutes min read</span>
+                </div>
+                @if (Model.Project?.Tags.Count > 0)
+                {
+                    <span class="project-header__separator">·</span>
+                    <div class="project-header__tags">
+                        @foreach (var tag in Model.Project.Tags)
+                        {
+                            <a asp-page="/Index" asp-route-tag="@tag.Slug" class="project-header__tag">@tag.Name</a>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="project-header__actions">
+                @if (!string.IsNullOrWhiteSpace(Model.Project?.RepositoryUrl))
+                {
+                    <a href="@Model.Project?.RepositoryUrl" target="_blank" rel="noopener noreferrer" class="project-header__action" aria-label="Open repository in new tab">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4 4 0 0 0-4-4 4 4 0 0 0-4 4v4"/><rect x="3" y="10" width="6" height="6" rx="1"/><rect x="15" y="10" width="6" height="6" rx="1"/><path d="M3 10V7a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v3"/><path d="M15 10V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1"/></svg>
+                        Repository
+                    </a>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Project?.LiveUrl))
+                {
+                    <a href="@Model.Project?.LiveUrl" target="_blank" rel="noopener noreferrer" class="project-header__action project-header__action--primary" aria-label="Open live demo in new tab">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        Live Demo
+                    </a>
+                }
+            </div>
+        </header>
+
+        <div class="project-body">
+            <div class="project-content">
+                @if (!string.IsNullOrWhiteSpace(Model.RenderedDescription))
+                {
+                    <div class="project-content__prose">@Html.Raw(Model.RenderedDescription)</div>
+                }
+            </div>
+
+            <aside class="project-sidebar">
+                <div class="project-sidebar__card">
+                    <h3 class="project-sidebar__title">Browse by tag</h3>
+                    <div class="project-sidebar__tags">
+                        @foreach (var tag in Model.AllTags)
+                        {
+                            <a asp-page="/Index" asp-route-tag="@tag.Slug" class="project-sidebar__tag @(Model.Project?.Tags.Any(t => t.Slug == tag.Slug) == true ? "project-sidebar__tag--active" : "")">@tag.Name</a>
+                        }
+                    </div>
+                </div>
+
+                @if (Model.RelatedProjects.Count > 0)
+                {
+                    <div class="project-sidebar__card">
+                        <h3 class="project-sidebar__title">Related projects</h3>
+                        <ul class="project-sidebar__list">
+                            @foreach (var related in Model.RelatedProjects)
+                            {
+                                <li>
+                                    <a asp-page="/Project" asp-route-slug="@related.Slug" class="project-sidebar__related">
+                                        <span class="project-sidebar__related-title">@related.Title</span>
+                                        <time datetime="@((related.PublishedAt ?? related.CreatedAt).ToString("yyyy-MM-dd"))">@(related.PublishedAt?.ToString("MMM d, yyyy") ?? related.CreatedAt.ToString("MMM d, yyyy"))</time>
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
+
+                @if (Model.RelatedPosts.Count > 0)
+                {
+                    <div class="project-sidebar__card">
+                        <h3 class="project-sidebar__title">Related blog posts</h3>
+                        <ul class="project-sidebar__list">
+                            @foreach (var blogPost in Model.RelatedPosts)
+                            {
+                                <li>
+                                    <a href="@SiteUrl.Combine(Model.BlogBaseUrl, $"/Post/{blogPost.Slug}")" class="project-sidebar__related">
+                                        <span class="project-sidebar__related-title">@blogPost.Title</span>
+                                        <time datetime="@((blogPost.PublishedAt ?? blogPost.CreatedAt).ToString("yyyy-MM-dd"))">@(blogPost.PublishedAt?.ToString("MMM d, yyyy") ?? blogPost.CreatedAt.ToString("MMM d, yyyy"))</time>
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
+            </aside>
+        </div>
+
+        <nav class="project-footer">
+            <a asp-page="/Index" class="project-footer__back">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+                Back to all projects
+            </a>
+        </nav>
+    </div>
+}

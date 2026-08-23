@@ -1,0 +1,308 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      PAPYRUS_TEST_CONNECTION_STRING: Host=localhost;Port=5432;Database=papyrus_test;Username=postgres;Password=postgres
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: papyrus_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d papyrus_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+          --health-start-period 10s
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore Papyrus.sln
+
+      - name: Build with warnings treated as errors
+        run: dotnet build Papyrus.sln --configuration Release --no-restore /p:TreatWarningsAsErrors=true
+
+      - name: Run tests
+        run: dotnet test Papyrus.sln --configuration Release --no-build --no-restore --logger trx --results-directory TestResults
+
+      - name: Run PostgreSQL integration tests
+        run: dotnet test src/Papyrus.Tests/Papyrus.Tests.csproj --configuration Release --no-build --no-restore --filter FullyQualifiedName~Papyrus.Tests.Integration --logger trx --results-directory TestResults
+
+      - name: Scan repository for leaked secrets
+        uses: gitleaks/gitleaks-action@v2
+
+      - name: Check vulnerable NuGet packages
+        run: |
+          dotnet list Papyrus.sln package --vulnerable --include-transitive --format json > /tmp/vulnerabilities.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          document = json.loads(Path('/tmp/vulnerabilities.json').read_text())
+
+          def has_vulnerabilities(value):
+              if isinstance(value, dict):
+                  return any(
+                      (key.lower() == 'vulnerabilities' and bool(item))
+                      or has_vulnerabilities(item)
+                      for key, item in value.items()
+                  )
+              if isinstance(value, list):
+                  return any(has_vulnerabilities(item) for item in value)
+              return False
+
+          if has_vulnerabilities(document):
+              raise SystemExit('Vulnerable NuGet packages detected.')
+
+      - name: Start admin API for OpenAPI generation
+        run: |
+          ASPNETCORE_URLS=http://127.0.0.1:5205 \
+          Papyrus__SkipDatabaseInitialization=true \
+          dotnet run --project src/Papyrus.Api.Admin/Papyrus.Api.Admin.csproj --configuration Release --no-build > "$RUNNER_TEMP/papyrus-api.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/papyrus-api.pid"
+
+      - name: Verify committed OpenAPI contract
+        run: |
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:5205/openapi/v1.json -o /tmp/openapi.json; then
+              break
+            fi
+            sleep 1
+          done
+          test -s /tmp/openapi.json
+          python -c "import json; d=json.load(open('/tmp/openapi.json', encoding='utf-8')); json.dump(d, open('/tmp/openapi.sorted.json','w',encoding='utf-8'), indent=2, sort_keys=True); open('/tmp/openapi.sorted.json','a',encoding='utf-8').write('\\n')"
+          diff --unified=3 docs/api/openapi.json /tmp/openapi.sorted.json
+
+      - name: Stop admin API
+        if: always()
+        run: |
+          if test -f "$RUNNER_TEMP/papyrus-api.pid"; then
+            kill "$(cat "$RUNNER_TEMP/papyrus-api.pid")" || true
+          fi
+
+  browser-smoke:
+    needs: verify
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    env:
+      ConnectionStrings__papyrus: Host=localhost;Port=5432;Database=papyrus_test;Username=postgres;Password=postgres
+      AdminApi__ApiKey: dev-admin-key
+      PAPYRUS_E2E_ADMIN_KEY: dev-admin-key
+      PAPYRUS_E2E_ADMIN_URL: http://127.0.0.1:5205
+      PAPYRUS_E2E_BLOG_URL: http://127.0.0.1:5075
+      PAPYRUS_E2E_PORTFOLIO_URL: http://127.0.0.1:5024
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: papyrus_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d papyrus_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+          --health-start-period 10s
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Restore .NET dependencies
+        run: dotnet restore Papyrus.sln
+
+      - name: Build .NET projects
+        run: dotnet build Papyrus.sln --configuration Release --no-restore /p:TreatWarningsAsErrors=true
+
+      - name: Build Admin UI
+        run: npm ci --prefix src/Papyrus.Admin.UI
+
+      - name: Compile Admin UI
+        run: npm run build --prefix src/Papyrus.Admin.UI
+
+      - name: Install browser test dependencies
+        run: npm ci --prefix tests/e2e
+
+      - name: Install Chromium
+        run: npx --prefix tests/e2e playwright install --with-deps chromium
+
+      - name: Start Admin API
+        run: |
+          ASPNETCORE_URLS=http://127.0.0.1:5205 dotnet run --project src/Papyrus.Api.Admin/Papyrus.Api.Admin.csproj --configuration Release --no-build > "$RUNNER_TEMP/papyrus-admin.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/papyrus-admin.pid"
+
+      - name: Start Blog site
+        run: |
+          ASPNETCORE_URLS=http://127.0.0.1:5075 dotnet run --project src/Papyrus.Web.Blog/Papyrus.Web.Blog.csproj --configuration Release --no-build > "$RUNNER_TEMP/papyrus-blog.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/papyrus-blog.pid"
+
+      - name: Start Portfolio site
+        run: |
+          ASPNETCORE_URLS=http://127.0.0.1:5024 dotnet run --project src/Papyrus.Web.Portfolio/Papyrus.Web.Portfolio.csproj --configuration Release --no-build > "$RUNNER_TEMP/papyrus-portfolio.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/papyrus-portfolio.pid"
+
+      - name: Wait for web apps
+        run: |
+          for url in http://127.0.0.1:5205/health http://127.0.0.1:5075/ http://127.0.0.1:5024/; do
+            for attempt in {1..45}; do
+              if curl --fail --silent "$url" > /dev/null; then break; fi
+              sleep 1
+            done
+            curl --fail --silent "$url" > /dev/null
+          done
+
+      - name: Run browser smoke tests
+        run: npm run test:e2e --prefix tests/e2e
+
+      - name: Upload browser artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: papyrus-browser-smoke-report
+          path: tests/e2e/playwright-report
+          if-no-files-found: ignore
+
+  load-smoke:
+    needs: verify
+    runs-on: ubuntu-latest
+    env:
+      ConnectionStrings__papyrus: Host=localhost;Port=5432;Database=papyrus_test;Username=postgres;Password=postgres
+      AdminApi__ApiKey: dev-admin-key
+      PAPYRUS_LOAD_ADMIN_URL: http://127.0.0.1:5205
+      PAPYRUS_LOAD_BLOG_URL: http://127.0.0.1:5075
+      PAPYRUS_LOAD_PORTFOLIO_URL: http://127.0.0.1:5024
+      PAPYRUS_LOAD_ADMIN_KEY: dev-admin-key
+      PAPYRUS_LOAD_TENANT_ID: main
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: papyrus_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d papyrus_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+          --health-start-period 10s
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore .NET dependencies
+        run: dotnet restore Papyrus.sln
+
+      - name: Build .NET projects
+        run: dotnet build Papyrus.sln --configuration Release --no-restore /p:TreatWarningsAsErrors=true
+
+      - name: Start Admin API
+        run: |
+          ASPNETCORE_URLS=http://127.0.0.1:5205 dotnet run --project src/Papyrus.Api.Admin/Papyrus.Api.Admin.csproj --configuration Release --no-build > "$RUNNER_TEMP/papyrus-admin-load.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/papyrus-admin-load.pid"
+
+      - name: Start Blog site
+        run: |
+          ASPNETCORE_URLS=http://127.0.0.1:5075 dotnet run --project src/Papyrus.Web.Blog/Papyrus.Web.Blog.csproj --configuration Release --no-build > "$RUNNER_TEMP/papyrus-blog-load.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/papyrus-blog-load.pid"
+
+      - name: Start Portfolio site
+        run: |
+          ASPNETCORE_URLS=http://127.0.0.1:5024 dotnet run --project src/Papyrus.Web.Portfolio/Papyrus.Web.Portfolio.csproj --configuration Release --no-build > "$RUNNER_TEMP/papyrus-portfolio-load.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/papyrus-portfolio-load.pid"
+
+      - name: Wait for web apps
+        run: |
+          for url in http://127.0.0.1:5205/health http://127.0.0.1:5075/ http://127.0.0.1:5024/; do
+            for attempt in {1..45}; do
+              if curl --fail --silent "$url" > /dev/null; then break; fi
+              sleep 1
+            done
+            curl --fail --silent "$url" > /dev/null
+          done
+
+      - name: Set up K6
+        uses: grafana/setup-k6-action@v1
+
+      - name: Run public K6 load smoke
+        run: k6 run tests/load/k6/public-listing.js
+
+      - name: Run admin K6 load smoke
+        run: k6 run tests/load/k6/admin-write.js
+
+      - name: Stop load-test web apps
+        if: always()
+        run: |
+          for pid_file in "$RUNNER_TEMP"/papyrus-*-load.pid; do
+            if test -f "$pid_file"; then kill "$(cat "$pid_file")" || true; fi
+          done
+
+  containers:
+    needs: verify
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: admin
+            dockerfile: Dockerfile.admin
+          - name: blog
+            dockerfile: Dockerfile.blog
+          - name: portfolio
+            dockerfile: Dockerfile.portfolio
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build container image
+        run: docker build --pull --file "${{ matrix.dockerfile }}" --tag "papyrus-${{ matrix.name }}:ci" .
+
+      - name: Scan container image for high or critical vulnerabilities
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: papyrus-${{ matrix.name }}:ci
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL

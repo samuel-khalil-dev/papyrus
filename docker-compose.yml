@@ -1,0 +1,107 @@
+services:
+  test-db:
+    image: postgres:17-alpine
+    profiles: [test]
+    environment:
+      POSTGRES_DB: papyrus_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d papyrus_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: papyrus
+      POSTGRES_USER: ${POSTGRES_USER:-papyrus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+    volumes:
+      - papyrus-postgres-data:/var/lib/postgresql/data
+    networks:
+      - papyrus
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  admin-api:
+    image: ${PAPYRUS_ADMIN_IMAGE:-papyrus-admin:local}
+    build:
+      context: .
+      dockerfile: Dockerfile.admin
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_HTTP_PORTS: 8080
+      ConnectionStrings__papyrus: Host=db;Port=5432;Database=papyrus;Username=${POSTGRES_USER:-papyrus};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      AdminApi__ApiKey: ${ADMIN_API_KEY:?ADMIN_API_KEY must be set}
+      Media__RootPath: /data/media
+    ports:
+      - "${ADMIN_PORT:-5205}:8080"
+    volumes:
+      - papyrus-media:/data/media
+    networks:
+      - papyrus
+    depends_on:
+      db:
+        condition: service_healthy
+    init: true
+
+  blog:
+    image: ${PAPYRUS_BLOG_IMAGE:-papyrus-blog:local}
+    build:
+      context: .
+      dockerfile: Dockerfile.blog
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_HTTP_PORTS: 8080
+      ConnectionStrings__papyrus: Host=db;Port=5432;Database=papyrus;Username=${POSTGRES_USER:-papyrus};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      Site__PublicBaseUrl: ${BLOG_PUBLIC_BASE_URL:-http://localhost:5075}
+      Site__MediaBaseUrl: ${MEDIA_BASE_URL:-http://localhost:5205}
+      Site__BlogBaseUrl: ${BLOG_PUBLIC_BASE_URL:-http://localhost:5075}
+      Site__PortfolioBaseUrl: ${PORTFOLIO_PUBLIC_BASE_URL:-http://localhost:5024}
+    ports:
+      - "${BLOG_PORT:-5075}:8080"
+    networks:
+      - papyrus
+    depends_on:
+      admin-api:
+        condition: service_started
+    init: true
+
+  portfolio:
+    image: ${PAPYRUS_PORTFOLIO_IMAGE:-papyrus-portfolio:local}
+    build:
+      context: .
+      dockerfile: Dockerfile.portfolio
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_HTTP_PORTS: 8080
+      ConnectionStrings__papyrus: Host=db;Port=5432;Database=papyrus;Username=${POSTGRES_USER:-papyrus};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      Site__PublicBaseUrl: ${PORTFOLIO_PUBLIC_BASE_URL:-http://localhost:5024}
+      Site__MediaBaseUrl: ${MEDIA_BASE_URL:-http://localhost:5205}
+      Site__BlogBaseUrl: ${BLOG_PUBLIC_BASE_URL:-http://localhost:5075}
+      Site__PortfolioBaseUrl: ${PORTFOLIO_PUBLIC_BASE_URL:-http://localhost:5024}
+    ports:
+      - "${PORTFOLIO_PORT:-5024}:8080"
+    networks:
+      - papyrus
+    depends_on:
+      admin-api:
+        condition: service_started
+    init: true
+
+volumes:
+  papyrus-postgres-data:
+  papyrus-media:
+
+networks:
+  papyrus:
+    driver: bridge

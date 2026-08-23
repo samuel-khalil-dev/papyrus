@@ -1,0 +1,28 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY Papyrus.sln ./
+COPY src/Papyrus.Web.Portfolio/Papyrus.Web.Portfolio.csproj Papyrus.Web.Portfolio/
+COPY src/Papyrus.Contracts/Papyrus.Contracts.csproj Papyrus.Contracts/
+COPY src/Papyrus.Application/Papyrus.Application.csproj Papyrus.Application/
+COPY src/Papyrus.Infrastructure/Papyrus.Infrastructure.csproj Papyrus.Infrastructure/
+COPY src/Papyrus.Core/Papyrus.Core.csproj Papyrus.Core/
+COPY src/Papyrus.ServiceDefaults/Papyrus.ServiceDefaults.csproj Papyrus.ServiceDefaults/
+COPY src/Papyrus.Web.Shared/Papyrus.Web.Shared.csproj Papyrus.Web.Shared/
+RUN dotnet restore Papyrus.Web.Portfolio/Papyrus.Web.Portfolio.csproj
+COPY Directory.Build.props ./
+COPY src/Papyrus.Web.Portfolio/ Papyrus.Web.Portfolio/
+COPY src/Papyrus.Contracts/ Papyrus.Contracts/
+COPY src/Papyrus.Application/ Papyrus.Application/
+COPY src/Papyrus.Infrastructure/ Papyrus.Infrastructure/
+COPY src/Papyrus.Core/ Papyrus.Core/
+COPY src/Papyrus.ServiceDefaults/ Papyrus.ServiceDefaults/
+COPY src/Papyrus.Web.Shared/ Papyrus.Web.Shared/
+RUN dotnet publish Papyrus.Web.Portfolio/Papyrus.Web.Portfolio.csproj -c Release -o /app/publish --no-restore
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+WORKDIR /app
+ENV ASPNETCORE_HTTP_PORTS=8080
+EXPOSE 8080
+COPY --from=build /app/publish .
+USER $APP_UID
+ENTRYPOINT ["dotnet", "Papyrus.Web.Portfolio.dll"]

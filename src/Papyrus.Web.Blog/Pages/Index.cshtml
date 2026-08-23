@@ -1,10 +1,150 @@
 ﻿@page
 @model IndexModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Blog";
+    var hasFilters = !string.IsNullOrWhiteSpace(Model.SearchTerm) || !string.IsNullOrWhiteSpace(Model.Tag);
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<section class="hero-section">
+    <div class="hero-section__content">
+        <span class="hero-section__eyebrow">Technical writing</span>
+        <h1 class="hero-section__title">Blog</h1>
+        <p class="hero-section__subtitle">Long-form write-ups about projects, implementation details, lessons learned, and the thinking behind the work.</p>
+    </div>
+    <div class="hero-section__glow" aria-hidden="true"></div>
+</section>
+
+<form method="get" class="filter-bar" aria-label="Filter posts">
+    <div class="filter-bar__inner">
+        <div class="filter-bar__search">
+            <svg class="filter-bar__icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="text" name="q" value="@Model.SearchTerm" placeholder="Search posts..." aria-label="Search posts" class="filter-bar__input" autocomplete="off" />
+        </div>
+        <div class="filter-bar__tags">
+            @foreach (var tag in Model.Tags)
+            {
+                    <a asp-page="/Index" asp-route-tag="@tag.Slug" asp-route-q="@Model.SearchTerm"
+                       class="filter-bar__tag @(Model.Tag == tag.Slug || Model.Tag == tag.Name ? "filter-bar__tag--active" : "")">@tag.Name</a>
+            }
+        </div>
+        <button type="submit" class="btn btn-primary">Search</button>
+        @if (hasFilters)
+        {
+            <a asp-page="/Index" class="btn btn-link">Clear</a>
+        }
+    </div>
+</form>
+
+@if (Model.FeaturedPost is { } featuredPost && Model.CurrentPage == 1 && string.IsNullOrWhiteSpace(Model.SearchTerm) && string.IsNullOrWhiteSpace(Model.Tag))
+{
+    <a asp-page="/Post" asp-route-slug="@featuredPost.Slug" class="featured-card">
+        <div class="featured-card__inner">
+            <div class="featured-card__body">
+                @if (Model.FeaturedCoverImageUrl is not null)
+                {
+                    <img class="featured-card__cover" src="@Model.FeaturedCoverImageUrl" alt="@featuredPost.Title" />
+                }
+                <span class="featured-card__badge">Featured</span>
+                <p class="featured-card__category">@(featuredPost.Category?.Name ?? featuredPost.Project?.Title ?? "Independent post")</p>
+                <h2 class="featured-card__title">@featuredPost.Title</h2>
+                <p class="featured-card__summary">@featuredPost.Summary</p>
+                <div class="featured-card__meta">
+                    @if (featuredPost.Tags.Count > 0)
+                    {
+                        <span class="featured-card__tags">@string.Join(" · ", featuredPost.Tags.Select(t => t.Name))</span>
+                    }
+                    <time datetime="@((featuredPost.PublishedAt ?? featuredPost.CreatedAt).ToString("yyyy-MM-dd"))">@(featuredPost.PublishedAt?.ToString("MMMM d, yyyy") ?? featuredPost.CreatedAt.ToString("MMMM d, yyyy"))</time>
+                </div>
+            </div>
+            <div class="featured-card__arrow">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </div>
+        </div>
+    </a>
+}
+
+@if (Model.Posts.Count == 0)
+{
+    <div class="empty-state">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 12h.01"/><path d="M12 12h.01"/><path d="M9 12h.01"/><path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
+        @if (hasFilters)
+        {
+            <p>No posts match your search/filter.</p>
+            <a asp-page="/Index" class="btn btn-link">Clear filters</a>
+        }
+        else
+        {
+            <p>No published posts yet.</p>
+        }
+    </div>
+}
+else
+{
+    <div class="card-grid">
+        @foreach (var post in Model.Posts)
+        {
+            <article class="card-item reveal-on-scroll">
+                <a asp-page="/Post" asp-route-slug="@post.Slug" class="card-item__link">
+                    <div class="card-item__inner">
+                        @if (Model.CoverImageUrls[post.Id] is string coverUrl)
+                        {
+                            <img class="card-item__cover" src="@coverUrl" alt="@post.Title" />
+                        }
+                        <p class="card-item__category">@(post.Category?.Name ?? post.Project?.Title ?? "Independent post")</p>
+                        <h3 class="card-item__title">@post.Title</h3>
+                        <p class="card-item__summary">@post.Summary</p>
+                        @if (post.Tags.Count > 0)
+                        {
+                            <p class="card-item__tags">@string.Join(" · ", post.Tags.Select(t => t.Name))</p>
+                        }
+                        <div class="card-item__meta">
+                            <time datetime="@((post.PublishedAt ?? post.CreatedAt).ToString("yyyy-MM-dd"))">@(post.PublishedAt?.ToString("MMMM d, yyyy") ?? post.CreatedAt.ToString("MMMM d, yyyy"))</time>
+                            <svg class="card-item__arrow" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                        </div>
+                    </div>
+                </a>
+            </article>
+        }
+    </div>
+
+    @if (Model.TotalPages > 1)
+    {
+        <nav class="pagination" aria-label="Page navigation">
+            <ul class="pagination__list">
+                @if (Model.CurrentPage > 1)
+                {
+                    <li>
+                        <a href="?page=@(Model.CurrentPage - 1)@(string.IsNullOrWhiteSpace(Model.SearchTerm) ? "" : $"&q={Model.SearchTerm}")@(string.IsNullOrWhiteSpace(Model.Tag) ? "" : $"&tag={Model.Tag}")"
+                           class="pagination__link pagination__link--prev" aria-label="Previous page">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                        </a>
+                    </li>
+                }
+                @for (var i = 1; i <= Model.TotalPages; i++)
+                {
+                    @if (i == 1 || i == Model.TotalPages || Math.Abs(i - Model.CurrentPage) <= 1)
+                    {
+                        <li>
+                            <a href="?page=@i@(string.IsNullOrWhiteSpace(Model.SearchTerm) ? "" : $"&q={Model.SearchTerm}")@(string.IsNullOrWhiteSpace(Model.Tag) ? "" : $"&tag={Model.Tag}")"
+                               class="pagination__link @(i == Model.CurrentPage ? "pagination__link--active" : "")">@i</a>
+                        </li>
+                    }
+                    else if (Math.Abs(i - Model.CurrentPage) == 2)
+                    {
+                        <li class="pagination__ellipsis">…</li>
+                    }
+                }
+                @if (Model.CurrentPage < Model.TotalPages)
+                {
+                    <li>
+                        <a href="?page=@(Model.CurrentPage + 1)@(string.IsNullOrWhiteSpace(Model.SearchTerm) ? "" : $"&q={Model.SearchTerm}")@(string.IsNullOrWhiteSpace(Model.Tag) ? "" : $"&tag={Model.Tag}")"
+                           class="pagination__link pagination__link--next" aria-label="Next page">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                        </a>
+                    </li>
+                }
+            </ul>
+            <p class="pagination__info">Page @Model.CurrentPage of @Model.TotalPages · @Model.TotalPosts @(Model.TotalPosts == 1 ? "post" : "posts")</p>
+        </nav>
+    }
+}

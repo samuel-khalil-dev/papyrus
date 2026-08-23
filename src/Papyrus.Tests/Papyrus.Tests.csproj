@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="10.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.11" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+    <PackageReference Include="NetArchTest.Rules" Version="1.3.2" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Papyrus.Contracts\Papyrus.Contracts.csproj" />
+    <ProjectReference Include="..\Papyrus.Core\Papyrus.Core.csproj" />
+    <ProjectReference Include="..\Papyrus.Infrastructure\Papyrus.Infrastructure.csproj" />
+    <ProjectReference Include="..\Papyrus.Api.Admin\Papyrus.Api.Admin.csproj" />
+    <ProjectReference Include="..\Papyrus.ServiceDefaults\Papyrus.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\Papyrus.Web.Blog\Papyrus.Web.Blog.csproj" />
+    <ProjectReference Include="..\Papyrus.Web.Portfolio\Papyrus.Web.Portfolio.csproj" />
+  </ItemGroup>
+
+</Project>
