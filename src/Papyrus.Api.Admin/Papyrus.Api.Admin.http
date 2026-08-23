@@ -1,0 +1,6 @@
+@Papyrus.Api.Admin_HostAddress = http://localhost:5205
+
+GET {{Papyrus.Api.Admin_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
