@@ -1,3 +1,6 @@
+using Papyrus.Api.Admin;
+using Papyrus.ServiceDefaults;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
@@ -18,19 +21,11 @@ app.UseHttpsRedirection();
 
 app.MapDefaultEndpoints();
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
 app.MapGet("/weatherforecast", () =>
 {
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
+    var forecast = Enumerable.Range(1, 5).Select(_ =>
         new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
+        (Random.Shared.Next(-20, 55)
         ))
         .ToArray();
     return forecast;
@@ -39,7 +34,10 @@ app.MapGet("/weatherforecast", () =>
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+namespace Papyrus.Api.Admin
 {
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+    internal record WeatherForecast(int TemperatureC)
+    {
+        public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+    }
 }
