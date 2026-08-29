@@ -25,18 +25,26 @@ so canonical/RSS/sitemap URL behavior is excluded.
 
 The query timings below are the 30-sample PostgreSQL execution measurements from
 [`projection-evidence.md`](projection-evidence.md:108). They exclude HTTP and Razor
-rendering. HTTP p95/error and payload measurements are the S30.5 K6 dispatch
-capture points; the committed smoke configuration is the reproducible baseline
-until a production-like environment is available.
+rendering. HTTP p95/error and payload measurements are the S30.5 K6 capture
+points; the committed smoke configuration is the reproducible baseline until a
+production-like environment is available. The public values are aggregate
+transport metrics across the feed and search scenarios because the K6 summary
+export reports the custom payload trend and HTTP duration for the complete
+script run.
 
-| Workload | DB p95 (ms) | Queries/request | Payload budget observation | Error baseline |
-| --- | ---: | ---: | --- | --- |
-| Public Blog feed | 0.073 | 4 (count, page, featured, tags) | response bytes to be captured by K6 `http_req_receiving`; budget 256 KiB | K6 threshold `<1%` |
-| Public Portfolio feed | 0.041 | 4 (count, page, featured, tags) | response bytes to be captured by K6; budget 256 KiB | K6 threshold `<1%` |
-| Public Blog search | not separately isolated in SQL capture | 4 | budget 256 KiB | K6 threshold `<1%` |
-| Public Portfolio search | not separately isolated in SQL capture | 4 | budget 256 KiB | K6 threshold `<1%` |
-| Admin Blog collection | 0.037 | 2 (count, page) | response budget 128 KiB | K6 threshold `<1%`, 0 5xx |
-| Admin upload (5 MiB maximum) | not exercised in S30.5 | 0 DB commands | request budget 5 MiB; cost must be captured as upload duration and bytes | 0 5xx; validation 4xx allowed |
+| Workload | DB p95 (ms) | Queries/request | HTTP p95 (ms) | `response_payload_bytes` p95 (bytes) | Error/check baseline |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Public Blog feed | 0.073 | 4 (count, page, featured, tags) | 23.574* | 9,030* | 0.00% failed; 100.00% checks |
+| Public Portfolio feed | 0.041 | 4 (count, page, featured, tags) | 23.574* | 9,030* | 0.00% failed; 100.00% checks |
+| Public Blog search | not separately isolated in SQL capture | 4 | 23.574* | 9,030* | 0.00% failed; 100.00% checks |
+| Public Portfolio search | not separately isolated in SQL capture | 4 | 23.574* | 9,030* | 0.00% failed; 100.00% checks |
+| Admin Blog collection | 0.037 | 2 (count, page) | 21.660 | 9,256 | 0.00% failed; 100.00% checks; 0 5xx |
+| Admin upload (5 MiB maximum) | not exercised in S30.5 | 0 DB commands | — | — | request budget 5 MiB; cost must be captured as upload duration and bytes; 0 5xx; validation 4xx allowed |
+
+\* Aggregate public K6 result across the `public_feed` and `public_search`
+scenarios; see [`s30.5-k6-public-20260829.json`](s30.5-k6-public-20260829.json).
+The admin result is recorded in
+[`s30.5-k6-admin-20260829.json`](s30.5-k6-admin-20260829.json).
 
 The current K6 transport baseline is p95 `<1000 ms`, failed requests `<1%`, and
 checks `>99%`; those are enforced by

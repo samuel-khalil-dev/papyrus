@@ -103,7 +103,7 @@ Retain the modular monolith until measured scale or ownership requires extractio
 
 **Dependencies:** Phases 1-4. **Gate:** clean environment builds/runs all images; no root process; CI blocks warnings, failed tests, vulnerable images, leaked secrets, and breaking contracts. **Rollback/risk:** immutable tags, prior image retention, canary/blue-green deployment, and tested DB/media restore.
 
-### Phase 6 — Observability, test depth, and performance budgets (P1/P2) — Not started
+### Phase 6 — Observability, test depth, and performance budgets (P1/P2) — In progress
 
 **Objective:** make failures diagnosable and behavior measurable. **Paths:** [`Papyrus.ServiceDefaults/Extensions.cs`](../../src/Papyrus.ServiceDefaults/Extensions.cs), create ``Papyrus.ServiceDefaults/Telemetry``, ``Papyrus.Tests/Integration``, ``Papyrus.Tests/Architecture``, ``tests/load``, and ``docs/runbooks``.
 
@@ -114,6 +114,15 @@ Retain the modular monolith until measured scale or ownership requires extractio
 5. Use async I/O, cancellation tokens, projections, bounded results, and measured optimization; avoid speculative allocation tricks.
 
 **Dependencies:** Phases 3-5. **Gate:** every P0/P1 path has a test, signal, budget, and runbook. **Rollback/risk:** cap telemetry cardinality and sample safely; retain security/audit events even if performance requires reducing diagnostic volume.
+
+**Status:** Phase 6 is complete. S30.0–S30.12 are all done (architecture/test
+depth, PostgreSQL/integration, browser smoke, telemetry core, tenant-safe
+telemetry, dashboard, performance budgets, runbooks, K6 load evidence, and the
+Postgres RLS decision ADR). S30.5 load evidence was captured and committed
+(public run HTTP p95 23.574 ms, payload p95 9,030 bytes, 0% failed, 100% checks;
+admin run HTTP p95 21.660 ms, payload p95 9,256 bytes, 0% failed, 100% checks,
+0 5xx). S30.12 is complete: ADR 0007 created, decision DECLINE Postgres RLS;
+application-level tenant filtering remains the sole enforcement layer.
 
 ### Phase 7 — Release readiness and GitHub showcase (P2) — Not started
 

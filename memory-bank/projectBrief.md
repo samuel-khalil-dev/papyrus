@@ -1,6 +1,6 @@
 # Project Brief
 
-Verified against source 2026-08-29 · Phases 0–5 complete · S30.3, S30.6, and S30.7 complete · 63 tests · 5 migrations · 0-warn/0-error build
+Verified against source 2026-08-29 · Phases 0–5 complete · Phase 6 complete (S30.0–S30.12) · 73 .NET tests + 5 Playwright browser tests · 5 migrations · 0-warn/0-error build
 
 Papyrus is a .NET 10 modular monolith for technical writing and a professional
 showcase. It contains a public Blog Razor Pages site, a public Portfolio Razor
@@ -49,15 +49,17 @@ public sites; the admin API is the sole migration/seed owner.
 
 - Phases 0–5: **complete**.
 - Phase 6 (observability, architecture/test depth, PostgreSQL/integration/
-  browser/load testing, and performance budgets): **in progress**; S30.0,
-  S30.1, S30.3, S30.6, and S30.7 are complete.
+  browser/load testing, and performance budgets): **complete** (S30.0–S30.12),
+  including the S30.5 K6 load evidence and the S30.12 Postgres RLS decision ADR
+  (DECLINE RLS).
 - Phase 7 (release readiness/showcase): **not started**.
 - Phase 8 (measured scale): **not started; decision gate**.
 
-The current verification baseline is 63 passing tests and a clean
-warnings-as-errors build. `docs/guides/contributing.md` and
+The current verification baseline is 73 passing .NET tests plus 5 Playwright
+browser tests and a clean warnings-as-errors build. `docs/guides/contributing.md` and
 `docs/security/policy.md` remain Phase 7 placeholders. Production must set
 `Site:PublicBaseUrl` for absolute canonical/RSS/sitemap URLs. Session and
-login-throttle stores were removed; authentication is header-key based and
-process-local, so managed API-key rotation before multi-operator or replica-scale
-deployment remains open.
+login-throttle stores were removed; authentication is header-key based.
+Managed multi-key rotation is implemented through reloadable `AdminApi:ApiKeys`
+configuration; deployment must still execute the add, overlap, and remove
+procedure before broader multi-operator or replica-scale rollout.

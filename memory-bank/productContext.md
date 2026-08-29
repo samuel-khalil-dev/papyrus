@@ -1,6 +1,6 @@
 # Product Context
 
-Verified against source 2026-08-29 · Phases 0–5 complete · S30.3, S30.6, and S30.7 complete · 63 tests · 5 migrations · 0-warn/0-error build
+Verified against source 2026-08-29 · Phases 0–5 complete · Phase 6 complete (S30.0–S30.12) · 73 .NET tests + 5 Playwright browser tests · 5 migrations · 0-warn/0-error build
 
 Papyrus is a personal technical-writing and professional-showcase platform
 with a public blog, a public portfolio, and an authenticated React admin
@@ -44,11 +44,13 @@ surface.
 
 ## Delivery status
 
-Phases 0–5 are complete. Phase 6 is active: S30.3, telemetry core S30.6, and
-tenant-safe telemetry S30.7 are complete; deeper tests and performance budgets remain. Phases 7 and 8 are not
-started. The current baseline is 63 passing tests, five applied migrations, and a zero-warning,
-zero-error warnings-as-errors build. Residual release gates are W6–W8, O4, and
-O7–O10, plus deployment configuration for `Site:PublicBaseUrl` and managed
-API-key rotation for multi-operator/replica-scale deployment.
-`docs/guides/contributing.md` and `docs/security/policy.md` remain placeholders
-until Phase 7.
+Phases 0–5 are complete. Phase 6 is complete (S30.0–S30.12), including the S30.5
+K6 load evidence and the S30.12 Postgres RLS decision ADR (DECLINE RLS). Phases
+7 and 8 are not started. The current baseline is 73 passing .NET tests plus 5
+Playwright browser tests, five applied migrations, and a zero-warning, zero-error
+warnings-as-errors build. Residual release gates are W6–W8, O4, and O7–O10
+(O7's load-evidence portion is done; the restore, migration-ownership, and
+media-volume drills remain), plus deployment configuration for
+`Site:PublicBaseUrl`. Managed multi-key API-key rotation now supports an overlap
+window through reloadable `AdminApi:ApiKeys` configuration. `docs/guides/contributing.md` and `docs/security/policy.md` remain
+placeholders until Phase 7.

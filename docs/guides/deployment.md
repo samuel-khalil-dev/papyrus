@@ -31,10 +31,24 @@ Site__BlogBaseUrl=https://blog.example.com         # blog and portfolio
 Site__PortfolioBaseUrl=https://portfolio.example.com # blog and portfolio
 ```
 
-`Site__PublicBaseUrl` is required in production for trusted absolute canonical,
-RSS, and sitemap URLs; without it the application intentionally emits relative
-URLs. The session and login-throttle stores are process-local, so replica-safe
-storage is required before a scale-out deployment.
+`Site__PublicBaseUrl` is required in production on every public-site container.
+Set it to that container's exact public HTTPS origin, with no path suffix or
+trailing slash: the Blog container receives the blog origin and the Portfolio
+container receives the portfolio origin. The repository does not define the
+production hostnames, so replace the example values with the deployment's real
+DNS names rather than copying them. For Docker Compose, provide the values as
+`BLOG_PUBLIC_BASE_URL` and `PORTFOLIO_PUBLIC_BASE_URL`; Compose now fails before
+startup if either value is missing. In the GitHub Actions deployment, configure
+the corresponding production environment variables with those same names.
+
+The setting binds to the `Site` section as `PublicBaseUrl`. Each public app
+passes that configured value through `SiteUrl.ResolvePublicBase` and then
+`SiteUrl.Combine`: page canonical metadata, `/feed.xml` RSS item/channel links,
+and `/sitemap.xml` locations are absolute URLs rooted at the supplied origin.
+When the setting is absent, the application intentionally emits relative URLs
+and never trusts `Request.Host`. The session and login-throttle stores are
+process-local, so replica-safe storage is required before a scale-out
+deployment.
 
 The example domains in the production appsettings files are intentionally
 documentation defaults. Override them with the real public HTTPS hostnames at
@@ -47,6 +61,12 @@ The admin media directory is configured by `Media:RootPath` and should be
 mounted to durable storage, or replaced with an object-storage implementation,
 because container filesystems are ephemeral. The public sites use
 `Site:MediaBaseUrl` to generate absolute media URLs.
+
+The checked-in Admin image pre-creates `/data/media` and assigns it to the
+container's non-root `APP_UID` before switching users. This preserves write
+access when Docker initializes the empty named `papyrus-media` volume; keep the
+Compose mount at `/data/media` and verify persistence across an Admin restart at
+release.
 
 ## Build and run the containers
 
@@ -81,10 +101,9 @@ general public edge. Responses intentionally contain status text only. This is
 the network release gate for O-NEW-05; verify the firewall/ingress scope at
 release.
 
-`Site__PublicBaseUrl` is required in production for trusted absolute canonical,
-RSS, and sitemap URLs; without it the application intentionally emits relative
-URLs. Set it on the blog container (and any host that emits public URLs) before
-using the performance baseline as release evidence for those routes (see
+`Site__PublicBaseUrl` must be set on both public containers (with the origin
+appropriate to each site) before using the performance baseline as release
+evidence for canonical, RSS, and sitemap routes (see
 [`phase6-baseline.md`](../performance/phase6-baseline.md)).
 
 ## Database migrations

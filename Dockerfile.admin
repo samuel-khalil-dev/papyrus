@@ -30,5 +30,6 @@ WORKDIR /app
 ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
 COPY --from=build /app/publish .
+RUN mkdir -p /data/media && chown -R $APP_UID:$APP_UID /data/media
 USER $APP_UID
 ENTRYPOINT ["dotnet", "Papyrus.Api.Admin.dll"]

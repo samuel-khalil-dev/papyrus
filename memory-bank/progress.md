@@ -1,8 +1,15 @@
 # Progress
 
-Verified against source 2026-08-29 · Phases 0–5 complete · S30.0–S30.4, S30.6–S30.11 complete · 73 .NET tests + 5 Playwright browser tests · 5 migrations · 0-warn/0-error build
+Verified against source 2026-08-29 · Phases 0–5 complete · Phase 6 complete (S30.0–S30.12) · 73 .NET tests + 5 Playwright browser tests · 5 migrations · 0-warn/0-error build
 
 ## Done
+
+- Release workflow validation/remediation complete: Trivy now uses the immutable
+  commit for verified `aquasecurity/trivy-action` v0.33.1; SBOM generation uses
+  the immutable commit for verified `anchore/sbom-action` v0.24.1; unused
+  `security-events: write` was removed; the dependency-scan Python here-document
+  was closed with its missing `PY` terminator. Dockerized `actionlint` and
+  `git diff --check` pass.
 
 - Phases 0–5: audit/guardrails, tenant isolation and API-key auth, HTTP/media
   security, application/persistence correctness, REST/projections, and
@@ -86,18 +93,40 @@ Verified against source 2026-08-29 · Phases 0–5 complete · S30.0–S30.4, S3
 - S30.11 complete: added incident and telemetry runbooks, corrected documentation
   to the 73 .NET plus 5 Playwright test baseline, and attached W6, W7, W8, O4,
   O8, and O10 release-gate evidence. O7 remains pending S30.5 load evidence.
+- S30.5 completed on 2026-08-29 against the Docker Compose PostgreSQL 17
+  deployment. Public aggregate K6 p95/payload p95 were 23.574 ms/9,030 bytes;
+  admin values were 21.660 ms/9,256 bytes. Both runs had 0.00% failed requests
+  and 100.00% checks; admin recorded zero 5xx responses. Dated raw summaries
+  were added under `docs/performance/`, and O7 now has load evidence attached;
+  restore/migration/media drills remain open.
+- S30.12 complete: created
+  `docs/architecture/decisions/0007-postgres-rls-decision.md` recording the
+  decision to DECLINE Postgres RLS; application-level tenant filtering remains
+  the sole enforcement layer. Phase 6 is now fully complete (S30.0–S30.12).
+- Managed Admin API-key rotation complete: added the reloadable
+  `AdminApi:ApiKeys` configuration set, retained `AdminApi:ApiKey` compatibility,
+  used fixed-time comparison across all configured candidates, and added four
+  xUnit tests for acceptance, rejection, binding, and add/overlap/remove
+  rotation behavior. The solution build passed with 0 warnings and 0 errors;
+  the full test run passed 61 tests and had 16 PostgreSQL connection failures
+  because 127.0.0.1:5432 was unavailable.
 
 ## Not started / open
 
-- Phase 6: S30.0–S30.4 and S30.6–S30.11 are complete. Remaining work is S30.5
-  (K6 load tests, P2) and optional S30.12 (Postgres RLS decision ADR, P2).
+- Phase 6 is complete (S30.0–S30.12).
 - Phase 7: release readiness and showcase documentation/assets.
 - Phase 8: measured scale decision gate.
-- O7 release-gate evidence remains pending S30.5; S30.11 attached evidence for
-  W6, W7, W8, O4, O8, and O10.
-- Managed API-key rotation and multi-key support before broader multi-operator
-  or replica-scale deployment.
-- Production `Site:PublicBaseUrl` configuration.
+- O7 is complete: S30.5 load evidence plus the 2026-08-29 Compose restore,
+  migration-ownership, and media-volume drills are recorded in the release gate
+  and incident runbook. The media drill required non-root ownership setup for
+  `/data/media` in `Dockerfile.admin`; the rebuilt image passed the restart test.
+- Operate the managed API-key rotation procedure with a reloadable secret
+  provider before broader multi-operator or replica-scale deployment.
+- Production `Site:PublicBaseUrl` configuration completed: Compose requires the
+  per-site public URL inputs, the release workflow passes them from the
+  production environment, and deployment documentation describes the binding
+  and absolute canonical/RSS/sitemap generation flow. Exact hostnames remain
+  deployment-owned.
 - `docs/guides/contributing.md` and `docs/security/policy.md` are still
   placeholders pending Phase 7.
 
@@ -116,7 +145,8 @@ Verified against source 2026-08-29 · Phases 0–5 complete · S30.0–S30.4, S3
   9.5.2 (latest published; no 13.x); marked `plans/wire-admin-ui-to-aspire.md`
   Implemented; corrected the target port to 5173.
 
-- 2026-08-29: S30.5 remains open; K6 load evidence is still required for O7.
+- 2026-08-29: S30.5 completed; K6 load evidence attached for O7. S30.12
+  completed; Postgres RLS decision ADR records DECLINE RLS.
 - 2026-08-28: Fixed the Admin API 401 under Aspire by injecting
   `AdminApi__ApiKey` via `.WithEnvironment(...)` in `Papyrus.AppHost/Program.cs`.
 - 2026-08-26: Resolved EF pending model changes by generating

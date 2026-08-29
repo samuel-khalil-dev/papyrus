@@ -109,7 +109,7 @@ available.
 
 PostgreSQL was started locally as Docker container `papyrus-postgres` using the
 persistent named volume `papyrus-postgres-data`, published on `localhost:5432`,
-with database `papyrus` and the documented development credentials. The four
+with database `papyrus` and the documented development credentials. The five
 current migrations were applied, and the admin startup seed verified the
 `main` tenant with one live project, one live post, one category, and two tags.
 
@@ -173,6 +173,13 @@ changed.
 
 - [`dotnet build Papyrus.sln`](../../Papyrus.sln) — passed, 0 warnings, 0 errors.
 - [`dotnet test Papyrus.sln`](../../Papyrus.sln) — passed, 73/73 tests.
+
+> **Note on date and test count:** this evidence is dated 2026-08-25, but the
+> 73-test baseline was reached on 2026-08-29. The 73/73 count shown here is
+> coincidentally the same as the current baseline; it reflects the suite state
+> at the time this evidence was captured, not the 2026-08-29 baseline. Treat the
+> date as authoritative for this capture and the current baseline as the
+> 2026-08-29 verification record.
 - PostgreSQL SQL translation harness — passed and produced
   [`projection-sql.txt`](projection-sql.txt:1).
 - Runtime PostgreSQL latency and `EXPLAIN (ANALYZE, BUFFERS)` capture — passed

@@ -12,13 +12,17 @@ using Papyrus.ServiceDefaults.Telemetry;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var configuredAdminApiKey = builder.Configuration[AdminApiKey.ConfigurationKey];
+var configuredAdminApiKeys = builder.Configuration
+    .GetSection(AdminApiKeyOptions.SectionName)
+    .Get<AdminApiKeyOptions>()?
+    .GetConfiguredKeys()
+    .ToArray() ?? [];
 if (!builder.Environment.IsDevelopment()
-    && (string.IsNullOrWhiteSpace(configuredAdminApiKey)
-        || string.Equals(configuredAdminApiKey, "change-me", StringComparison.OrdinalIgnoreCase)))
+    && (configuredAdminApiKeys.Length == 0
+        || configuredAdminApiKeys.Any(key => string.Equals(key, "change-me", StringComparison.OrdinalIgnoreCase))))
 {
     throw new InvalidOperationException(
-        $"{AdminApiKey.ConfigurationKey} must be supplied in production and must not use the default placeholder.");
+        $"{AdminApiKeyOptions.SectionName}:ApiKeys must be supplied in production and must not use the default placeholder.");
 }
 
 builder.AddServiceDefaults();

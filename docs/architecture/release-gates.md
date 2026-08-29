@@ -79,14 +79,35 @@ a later sub-task, it is marked **Pending** rather than fabricated.
 
 ### O7 — Restore/load drills
 
-**Status: Pending S30.5 (load evidence).**
+**Status: Closed — restore, migration-ownership, media-volume, and load evidence attached (2026-08-29 UTC).**
 
 - Restore/migration/readiness/media-volume drill procedures are documented in
   [`incident-runbook.md`](../runbooks/incident-runbook.md) and
   [`deployment.md`](../guides/deployment.md).
-- **Pending:** load evidence comes from S30.5 (Grafana K6 load tests), which is
-  still pending. The restore/load drill outcome must be recorded at release once
-  S30.5 load evidence is available.
+- S30.5 was executed against the Docker Compose PostgreSQL 17 deployment on
+  2026-08-29 UTC. The public run recorded HTTP p95 **23.574 ms**, payload p95
+  **9,030 bytes**, 0.00% failed requests, and 100.00% checks. The admin run
+  recorded HTTP p95 **21.660 ms**, payload p95 **9,256 bytes**, 0.00% failed
+  requests, 100.00% checks, and zero 5xx responses.
+- Raw K6 summaries: [`s30.5-k6-public-20260829.json`](../performance/s30.5-k6-public-20260829.json)
+  and [`s30.5-k6-admin-20260829.json`](../performance/s30.5-k6-admin-20260829.json).
+- Restore drill: `pg_dump -Fc` created a 26,130-byte backup from the Compose
+  PostgreSQL 17 `papyrus` database; `pg_restore --exit-on-error` restored it into
+  a disposable `papyrus_restore` database. Verification found four applied EF
+  migration-history rows and seven public tables in the restored database.
+- Migration-ownership drill: the solution build passed with 0 warnings/errors;
+  the two `MigrationOwnershipTests` passed; source inspection found the sole
+  production `MigrateAsync()` call in Infrastructure and the sole Admin startup
+  initialization call in `Papyrus.Api.Admin`. No applied migration was edited or
+  deleted, and no database update was run as part of the drill.
+- Media-volume drill: the initial write exposed that a new named volume was root
+  owned and not writable by the non-root Admin container. `Dockerfile.admin` now
+  creates `/data/media` and assigns it to `APP_UID`; after rebuilding, a sentinel
+  file was written to `/data/media`, the Admin container was restarted, and the
+  sentinel remained readable. Inspection confirmed the writable named volume is
+  mounted at `/data/media`.
+- The combined restore/load gate is closed. Temporary drill credentials, backup
+  artifact, restore database, and sentinel file were removed after verification.
 
 ### O8 — Performance budgets
 

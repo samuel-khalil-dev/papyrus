@@ -1,5 +1,54 @@
 # Decision Log
 
+## 2026-08-29 — Managed Admin API-key rotation
+
+- Chose a configuration-backed `AdminApi:ApiKeys` string collection and
+  `IOptionsMonitor<AdminApiKeyOptions>` rather than a database table or an
+  in-process mutation endpoint. This preserves secret ownership by deployment
+  tooling, works across replicas when backed by shared/reloadable configuration,
+  and requires no schema migration.
+- Rotation is an explicit add/overlap/remove sequence: add the new key while
+  retaining the old key, allow clients to migrate during the transition window,
+  then remove the old key. Each request snapshots the current options and runs
+  fixed-time comparisons against every configured candidate. The existing single
+  `AdminApi:ApiKey` setting remains a compatibility alias during migration.
+- Added xUnit coverage for multiple-key acceptance, invalid-key rejection,
+  configuration binding, and retirement of the old key after the overlap window.
+
+## 2026-08-29 — Production public URL configuration
+
+- Kept `Site:PublicBaseUrl` as deployment-owned configuration rather than
+  inventing a production hostname. Each public container receives its own
+  origin through `Site__PublicBaseUrl`, mapped by Compose from the required
+  `BLOG_PUBLIC_BASE_URL` or `PORTFOLIO_PUBLIC_BASE_URL` input.
+- Made both Compose inputs required so a production deployment cannot silently
+  fall back to localhost. The release workflow supplies the values from the
+  production environment's non-secret variables. `SiteUrl.ResolvePublicBase`
+  and `SiteUrl.Combine` already provide the trusted absolute URL path for page
+  canonicals, RSS, and sitemap locations.
+
+## 2026-08-29 — O7 restore, ownership, and media-volume drills
+
+- The Compose custom-format PostgreSQL backup restored cleanly into a disposable
+  database with `pg_restore --exit-on-error`; no production database was altered.
+- Migration ownership was verified by the solution's structural tests and source
+  inspection: Infrastructure owns the production migration call and Admin owns
+  startup invocation. Applied migration files remain immutable; no database
+  update or new migration was needed.
+- A fresh named media volume was initially root-owned, preventing the non-root
+  Admin process from writing uploads. The Admin runtime image now creates
+  `/data/media` and assigns it to `APP_UID`, preserving both least privilege and
+  volume write access. The sentinel survived a container restart.
+
+## 2026-08-29 — O7 drill execution setup
+
+- The O7 operational drills use temporary process-local Compose credentials for the
+  disposable local deployment because the workstation does not provide the required
+  interpolation variables. No `.env`, connection string, API key, or migration
+  history file is changed.
+- The repository's canonical persistent context directory is `memory-bank/` as
+  tracked by the project; no duplicate `.memory-bank/` directory is introduced.
+
 ## 2026-08-29 — S30.0 architecture test tooling
 
 - Added `NetArchTest.Rules` version 1.3.2 to the existing solution test project,
@@ -125,3 +174,25 @@
 - Attached release-gate evidence for W6, W7, W8, O4, O8, and O10. O7 is
   explicitly pending S30.5 K6 load-test evidence; optional S30.12 remains the
   Postgres RLS decision ADR.
+
+## 2026-08-29 — S30.5 K6 load evidence capture
+
+- Executed the plan-locked K6 scripts against the Docker Compose PostgreSQL 17
+  deployment using the official Grafana K6 container and `host.docker.internal`
+  for the host-published ports.
+- Public run: HTTP p95 23.574 ms, payload p95 9,030 bytes, 0% failed, 100%
+  checks. Admin run: HTTP p95 21.660 ms, payload p95 9,256 bytes, 0% failed,
+  100% checks, 0 5xx.
+- Committed dated raw summaries `docs/performance/s30.5-k6-public-20260829.json`
+  and `docs/performance/s30.5-k6-admin-20260829.json` (commit 5de7d49), updated
+  `docs/performance/phase6-baseline.md` with the real numbers, and attached the
+  O7 load-evidence portion. O7 remains open only pending the restore,
+  migration-ownership, and media-volume drills.
+
+## 2026-08-29 — S30.12 Postgres RLS decision ADR
+
+- Created `docs/architecture/decisions/0007-postgres-rls-decision.md` recording
+  the decision to DECLINE Postgres RLS.
+- Application-level tenant filtering (EF global query filters, save-boundary
+  enforcement, composite tenant relationships, and tenant-scoped media) remains
+  the sole enforcement layer; no RLS policies or migration were introduced.

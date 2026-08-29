@@ -8,7 +8,6 @@ on:
 permissions:
   contents: read
   packages: write
-  security-events: write
 
 env:
   REGISTRY: ghcr.io
@@ -48,6 +47,7 @@ jobs:
 
           if has_vulnerabilities(document):
               raise SystemExit('Vulnerable NuGet packages detected.')
+          PY
       - name: Scan repository for leaked secrets
         uses: gitleaks/gitleaks-action@v2
 
@@ -78,7 +78,7 @@ jobs:
       - name: Build release image
         run: docker build --pull --file "${{ matrix.dockerfile }}" --tag "${{ env.IMAGE_PREFIX }}/${{ matrix.name }}:${{ github.ref_name }}" .
       - name: Scan release image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8
         with:
           image-ref: ${{ env.IMAGE_PREFIX }}/${{ matrix.name }}:${{ github.ref_name }}
           format: table
@@ -86,7 +86,7 @@ jobs:
           ignore-unfixed: true
           severity: HIGH,CRITICAL
       - name: Generate SPDX SBOM
-        uses: anchore/sbom-action@v0
+        uses: anchore/sbom-action@65f438523a6c695224053b36fa18a54cb7026ea3
         with:
           image: ${{ env.IMAGE_PREFIX }}/${{ matrix.name }}:${{ github.ref_name }}
           format: spdx-json
@@ -141,6 +141,8 @@ jobs:
           POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+          BLOG_PUBLIC_BASE_URL: ${{ vars.BLOG_PUBLIC_BASE_URL }}
+          PORTFOLIO_PUBLIC_BASE_URL: ${{ vars.PORTFOLIO_PUBLIC_BASE_URL }}
           PAPYRUS_ADMIN_IMAGE: ${{ env.IMAGE_PREFIX }}/admin:${{ github.ref_name }}
           PAPYRUS_BLOG_IMAGE: ${{ env.IMAGE_PREFIX }}/blog:${{ github.ref_name }}
           PAPYRUS_PORTFOLIO_IMAGE: ${{ env.IMAGE_PREFIX }}/portfolio:${{ github.ref_name }}
