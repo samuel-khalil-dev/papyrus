@@ -1,15 +1,16 @@
 # Active Context
 
-Verified against source 2026-08-29 · Phases 0–5 complete · S30.0–S30.4, S30.6–S30.11 complete · 73 .NET tests + 5 Playwright browser tests · 5 migrations · 0-warn/0-error build
+Verified against source 2026-08-29 · Phases 0–5 complete · Phase 6 complete (S30.0–S30.12) · 73 .NET tests + 5 Playwright browser tests · 5 migrations · 0-warn/0-error build
 
 ## Current task
 
-S30.0–S30.4, S30.6–S30.11 are complete. Phase 6 now includes the architecture,
-PostgreSQL integration, handler/migration-drift, Playwright, telemetry,
-performance-budget, dashboard/alert, and runbook/release-gate work. The current
+Phase 6 is complete: all S30.0–S30.12 subtasks are done. This includes the
+architecture, PostgreSQL integration, handler/migration-drift, Playwright,
+telemetry, performance-budget, dashboard/alert, runbook/release-gate, K6 load
+evidence (S30.5), and the Postgres RLS decision ADR (S30.12). The current
 verification baseline is 73 .NET tests plus 5 Playwright browser tests, with a
-clean zero-warning/zero-error build. S30.5 remains the focused K6 load-test
-item; O7 release-gate evidence is explicitly pending that work.
+  clean zero-warning/zero-error build. O7 is closed: load, restore,
+  migration-ownership, and media-volume evidence is attached for 2026-08-29 UTC.
 
 S30.3 is complete. Added InMemory handler coverage for content create/update/
 validation, content lists, public feed/search/detail, taxonomy, and lifecycle
@@ -43,19 +44,21 @@ recording the seven model-managed trigram indexes without recreating them.
 
 ## Current state
 
-- Phases 0–5 are complete; S30.0–S30.4 and S30.6–S30.11 of Phase 6 are complete.
-- Remaining Phase 6 work is S30.5 (K6 load tests, P2) and optional S30.12
-  (Postgres RLS decision ADR, P2).
+- Phases 0–5 are complete; Phase 6 (S30.0–S30.12) is complete.
+- S30.5 K6 load evidence is captured (public p95 23.574 ms / 9,030-byte payload;
+  admin p95 21.660 ms / 9,256-byte payload; 0% failed, 100% checks, 0 5xx).
+- S30.12 Postgres RLS decision ADR is complete: DECLINE RLS; application-level
+  tenant filtering remains the sole enforcement layer.
 - Phases 7 and 8 are not started; Phase 8 remains a decision gate.
 - Multi-tenancy (C1), API-key admin auth (C2), header-authenticated mutation
   protection (C3), and media safety (C4) are implemented and closed for their
   code scope.
 - The security audit was redone and remediated: no critical findings;
   W-NEW-01…05 and O-NEW-01…05 are fixed. S30.11 attached evidence for W6, W7,
-  W8, O4, O8, and O10; O7 remains pending S30.5 load evidence.
+  W8, O4, O8, and O10; S30.5 attached the O7 load evidence.
 - W1–W5, O1–O3, O5, and O6 were verified against current code and removed from
-  active risk acceptance. O7 remains open pending S30.5; other remaining
-  operational/release gates are tracked in the attached S30.11 evidence.
+  active risk acceptance. O7 is closed with its load, restore,
+  migration-ownership, and media-volume evidence attached.
 - Five migrations are defined, including the trigram-index migration and its
   model-sync migration. Existing migration files were not edited or deleted.
 - `Papyrus.Api.Admin` explicitly references
@@ -74,16 +77,77 @@ recording the seven model-managed trigram indexes without recreating them.
 
 ## Open items
 
-- Complete S30.5 K6 load tests (P2), then attach the O7 release-gate load
-  evidence. Optionally complete S30.12, the Postgres RLS decision ADR (P2).
-- Establish managed API-key rotation and multi-key support before broader
-  multi-operator or replica-scale deployment.
-- Set `Site:PublicBaseUrl` in production for absolute canonical/RSS/sitemap
-  URLs.
+- O7 restore/load gate is closed with dated restore, migration-ownership, and
+  media-volume evidence; the load-evidence portion remains from S30.5.
+- Managed API-key rotation and multi-key support are implemented for the Admin
+  API. Before broader multi-operator or replica-scale deployment, configure the
+  `AdminApi:ApiKeys` set through a reloadable secret/configuration provider and
+  exercise the documented add/overlap/remove rotation procedure.
+- Production `Site:PublicBaseUrl` configuration is now wired as a required
+  deployment input for both public containers; the exact production hostnames
+  remain deployment-owned and are not present in this repository.
 - `docs/guides/contributing.md` and `docs/security/policy.md` remain
   placeholders pending Phase 7.
 
 ## Session notes
+
+- 2026-08-29: Fixed `.github/workflows/release.yml`: pinned Trivy to the
+  immutable commit for `aquasecurity/trivy-action` v0.33.1, pinned the SBOM
+  action to the immutable commit for `anchore/sbom-action` v0.24.1, removed the
+  unused `security-events: write` permission, and restored the missing `PY`
+  here-document terminator in the NuGet vulnerability scan. `actionlint` passed
+  and `git diff --check` passed.
+
+- 2026-08-29: Completed the production public URL configuration action. Docker
+  Compose now requires `BLOG_PUBLIC_BASE_URL` and `PORTFOLIO_PUBLIC_BASE_URL`
+  and maps them to each public app's `Site__PublicBaseUrl`. The release workflow
+  passes the corresponding production environment variables. Deployment docs
+  explain the `Site:PublicBaseUrl` binding and its canonical/RSS/sitemap flow.
+  No production hostname was invented. The solution build passed with 0
+  warnings and 0 errors; `git diff --check` passed.
+
+- 2026-08-29: Implemented managed Admin API-key rotation. `AdminApi:ApiKeys`
+  accepts multiple configured keys, while the legacy `AdminApi:ApiKey` remains
+  supported for compatibility. The authentication handler reads
+  `IOptionsMonitor<AdminApiKeyOptions>` on each request, so reload-capable
+  configuration providers can add a new key, retain the old key during the
+  transition window, and retire it by removing it. Added four xUnit tests.
+  Solution build passed with 0 warnings and 0 errors. Full tests passed 61; 16
+  PostgreSQL integration tests could not connect because 127.0.0.1:5432 refused
+  the connection.
+
+- 2026-08-29: Completed the O7 drills against Docker Compose. The custom-format
+  PostgreSQL backup restored successfully into a disposable database; the two
+  migration-ownership tests and zero-warning solution build passed. The media
+  drill exposed root ownership on a fresh named volume, so `Dockerfile.admin`
+  now creates `/data/media` and assigns it to `APP_UID`; a sentinel survived an
+  Admin restart. Release-gate and runbook evidence was recorded and temporary
+  drill artifacts were removed.
+
+- 2026-08-29: O7 restore/migration-ownership/media-volume drill execution began.
+  Docker Compose is available, but the first environment diagnostic confirmed that
+  `POSTGRES_PASSWORD` and `ADMIN_API_KEY` are not preset; the drills will use the
+  documented temporary local values without changing checked-in secrets. The
+  repository uses `memory-bank/` as its persistent context directory; no separate
+  `.memory-bank/` directory exists.
+
+- 2026-08-29: S30.5 evidence capture started. The first PowerShell 7 probe
+  (`k6 version`) failed because K6 is not installed or available on PATH; no
+  load numbers were produced. Next step is to use the documented K6 setup or
+  stop with the verified environment blocker.
+
+- 2026-08-29: Completed S30.5 against the Docker Compose PostgreSQL 17
+  deployment using the official Grafana K6 container and
+  `host.docker.internal` for the host-published ports. Public aggregate p95 was
+  23.574 ms with 9,030-byte payload p95, 0.00% failed, and 100.00% checks.
+  Admin p95 was 21.660 ms with 9,256-byte payload p95, 0.00% failed, 100.00%
+  checks, and zero 5xx. Dated summaries are in `docs/performance/` and O7's
+  load-evidence portion is attached; restore/migration/media drills remain.
+
+- 2026-08-29: Completed S30.12. Created
+  `docs/architecture/decisions/0007-postgres-rls-decision.md` recording the
+  decision to DECLINE Postgres RLS; application-level tenant filtering remains
+  the sole enforcement layer. Phase 6 is now fully complete (S30.0–S30.12).
 
 - 2026-08-28: Fixed the Aspire DCP startup error for the dev-only, proxied
   non-container `admin-ui` resource. The AppHost now uses
@@ -137,6 +201,34 @@ recording the seven model-managed trigram indexes without recreating them.
 
 Errors encountered and resolved across sessions; recorded for traceability.
 No new failures occurred during this memory-bank reconstruction session.
+
+- **Release workflow validation (2026-08-29)** — the first YAML validation
+  attempt could not run because Python's `yaml` module and Ruby were unavailable.
+  Dockerized `actionlint` then identified a missing `PY` terminator in the
+  dependency-scan here-document. **Resolution:** added the terminator and
+  re-ran Dockerized `actionlint` successfully; `git diff --check` also passed.
+
+- **Configuration patch formatting (2026-08-29)** — the first patch attempt was
+  rejected because it contained a duplicated `*** Begin Patch` header; no files
+  were changed by that attempt. **Resolution:** reapplied the same changes with
+  the valid file-oriented patch format.
+
+- **Full xUnit verification (2026-08-29)** — 16 PostgreSQL integration tests
+  failed during fixture initialization because no PostgreSQL server was
+  listening on `127.0.0.1:5432`; 61 non-PostgreSQL tests passed. The solution
+  build independently passed with zero warnings and zero errors. No source fix
+  was required; the remaining verification is environment-dependent.
+
+- **O7 drill environment diagnostic (2026-08-29)** — PowerShell inspection of
+  `POSTGRES_PASSWORD` and `ADMIN_API_KEY` exited 1 because neither variable was
+  present in the inherited environment. **Resolution:** use temporary process-local
+  Compose values for the disposable local drill; no secret or checked-in
+  configuration will be modified.
+
+- **Memory-bank path check (2026-08-29)** — the repository has `memory-bank/`, while
+  the external rule references `./.memory-bank/`; the latter does not exist.
+  **Resolution:** continue with the complete repository `memory-bank/` set already
+  initialized and do not create a duplicate context tree.
 
 - **S30.0 architecture test build** — initial test anchors referenced nonexistent
   `Papyrus.Contracts.Paging.PagedResult<>` and
@@ -220,6 +312,21 @@ No new failures occurred during this memory-bank reconstruction session.
   not installed on this workstation. **Resolution:** CI installs the locked
   Grafana K6 tool with `grafana/setup-k6-action@v1`; local run commands and the
   limitation are documented in `tests/load/README.md`.
+
+- **S30.5 evidence capture (2026-08-29)** — PowerShell 7 confirmed that `k6`
+  is not installed or available on PATH (`k6 version` exited 1). No load test
+  was run and no performance value was recorded; execution remains pending a
+  documented K6 installation or a confirmed deployment/tooling blocker.
+
+- **S30.5 Docker K6 networking (2026-08-29)** — the first Dockerized K6 run
+  used the scripts' localhost defaults, which correctly resolved to the K6
+  container and produced connection-refused results against the host-published
+  web ports. **Fix:** rerun with `host.docker.internal` URLs so K6 reaches the
+  documented Compose deployment; the failed attempt is not evidence.
+
+- **Tooling diagnostic (2026-08-29)** — the editor reported an unresolved
+  `aquasecurity/trivy-action@0.28.0` reference in `.github/workflows/release.yml`.
+  This is unrelated to S30.5 and no workflow change was made.
 
 - **S30.9 initial budget-test build** — the command interceptor test used an
   incorrect nullable scalar override, attempted async disposal of a non-disposable

@@ -9,6 +9,9 @@ internal static class AdminAuthenticationExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        services.AddOptions<AdminApiKeyOptions>()
+            .Bind(configuration.GetSection(AdminApiKeyOptions.SectionName));
+
         services.AddAuthentication(ApiKeyAuthenticationHandler.SchemeName)
             .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(ApiKeyAuthenticationHandler.SchemeName, _ => { });
 

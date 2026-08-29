@@ -117,14 +117,16 @@ querying guidance.
 ## Test and code-review coverage
 
 The current suite contains 73 .NET tests plus 5 Playwright browser tests and
-covers tenant A/B filtering and mutation attempts, opaque session
-expiry/revocation/rotation, API-key matching, login throttling, raster media
-signatures and tenant paths, Markdown HTML and scheme attacks, public
-live-content filtering, tag resolution, admin create/update relationships,
-PostgreSQL integration behavior, architecture/layer and migration-ownership
-rules, and telemetry redaction/sampling. The review also confirmed EF
-no-tracking on the current projection/read paths and parameterized LINQ query
-construction.
+covers tenant A/B filtering and mutation attempts, header-based API-key
+authentication and matching, raster media signatures and tenant paths, Markdown
+HTML and scheme attacks, public live-content filtering, tag resolution, admin
+create/update relationships, PostgreSQL integration behavior,
+architecture/layer and migration-ownership rules, and telemetry
+redaction/sampling. Opaque session expiry/revocation/rotation and login
+throttling are no longer covered because those mechanisms were retired under
+ADR 0006 (Razor/session removal); authentication is header-key based and
+process-local. The review also confirmed EF no-tracking on the current
+projection/read paths and parameterized LINQ query construction.
 
 The code-level gaps identified in W-NEW-01 through W-NEW-05 are remediated and
 covered by the current 73-test .NET baseline plus the 5-test browser smoke

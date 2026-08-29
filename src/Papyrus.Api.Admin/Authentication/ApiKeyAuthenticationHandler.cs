@@ -21,8 +21,12 @@ internal sealed class ApiKeyAuthenticationHandler(
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        var expectedApiKey = Context.RequestServices.GetRequiredService<IConfiguration>()[AdminApiKey.ConfigurationKey];
-        if (string.IsNullOrWhiteSpace(expectedApiKey))
+        var configuredKeys = Context.RequestServices
+            .GetRequiredService<IOptionsMonitor<AdminApiKeyOptions>>()
+            .CurrentValue
+            .GetConfiguredKeys()
+            .ToArray();
+        if (configuredKeys.Length == 0)
         {
             RecordAuthEvent("configuration-missing");
             return Task.FromResult(AuthenticateResult.Fail("Admin API key is not configured."));
@@ -34,7 +38,7 @@ internal sealed class ApiKeyAuthenticationHandler(
             return Task.FromResult(AuthenticateResult.Fail("Missing admin API key."));
         }
 
-        if (!AdminApiKey.Matches(expectedApiKey, providedApiKey.ToString()))
+        if (!AdminApiKey.MatchesAny(configuredKeys, providedApiKey.ToString()))
         {
             RecordAuthEvent("invalid-key");
             return Task.FromResult(AuthenticateResult.Fail("Invalid admin API key."));

@@ -151,3 +151,22 @@ Before release, execute a deployment/restore drill that covers:
 
 Record the drill outcome as **W6** evidence in
 [`release-gates.md`](../architecture/release-gates.md).
+
+### Recorded exercise — 2026-08-29 UTC
+
+- **Deployment:** Compose PostgreSQL 17 plus the Admin, Blog, and Portfolio images
+  started successfully with healthy PostgreSQL and the expected published ports.
+- **Restore:** a custom-format `pg_dump` was restored with `pg_restore
+  --exit-on-error` into a disposable database; the restored schema contained
+  seven public tables and four migration-history rows.
+- **Migration ownership:** the two structural ownership tests passed; only the
+  Infrastructure initialization path contains the production migration call and
+  only `Papyrus.Api.Admin` invokes it at startup. Applied migration history was
+  left unchanged.
+- **Media persistence:** the first write attempt identified a permissions gap
+  on an empty named volume. The Admin image was corrected to pre-create and
+  assign `/data/media` to its non-root `APP_UID`; a rebuilt container wrote a
+  sentinel, restarted, and read the sentinel successfully from the same named
+  volume.
+- **Outcome:** W6 evidence is attached and O7 is closed. The temporary backup,
+  restore database, credentials file, and sentinel were cleaned up.

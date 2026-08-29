@@ -1,6 +1,6 @@
 # Tech Context
 
-Verified against source 2026-08-29 · Phases 0–5 complete · S30.0–S30.4, S30.6–S30.11 complete · 73 .NET tests + 5 Playwright browser tests · 5 migrations · 0-warn/0-error build
+Verified against source 2026-08-29 · Phases 0–5 complete · Phase 6 complete (S30.0–S30.12) · 73 .NET tests + 5 Playwright browser tests · 5 migrations · 0-warn/0-error build
 
 ## Runtime and projects
 
@@ -38,6 +38,12 @@ Verified against source 2026-08-29 · Phases 0–5 complete · S30.0–S30.4, S3
 - API key header: `X-Admin-Api-Key`; production value is supplied as
   `AdminApi__ApiKey` and has no checked-in production default (fail-fast in
   non-Development). The AppHost injects a dev key for local runs.
+- Managed rotation supports `AdminApi__ApiKeys__0`, `AdminApi__ApiKeys__1`, and
+  additional indexed values through `AdminApi:ApiKeys`. The legacy
+  `AdminApi:ApiKey` remains accepted as a compatibility alias. The handler uses
+  `IOptionsMonitor<AdminApiKeyOptions>`, enabling add/overlap/remove rotation
+  when the provider supports reload; no secret is hardcoded or persisted by the
+  application.
 - Admin UI: React 19 SPA served at `/admin`; protected API requests use the
   `X-Admin-Api-Key` and `X-Tenant-Id` headers, and there is no browser session
   cookie.
@@ -60,7 +66,7 @@ Verified against source 2026-08-29 · Phases 0–5 complete · S30.0–S30.4, S3
 - Anonymous `/health` and `/alive` endpoints exist, but deployment ingress must
   restrict them to orchestrator/monitoring networks.
 
-## Telemetry (S30.6)
+## Telemetry (S30.6, S30.8, S30.11)
 
 - `Papyrus.ServiceDefaults.Telemetry` owns the `Papyrus` ActivitySource, W3C
   trace-ID configuration, request middleware, telemetry options, and structured
@@ -73,11 +79,19 @@ Verified against source 2026-08-29 · Phases 0–5 complete · S30.0–S30.4, S3
   `CardinalityGuard`, and `TelemetrySamplingPolicy` driven by
   `Telemetry__CardinalityLimit` and `Telemetry__SamplingRate`. Sampling is only
   applied to request diagnostics; logger-backed audit events are always emitted.
+- S30.8 adds the portable Grafana dashboard
+  (`ops/dashboards/papyrus-dashboard.json`) covering request rate/latency/error,
+  rate-limit responses, audit events, redaction, sampling, cardinality, and
+  app/PostgreSQL health.
+- S30.11 adds the alert and incident runbooks (`docs/runbooks/alerts.md`,
+  `docs/runbooks/incident-runbook.md`) and the telemetry runbook
+  (`docs/runbooks/telemetry-runbook.md`).
 
 ## Verification baseline
 
 - Full `dotnet build Papyrus.sln`: 0 warnings and 0 errors.
-- Full `dotnet test Papyrus.sln`: 60 passing tests, including S30.3 handler and
-  migration-drift tests plus S30.6 telemetry seam tests.
+- Full `dotnet test Papyrus.sln`: 73 passing .NET tests plus 5 Playwright
+  browser tests, including S30.3 handler and migration-drift tests, S30.6
+  telemetry seam tests, and S30.7 redaction/sampling tests.
 - Phase 4 PostgreSQL projection SQL, latency, and `EXPLAIN (ANALYZE, BUFFERS)`
   evidence is complete for the scoped blocker.

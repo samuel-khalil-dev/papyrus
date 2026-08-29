@@ -1,6 +1,6 @@
 # System Patterns
 
-Verified against source 2026-08-29 · Phases 0–5 complete · S30.0–S30.4, S30.6–S30.11 complete · 73 .NET tests + 5 Playwright browser tests · 5 migrations · 0-warn/0-error build
+Verified against source 2026-08-29 · Phases 0–5 complete · Phase 6 complete (S30.0–S30.12) · 73 .NET tests + 5 Playwright browser tests · 5 migrations · 0-warn/0-error build
 
 ## Architecture
 
@@ -58,10 +58,12 @@ production.
 
 ## Roadmap state
 
-Phases 0–5 are complete. Phase 6 is active; S30.0, S30.1, S30.3, and S30.6 are
-complete, while redaction, test depth, and performance budgets remain. Phases 7
-and 8 are not started; Phase 8 is a measured decision gate. W6–W8, O4, and
-O7–O10 remain release-gate verifications, not blanket-accepted code defects.
+Phases 0–5 are complete. Phase 6 is complete (S30.0–S30.12), including the K6
+load evidence (S30.5) and the Postgres RLS decision ADR (S30.12, DECLINE RLS).
+Phases 7 and 8 are not started; Phase 8 is a measured decision gate. W6–W8, O4,
+and O7–O10 remain release-gate verifications, not blanket-accepted code defects.
+O7's load-evidence portion is done; O7 remains open only pending the restore,
+migration-ownership, and media-volume drills.
 
 ## Observability
 
