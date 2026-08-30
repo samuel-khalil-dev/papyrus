@@ -20,15 +20,10 @@ Papyrus is a personal site with multiple modules:
 
 ## Admin authentication
 
-The admin API uses an API key header:
-
-- Header name: `X-Admin-Api-Key`
-- Development value: `dev-admin-key`
-
-The React admin UI is served at `/admin` and sends the configured API key in the
-`X-Admin-Api-Key` header. Its state-changing API operations remain protected by
-the admin authorization policy; there is no browser session cookie or server-side
-Razor login flow.
+The Admin API uses the `X-Admin-Api-Key` header and the React admin UI sends the
+configured value only to protected API routes. Development credentials are
+provided by the local AppHost and must never be reused in another environment.
+There is no browser session-cookie or server-side Razor login flow.
 
 ## Content model
 
@@ -41,16 +36,52 @@ Razor login flow.
 ## Running locally
 
 ```powershell
-dotnet build Papyrus.sln
-dotnet run --project src/Papyrus.AppHost/Papyrus.AppHost.csproj
+dotnet restore Papyrus.sln
+npm ci --prefix src/Papyrus.Admin.UI
+dotnet run --project src/Papyrus.AppHost
 ```
+
+Follow the [local setup and demo guide](docs/guides/local-setup.md) for
+prerequisites, URLs, seed behavior, and the first published post.
+
+## Showcase
+
+These screenshots use the local seeded demo content and contain no credentials,
+private URLs, or personal data.
+
+![Papyrus Blog public surface](docs/assets/blog.png)
+
+![Papyrus Portfolio public surface](docs/assets/portfolio.png)
+
+![Papyrus React admin workspace](docs/assets/admin.png)
+
+![Papyrus health probe](docs/assets/health.png)
+
+![Papyrus .NET Aspire resource dashboard](docs/assets/aspire.png)
 
 ## Repository documentation
 
 - [`docs/`](docs/) is the documentation home, with navigation in [`docs/README.md`](docs/README.md).
+- [`docs/guides/contributing.md`](docs/guides/contributing.md) explains local setup, verification, conventions, and pull requests.
+- [`SECURITY.md`](SECURITY.md) explains private vulnerability disclosure.
+- [`LICENSE`](LICENSE) grants permission under the MIT License.
+- [`docs/project/changelog.md`](docs/project/changelog.md) records notable repository changes.
+- [`docs/project/feature-matrix.md`](docs/project/feature-matrix.md) separates implemented capabilities from deferred and release-pending work.
 - [`docs/project/roadmap.md`](docs/project/roadmap.md) contains the phased engineering roadmap and definition of done.
-- [`memory-bank/`](memory-bank/) contains the project brief, technical context, system patterns, active context, and progress history.
 - [`docs/guides/deployment.md`](docs/guides/deployment.md) documents container deployment, configuration, migration ownership, and durable media requirements.
+- [`docs/architecture/public-overview.md`](docs/architecture/public-overview.md) explains the public architecture and trade-offs.
+- [`docs/security/threat-model-summary.md`](docs/security/threat-model-summary.md) summarizes the security posture without operational secrets.
+- [`docs/project/limitations.md`](docs/project/limitations.md) records deferred capabilities and release limitations.
+
+## Support
+
+For setup and usage questions, start with the [documentation index](docs/README.md)
+and [local setup guide](docs/guides/local-setup.md). Search existing
+[GitHub Issues](https://github.com/samue/Papyrus/issues) before opening a new
+issue. Use issues for reproducible bugs, documentation corrections, and
+actionable feature proposals; include the Papyrus version or commit, expected
+behavior, actual behavior, and safe reproduction steps. Do not post secrets or
+security vulnerabilities publicly—follow [`SECURITY.md`](SECURITY.md) instead.
 
 ## Repository structure
 
@@ -84,10 +115,9 @@ separate multi-stage containers and coordinated with Docker Compose in
 production; the release workflow runs the dedicated database migration job
 before deployment.
 
-The current verification baseline is 40 passing xUnit tests and a clean
-warnings-as-errors build. Four EF migrations are applied, including the
-security/search trigram-index migration. Phases 0–5 are complete; Phase 6 is
-the next active but not-started phase. Phases 7 and 8 are not started.
+The verification baseline and phase status are maintained in the
+[documentation index](docs/README.md). PostgreSQL-backed integration coverage
+depends on the test database service and is exercised in CI.
 
 ## Notes
 

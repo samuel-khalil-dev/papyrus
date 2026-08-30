@@ -2,6 +2,8 @@
 
 - [Roadmap](roadmap.md) — phase objectives, milestones, and definition of done.
 - [Changelog](changelog.md) — released and unreleased project changes.
+- [Feature matrix](feature-matrix.md) — implemented, deferred, planned, and
+  release-verification-pending capabilities.
 
-Phases 0–5 are complete. Phase 6 is the next active phase; Phases 7 and 8 have
-not started.
+Phases 0–6 are complete. Phase 7 is the active release-readiness and showcase
+phase; Phase 8 has not started.

@@ -10,6 +10,7 @@ using Microsoft.Extensions.Options;
 using Papyrus.Api.Admin;
 using Papyrus.Contracts.Content;
 using Papyrus.Api.Admin.Media;
+using Papyrus.Application;
 using Papyrus.Infrastructure;
 using Papyrus.Infrastructure.MultiTenancy;
 
@@ -27,6 +28,7 @@ public sealed class AdminApiTests : IAsyncLifetime
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Services.AddDbContext<PapyrusDbContext>(options => options.UseInMemoryDatabase(_databaseName));
+        builder.Services.AddPapyrusApplication();
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddScoped<ITenantContext, TenantContext>();
         builder.Services.AddAuthentication("Test")
@@ -93,6 +95,54 @@ public sealed class AdminApiTests : IAsyncLifetime
         Assert.Equal("Updated Post", (await finalDb.BlogPosts.SingleAsync()).Title);
         Assert.Null((await finalDb.BlogPosts.SingleAsync()).ProjectId);
         Assert.Empty(await finalDb.BlogPostTags.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Category_and_tag_endpoints_create_update_and_soft_delete_through_injected_handlers()
+    {
+        var categoryResponse = await _client.PostAsJsonAsync("/api/v1/categories",
+            new CategoryUpsertRequest("engineering", "Engineering", "Build", true));
+        Assert.Equal(HttpStatusCode.Created, categoryResponse.StatusCode);
+        var category = await categoryResponse.Content.ReadFromJsonAsync<ContentCategoryResponse>();
+        Assert.NotNull(category);
+
+        var updatedCategoryResponse = await _client.PutAsJsonAsync($"/api/v1/categories/{category.Id}",
+            new CategoryUpsertRequest("platform", "Platform", "Updated", false));
+        Assert.Equal(HttpStatusCode.OK, updatedCategoryResponse.StatusCode);
+
+        var tagResponse = await _client.PostAsJsonAsync("/api/v1/tags", new TagUpsertRequest("dotnet", ".NET"));
+        Assert.Equal(HttpStatusCode.Created, tagResponse.StatusCode);
+        var tag = await tagResponse.Content.ReadFromJsonAsync<ContentTagResponse>();
+        Assert.NotNull(tag);
+
+        var updatedTagResponse = await _client.PutAsJsonAsync($"/api/v1/tags/{tag.Id}", new TagUpsertRequest("runtime", "Runtime"));
+        Assert.Equal(HttpStatusCode.OK, updatedTagResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await _client.DeleteAsync($"/api/v1/categories/{category.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await _client.DeleteAsync($"/api/v1/tags/{tag.Id}")).StatusCode);
+
+        await using var db = Db();
+        Assert.True((await db.ContentCategories.IgnoreQueryFilters().SingleAsync()).IsDeleted);
+        Assert.True((await db.ContentTags.IgnoreQueryFilters().SingleAsync()).IsDeleted);
+    }
+
+    [Fact]
+    public async Task Project_and_blog_post_delete_endpoints_soft_delete_through_injected_lifecycle_handler()
+    {
+        var projectResponse = await _client.PostAsJsonAsync("/api/v1/projects",
+            new ProjectUpsertRequest("project", "Project", "Summary", null, null, null, null, null, false, false, null, []));
+        var project = await projectResponse.Content.ReadFromJsonAsync<ProjectResponse>();
+        Assert.NotNull(project);
+        var postResponse = await _client.PostAsJsonAsync("/api/v1/blog-posts",
+            new BlogPostUpsertRequest("post", "Post", "Summary", "Content", null, project.Id, null, false, false, null, []));
+        var post = await postResponse.Content.ReadFromJsonAsync<BlogPostResponse>();
+        Assert.NotNull(post);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await _client.DeleteAsync($"/api/v1/projects/{project.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await _client.DeleteAsync($"/api/v1/blog-posts/{post.Id}")).StatusCode);
+
+        await using var db = Db();
+        Assert.True((await db.Projects.IgnoreQueryFilters().SingleAsync()).IsDeleted);
+        Assert.True((await db.BlogPosts.IgnoreQueryFilters().SingleAsync()).IsDeleted);
     }
 
     [Fact]

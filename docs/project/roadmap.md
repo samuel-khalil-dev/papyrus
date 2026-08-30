@@ -10,7 +10,7 @@ Papyrus is a .NET 10 modular monolith with an authenticated admin API/UI, public
 
 - Explicit EF configurations in [`Papyrus.Infrastructure/Configurations`](../../src/Papyrus.Infrastructure/Configurations), PostgreSQL/Npgsql, retry policy, and one admin migration owner.
 - Published/live filtering, slug constraints, safe markdown rendering, media reference protection, RSS, sitemaps, accessibility work, and deployment documentation in [`deployment.md`](../guides/deployment.md).
-- Aspire dependency ordering, persistent database volume, anonymous health/liveness endpoints, OpenTelemetry defaults, and 73 .NET tests plus 5 Playwright browser tests in [`Papyrus.Tests`](../../src/Papyrus.Tests).
+- Aspire dependency ordering, persistent database volume, anonymous health/liveness endpoints, OpenTelemetry defaults, 70 local non-integration .NET tests, and the separate 5-test Playwright browser suite. CI adds 14 PostgreSQL integration tests for 84 unique .NET tests in [`Papyrus.Tests`](../../src/Papyrus.Tests).
 - Clear read/write product seams, nullable C#, strict project separation, and zero-warning build history.
 
 ### Audit assessment and production blockers
@@ -103,7 +103,7 @@ Retain the modular monolith until measured scale or ownership requires extractio
 
 **Dependencies:** Phases 1-4. **Gate:** clean environment builds/runs all images; no root process; CI blocks warnings, failed tests, vulnerable images, leaked secrets, and breaking contracts. **Rollback/risk:** immutable tags, prior image retention, canary/blue-green deployment, and tested DB/media restore.
 
-### Phase 6 — Observability, test depth, and performance budgets (P1/P2) — In progress
+### Phase 6 — Observability, test depth, and performance budgets (P1/P2) — Complete
 
 **Objective:** make failures diagnosable and behavior measurable. **Paths:** [`Papyrus.ServiceDefaults/Extensions.cs`](../../src/Papyrus.ServiceDefaults/Extensions.cs), create ``Papyrus.ServiceDefaults/Telemetry``, ``Papyrus.Tests/Integration``, ``Papyrus.Tests/Architecture``, ``tests/load``, and ``docs/runbooks``.
 

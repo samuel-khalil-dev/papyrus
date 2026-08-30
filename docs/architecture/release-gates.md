@@ -1,24 +1,53 @@
-# Phase 0 Release Gates
+# Release Gates
 
-The following controls define the Phase 0 baseline and remain mandatory for
-subsequent release work:
+The following controls define the release baseline and remain mandatory for
+subsequent release work. They are enforced by the CI and release workflows
+([`ci.yml`](../../.github/workflows/ci.yml),
+[`release.yml`](../../.github/workflows/release.yml)) and by the operational
+gates recorded below.
 
-Phase 0 is complete for this repository. Code-level audit findings have been
-remediated. W1-W5, O1-O3, O5, and O6 are no longer active risks. W6-W8, O4,
-and O7-O10 remain concrete operational release-gate verifications, not
-blanket-accepted defects. Deployment portions of O-NEW-04 and O-NEW-05 also
-remain gates.
+## CI pipeline gates
 
-1. [`audit-register.md`](../security/audit-register.md) contains current evidence and release status for C1-C4 and the retained W6-W8/O4/O7-O10 gates; [`risk-acceptance.md`](../security/risk-acceptance.md) records the resolved historical dispositions.
-2. The threat model and ADRs are reviewed and linked from the change record.
-3. The current automated suite has 73 .NET tests plus 5 Playwright browser tests
-   and the solution build has zero warnings/errors with warnings treated as
-   errors. Architecture and release-gate tests must still be exercised in the
-   production-like gate.
-4. No source, project, migration, or secret change is accepted without an applicable roadmap phase and verification plan.
-5. Production defaults are fail-closed for credentials, tenant context, media policy, and error disclosure.
+The `verify` job in [`ci.yml`](../../.github/workflows/ci.yml) runs on every
+push to `main` and every pull request:
 
----
+1. **Restore** — `dotnet restore Papyrus.sln`.
+2. **Build with warnings treated as errors** —
+   `dotnet build Papyrus.sln --configuration Release --no-restore /p:TreatWarningsAsErrors=true`.
+3. **Tests** — `dotnet test Papyrus.sln` exercises 84 unique .NET tests in CI:
+   70 provider-independent/non-integration tests plus 14 PostgreSQL integration
+   tests.
+4. **PostgreSQL integration tests** — the `Papyrus.Tests.Integration` filter
+   runs the 14 integration tests against a `postgres:17-alpine` service. The
+   workflow runs the full suite first and then repeats this integration subset
+   explicitly; the unique CI test count remains 84, not 98.
+5. **Secret scan** — `gitleaks/gitleaks-action@v2`.
+6. **NuGet vulnerability scan** — `dotnet list ... package --vulnerable
+   --include-transitive`; fails on any vulnerable package.
+7. **OpenAPI drift check** — starts the Admin API, fetches
+   `/openapi/v1.json`, and diffs it against the committed
+   [`docs/api/openapi.json`](../api/openapi.json).
+
+The `browser-smoke` job (after `verify`) builds the Admin UI, runs the 5
+Playwright browser smoke tests against the Admin API, Blog, and Portfolio, and
+uploads the report. The `load-smoke` job runs the K6 public and admin load
+smokes. The `containers` job builds each image and scans it with Trivy for
+`HIGH`/`CRITICAL` vulnerabilities (`exit-code: 1`, `ignore-unfixed: true`).
+
+## Release pipeline gates
+
+The [`release.yml`](../../.github/workflows/release.yml) workflow runs on
+`v*.*.*` tags and `workflow_dispatch`:
+
+1. **dependency-scan** — NuGet vulnerability scan and gitleaks secret scan.
+2. **images** — builds the admin, blog, and portfolio images, scans each with
+   Trivy, generates an SPDX SBOM, and publishes immutable image tags to GHCR.
+3. **migrate** — a dedicated migration job in the `production-migrations`
+   environment installs `dotnet-ef` 10.0.11 and applies
+   `dotnet ef database update` against the production connection string.
+4. **deploy** — runs only after `images` and `migrate` succeed, on a
+   self-hosted runner in the `production` environment, via
+   `docker compose up --detach --remove-orphans`.
 
 ## Release-gate evidence
 
@@ -28,7 +57,7 @@ a later sub-task, it is marked **Pending** rather than fabricated.
 
 ### W6 — Deployment and operations
 
-**Status: Evidence attached (runbooks + deployment drills + docs review).**
+**Status: Evidence attached (2026-09-02 UTC local release drill).**
 
 - [`incident-runbook.md`](../runbooks/incident-runbook.md) — incident response
   (detection, triage, containment, recovery, post-incident review) tailored to
@@ -38,12 +67,21 @@ a later sub-task, it is marked **Pending** rather than fabricated.
   scoping.
 - Non-root multi-stage images and health checks are documented in
   [`deployment.md`](../guides/deployment.md) and the Dockerfiles.
-- **Remaining:** execute the clean deployment, restore, media-persistence, and
-  migration-ownership drill at release and record the dated outcome.
+- **2026-09-02 drill outcome — PASS (local Compose release candidate):** a
+  clean isolated project (`papyrus-release-drill`) built all three images and
+  started PostgreSQL 17, Admin, Blog, and Portfolio detached. The database was
+  healthy and `/health` returned HTTP 200 on all three web hosts. A custom-format
+  `pg_dump` completed at 21,661 bytes; `pg_restore --exit-on-error` restored a
+  disposable database, where four EF migration-history rows and seven public
+  tables were verified. A sentinel written to `/data/media` remained readable
+  after an Admin restart. The migration-ownership test filter passed 2/2 tests;
+  the mandated solution build passed with 0 warnings and 0 errors. The
+  disposable database, named volumes, stack, sentinel, and backup were removed
+  after verification. No credentials or connection strings are recorded.
 
 ### W7 — Observability and alerting
 
-**Status: Evidence attached (telemetry runbook + telemetry outputs).**
+**Status: Partial local evidence attached; production collector exercise pending.**
 
 - [`telemetry-runbook.md`](../runbooks/telemetry-runbook.md) — how to operate
   and query the shared `Papyrus` ActivitySource, structured audit events,
@@ -51,31 +89,55 @@ a later sub-task, it is marked **Pending** rather than fabricated.
 - Telemetry implementation and tests from S30.6/S30.7 (shared `Papyrus` W3C
   ActivitySource, structured audit sink, fail-closed redaction, bounded
   cardinality, configurable sampling, audit retention at 0% sampling).
-- **Remaining:** record the redaction review, dashboards, alerts, trace
-  propagation, and runbook exercise at release.
+- **2026-09-02 local outcome — PASS for code/config checks:** the telemetry test
+  filter passed 6/6 tests, including fail-closed redaction, W3C activity IDs,
+  audit logging without an exporter, and audit survival at 0% diagnostic
+  sampling. The dashboard JSON parsed successfully, its panels use the
+  documented Prometheus datasource placeholder, and a synthetic W3C
+  `traceparent` health request returned HTTP 200. The runbook and alert-family
+  mapping were reviewed against the dashboard contract.
+- **Pending production verification:** no OTLP collector, Prometheus alert
+  evaluator, or Grafana instance is configured in this workspace, so live
+  redaction-output inspection, cross-host trace correlation, alert firing and
+  recovery, and the audit-volume-drop runbook exercise were not executed.
 
 ### W8 — Release documentation and CI
 
-**Status: Evidence attached (docs review).**
+**Status: Partial evidence attached; CI secret-scan artifact pending.**
 
 - [`deployment.md`](../guides/deployment.md) and the CI/release workflows
   ([`ci.yml`](../../.github/workflows/ci.yml),
   [`release.yml`](../../.github/workflows/release.yml)) document the release
   path, image scanning, SBOM generation, and the dedicated `migrate` job.
-- **Remaining:** attach sanitized artifact review and secret-scan output to the
-  release approval.
+- **2026-09-02 sanitized artifact review — PASS:** the dashboard JSON parsed;
+  the committed showcase asset set contains only `admin.png`, `aspire.png`,
+  `blog.png`, `health.png`, and `portfolio.png`; and the tracked-file name
+  check found no committed `.env`, private-key, or certificate files. Restore
+  and release-candidate build checks also passed. No secrets, private URLs, or
+  personal data are recorded here.
+- **Pending CI verification:** the local `gitleaks` executable is unavailable,
+  so sanitized gitleaks output could not be attached. Run the repository's
+  `gitleaks/gitleaks-action@v2` in CI (or an approved controlled runner) and
+  attach its redacted result to release approval before tagging.
 
 ### O4 — Telemetry/audit signal evidence
 
-**Status: Evidence attached (telemetry runbook + S30.6/S30.7 outputs).**
+**Status: Partial local evidence attached; production telemetry configuration pending.**
 
 - [`telemetry-runbook.md`](../runbooks/telemetry-runbook.md) documents the
   telemetry/audit signals and how to investigate an audit-volume drop.
 - S30.6/S30.7 telemetry outputs: structured audit events, fail-closed redaction,
   bounded diagnostic cardinality, configurable sampling, and tests proving audit
   logging survives 0% diagnostic sampling.
-- **Remaining:** production dashboards, alerts, and retention configuration at
-  release.
+- **2026-09-02 local outcome — PASS for artifact/config review:** the
+  Prometheus-backed dashboard JSON parsed successfully and includes request,
+  latency, 5xx, 429, audit, redaction, sampling, cardinality, and app/PostgreSQL
+  health views; alert expressions and the telemetry runbook use the same
+  collector-derived metric contract.
+- **Pending production verification:** this repository contains no deployed
+  collector, dashboard service, alert evaluator, or retention policy, so live
+  dashboard data, alert delivery/recovery, and retention configuration remain
+  unverified and must be attached from the production observability platform.
 
 ### O7 — Restore/load drills
 
@@ -111,7 +173,7 @@ a later sub-task, it is marked **Pending** rather than fabricated.
 
 ### O8 — Performance budgets
 
-**Status: Evidence attached (S30.9/S30.10).**
+**Status: Baseline retained; release re-measurement pending production-like data.**
 
 - [`phase6-baseline.md`](../performance/phase6-baseline.md) records the measured
   baseline: public feed DB p95 below 0.1 ms, four public queries, two admin
@@ -119,9 +181,14 @@ a later sub-task, it is marked **Pending** rather than fabricated.
   budgets.
 - PostgreSQL query-count budget tests (`PerformanceBudgetTests`) enforce the
   public `≤ 4` and admin `≤ 2` command budgets.
-- **Remaining:** re-measure with a production-like dataset and `Site__PublicBaseUrl`
-  set before using the baseline as release evidence for canonical/RSS/sitemap
-  routes.
+- **2026-09-02 local outcome — NOT RELEASE EVIDENCE:** the local release-candidate
+  Compose deployment was verified, but it contains only the small seeded
+  dataset and no production-like fixture or capacity environment. The required
+  K6/dotnet-counters re-measurement with `Site__PublicBaseUrl` set was therefore
+  not claimed as complete. The 2026-08-29 baseline remains informational only;
+  repeat the documented workload with production-like data, capture p95,
+  errors, payloads, upload cost, allocations, and GC, and attach the sanitized
+  artifact before using O8 for release approval.
 
 ### O10 — Architecture evidence
 

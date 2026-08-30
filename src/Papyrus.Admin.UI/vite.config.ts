@@ -9,7 +9,7 @@ const apiTarget = process.env['services__admin-api__http__0']
 
 export default defineConfig({
   base: '/admin/',
-  plugins: [react(), tailwindcss()],
+  plugins: [react({ babel: { plugins: [['babel-plugin-react-compiler', { target: '19' }] ] } }), tailwindcss()],
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   server: {
     port: 5173,

@@ -1,8 +1,11 @@
-import { createContext } from 'react';
+import { createContext } from "react";
 
-export type Theme = 'light' | 'dark' | 'system';
+export type Theme = "light" | "dark" | "system";
 
-export const ThemeContext = createContext<{ theme: Theme; setTheme: (theme: Theme) => void }>({
-  theme: 'system',
+export const ThemeContext = createContext<{
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
+}>({
+  theme: "system",
   setTheme: () => undefined,
 });

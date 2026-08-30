@@ -45,4 +45,43 @@ public sealed class TagResolutionTests
         var loaded = await db.BlogPostTags.Include(x => x.Tag).SingleAsync();
         Assert.Equal("Two", loaded.Tag.Name);
     }
+
+    [Fact]
+    public async Task ResolveTags_cancels_database_lookup_when_token_is_cancelled()
+    {
+        await using var db = TestDb.Create();
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            AdminContentSupport.ResolveTagsAsync(db, "cancelled", cancellation.Token));
+    }
+
+    [Fact]
+    public async Task SetBlogPostTags_cancels_relationship_lookup_when_token_is_cancelled()
+    {
+        await using var db = TestDb.Create();
+        var post = new BlogPost { Id = Guid.NewGuid() };
+        db.BlogPosts.Add(post);
+        await db.SaveChangesAsync();
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            AdminContentSupport.SetBlogPostTagsAsync(db, post.Id, [], cancellation.Token));
+    }
+
+    [Fact]
+    public async Task SetProjectTags_cancels_relationship_lookup_when_token_is_cancelled()
+    {
+        await using var db = TestDb.Create();
+        var project = new Project { Id = Guid.NewGuid() };
+        db.Projects.Add(project);
+        await db.SaveChangesAsync();
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            AdminContentSupport.SetProjectTagsAsync(db, project.Id, [], cancellation.Token));
+    }
 }

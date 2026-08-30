@@ -33,7 +33,7 @@ internal static class AdminContentSupport
         return slug.Length <= 200 ? slug : slug[..200].Trim('-');
     }
 
-    public static async Task<IReadOnlyList<ContentTag>> ResolveTagsAsync(PapyrusDbContext db, string? tagsCsv)
+    public static async Task<IReadOnlyList<ContentTag>> ResolveTagsAsync(PapyrusDbContext db, string? tagsCsv, CancellationToken cancellationToken = default)
     {
         var names = ParseTagNames(tagsCsv);
         if (names.Count == 0)
@@ -46,7 +46,7 @@ internal static class AdminContentSupport
         {
             var slug = Slugify(name);
             var existing = await db.ContentTags.FirstOrDefaultAsync(tag =>
-                tag.Slug == slug || tag.Name.ToLower() == name.ToLower());
+                tag.Slug == slug || tag.Name.ToLower() == name.ToLower(), cancellationToken);
 
             if (existing is not null)
             {
@@ -70,9 +70,9 @@ internal static class AdminContentSupport
         return tags;
     }
 
-    public static async Task SetBlogPostTagsAsync(PapyrusDbContext db, Guid blogPostId, IReadOnlyCollection<ContentTag> tags)
+    public static async Task SetBlogPostTagsAsync(PapyrusDbContext db, Guid blogPostId, IReadOnlyCollection<ContentTag> tags, CancellationToken cancellationToken = default)
     {
-        var current = await db.BlogPostTags.Where(blogPostTag => blogPostTag.BlogPostId == blogPostId).ToListAsync();
+        var current = await db.BlogPostTags.Where(blogPostTag => blogPostTag.BlogPostId == blogPostId).ToListAsync(cancellationToken);
         db.BlogPostTags.RemoveRange(current);
 
         foreach (var tag in tags)
@@ -81,9 +81,9 @@ internal static class AdminContentSupport
         }
     }
 
-    public static async Task SetProjectTagsAsync(PapyrusDbContext db, Guid projectId, IReadOnlyCollection<ContentTag> tags)
+    public static async Task SetProjectTagsAsync(PapyrusDbContext db, Guid projectId, IReadOnlyCollection<ContentTag> tags, CancellationToken cancellationToken = default)
     {
-        var current = await db.ProjectTags.Where(projectTag => projectTag.ProjectId == projectId).ToListAsync();
+        var current = await db.ProjectTags.Where(projectTag => projectTag.ProjectId == projectId).ToListAsync(cancellationToken);
         db.ProjectTags.RemoveRange(current);
 
         foreach (var tag in tags)

@@ -172,14 +172,13 @@ changed.
 ## Verification status
 
 - [`dotnet build Papyrus.sln`](../../Papyrus.sln) — passed, 0 warnings, 0 errors.
-- [`dotnet test Papyrus.sln`](../../Papyrus.sln) — passed, 73/73 tests.
+- Filtered [`dotnet test Papyrus.sln`](../../Papyrus.sln) — passed, 70/70
+  non-integration tests locally. CI adds the 14 PostgreSQL integration tests
+  for 84 unique .NET tests total.
 
-> **Note on date and test count:** this evidence is dated 2026-08-25, but the
-> 73-test baseline was reached on 2026-08-29. The 73/73 count shown here is
-> coincidentally the same as the current baseline; it reflects the suite state
-> at the time this evidence was captured, not the 2026-08-29 baseline. Treat the
-> date as authoritative for this capture and the current baseline as the
-> 2026-08-29 verification record.
+> **Note on date and test count:** this evidence is dated 2026-08-25. The
+> documented 70/70 result is the current local non-integration baseline; CI
+> separately adds 14 PostgreSQL integration tests.
 - PostgreSQL SQL translation harness — passed and produced
   [`projection-sql.txt`](projection-sql.txt:1).
 - Runtime PostgreSQL latency and `EXPLAIN (ANALYZE, BUFFERS)` capture — passed

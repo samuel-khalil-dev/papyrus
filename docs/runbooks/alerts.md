@@ -1,78 +1,63 @@
 # Papyrus Alert Families
 
-**Scope:** Prometheus alert rules for the Papyrus web hosts and PostgreSQL. The
-rules below are intentionally expressed against the normalized metrics produced
-by the OpenTelemetry/Prometheus pipeline. The application emits activities and
-structured logs, not Prometheus counters directly; the collector must preserve
-the activity names and attributes documented in
-[`telemetry-runbook.md`](telemetry-runbook.md).
+**Mode:** Diátaxis **Reference**. These alert families map operational alerts
+to the actual Papyrus telemetry seam and the Docker Compose health topology.
+Thresholds are starting defaults and should be tuned against a production
+baseline without changing the signal mapping.
 
-The portable dashboard is
-[`ops/dashboards/papyrus-dashboard.json`](../../ops/dashboards/papyrus-dashboard.json).
-Thresholds are operational defaults and should be tuned against a production
-baseline without changing the underlying signal mapping.
+The dashboard is [`ops/dashboards/papyrus-dashboard.json`](../../ops/dashboards/papyrus-dashboard.json).
+Telemetry behavior and investigation steps are in
+[`telemetry-runbook.md`](telemetry-runbook.md); response procedures are in
+[`incident-runbook.md`](incident-runbook.md).
 
-## Alert rules
+## Alert families
 
-| Alert | PromQL expression | Threshold / `for` | Severity | Exact telemetry signal |
-| --- | --- | --- | --- | --- |
-| `PapyrusRequestLatencyHigh` | `histogram_quantile(0.95, sum by (le, papyrus_service) (rate(http_server_request_duration_seconds_bucket[5m])))` | `> 1` second for 10m | SEV-2 | S30.6 `Papyrus.Request` server activity duration, tagged `papyrus.service`; the 1000 ms p95 budget is defined in the performance baseline. |
-| `PapyrusRequest5xxRate` | `sum by (papyrus_service) (rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[5m])) / clamp_min(sum by (papyrus_service) (rate(http_server_request_duration_seconds_count[5m])), 1e-9)` | `> 0.01` for 10m; additionally page immediately when `papyrus_service="Papyrus.Api.Admin"` and any 5xx is present | SEV-2 (SEV-1 for admin outage) | S30.6 `Papyrus.Request` `http.status_code` activity tag, normalized as `http_response_status_code`. |
-| `PapyrusRateLimit429` | `sum by (papyrus_service) (rate(http_server_request_duration_seconds_count{http_response_status_code="429"}[5m]))` | `> 0` responses/s for 10m | SEV-3 | S30.6 `Papyrus.Request` `http.status_code=429`; this is the Admin per-IP rate-limit response signal, not a generic error. |
-| `PapyrusAuditVolumeDrop` | `sum(increase(papyrus_audit_events_total[15m])) < 0.5 * sum(increase(papyrus_audit_events_total[15m] offset 1h))` | true for 15m, and the prior-hour comparison must be at least 10 events | SEV-2 | S30.6 `Papyrus.AuditEvent` activity plus EventId `1001`/`AuditEvent` structured log. Audit emission is not subject to S30.7 diagnostic sampling. |
-| `PapyrusDiagnosticSamplingSuppressed` | `sum(rate(papyrus_diagnostic_sampled_total[5m])) / clamp_min(sum(rate(http_server_request_duration_seconds_count[5m])), 1e-9)` | `< 0.1` for 10m while `Telemetry:SamplingRate >= 0.1` | SEV-3 | S30.7 `TelemetrySamplingPolicy.ShouldSampleDiagnostic()` and the presence/absence of S30.6 `Papyrus.Request` activities. This detects unexpected suppression; it does not alert when configured sampling is intentionally `0`. |
-| `PapyrusRedactionActivity` | `sum(rate(papyrus_audit_redacted_total[5m]))` | `> 10` fields/s for 10m, or a 5x increase over the preceding hour | SEV-3 | S30.7 `Redactor` fail-closed output (`[redacted]`) at the `StructuredAuditEventSink` seam. `papyrus_audit_redacted_total` is a collector-derived metric from the structured `AuditEvent` log fields; no application counter is implied. |
-| `PapyrusCardinalityGuardCollapse` | `sum by (papyrus_tag_key) (rate(papyrus_cardinality_collapsed_total[5m]))` | `> 0` collapsed values/s for 10m | SEV-3 | S30.7 `CardinalityGuard.GetValue()` returning `[other]` for `papyrus.service` or `papyrus.endpoint`. `papyrus_cardinality_collapsed_total` is a collector-derived metric from those activity attributes. |
-| `PapyrusApplicationDown` | `min by (job) (up{job=~"admin-api|blog|portfolio"})` | `< 1` for 2m | SEV-1 | Platform scrape health for the three hosts, corresponding to the `/health` and `/alive` operational probes documented by the incident runbook. |
-| `PapyrusPostgresDown` | `min(up{job="postgres"})` | `< 1` for 2m | SEV-1 | Platform scrape health for PostgreSQL 17 and its health probe. |
+| Alert | Signal / expression shape | Threshold / `for` | Severity |
+| --- | --- | --- | --- |
+| `PapyrusRequestLatencyHigh` | p95 of `http_server_request_duration_seconds_bucket`, grouped by `papyrus_service` | `> 1` second for 10m | SEV-2 |
+| `PapyrusRequest5xxRate` | 5xx request count divided by all request count, grouped by `papyrus_service` | `> 1%` for 10m; page immediately for any Admin 5xx | SEV-2 / Admin SEV-1 |
+| `PapyrusRateLimit429` | Request count with `http_response_status_code="429"` | `> 0` responses/s for 10m | SEV-3 |
+| `PapyrusAuditVolumeDrop` | Audit activity increase in 15m compared with the preceding hour | Less than half, for 15m, with at least 10 prior-hour events | SEV-2 |
+| `PapyrusDiagnosticSamplingSuppressed` | Collector view of sampled diagnostics divided by request count | `< 0.1` for 10m while configured sampling is at least `0.1` | SEV-3 |
+| `PapyrusRedactionActivity` | Collector count of structured audit fields equal to `[redacted]` | `> 10` fields/s for 10m or 5x prior-hour increase | SEV-3 |
+| `PapyrusCardinalityGuardCollapse` | Collector count of request attributes equal to `[other]`, by tag key | `> 0` values/s for 10m | SEV-3 |
+| `PapyrusApplicationDown` | `min by (job) (up{job=~"admin-api|blog|portfolio"})` | `< 1` for 2m | SEV-1 |
+| `PapyrusPostgresDown` | `min(up{job="postgres"})` | `< 1` for 2m | SEV-1 |
 
-### Collector-boundary metric contract
+The request signals come from `Papyrus.Request` and its service, endpoint, and
+status tags. The audit signal comes from `Papyrus.AuditEvent` and structured
+EventId `1001`. Audit events are independent of diagnostic sampling, so an
+audit-volume alert must not be dismissed as a low `Telemetry:SamplingRate`.
 
-The following names are the **single canonical** portable Prometheus
-representation used by the expressions above and by the Grafana dashboard
-[`ops/dashboards/papyrus-dashboard.json`](../../ops/dashboards/papyrus-dashboard.json).
-Alerts and the dashboard MUST agree on these names; do not introduce a second
-naming scheme for the same signal.
+## Collector-boundary metric contract
 
-- `http_server_request_duration_seconds_count` / `_bucket` — the standard
-  OpenTelemetry HTTP server request duration metric (Prometheus form of
-  `http.server.request.duration`), tagged with `papyrus_service` and
-  `http_response_status_code`. This is the canonical source for request
-  rate, latency, 5xx error rate, and 429 rate-limit signals. It replaces the
-  spanmetrics-derived `traces_spanmetrics_*` names previously used for these
-  signals.
-- `papyrus_audit_events_total` — counts structured `AuditEvent` records
-  (EventId `1001`), tagged with `papyrus_audit_outcome`. This is the canonical
-  audit-volume signal and backs `PapyrusAuditVolumeDrop`.
-- `papyrus_audit_redacted_total` — counts structured `AuditEvent` records whose
-  redacted allowlist fields equal `[redacted]`. It is derived from the
-  logger-backed EventId `1001` record; it is not a new application signal.
-- `papyrus_cardinality_collapsed_total` — counts request activity attributes
-  whose value is `[other]`, grouped by the affected tag key (`papyrus_tag_key`).
-  It is derived from the output of `CardinalityGuard`, whose configured limit is
-  `Telemetry:CardinalityLimit`.
-- `papyrus_diagnostic_sampled_total` — counts sampled request diagnostics,
-  used to detect unexpected sampling suppression.
+The application emits activities and structured logs, not Prometheus counters
+directly. The following are **collector-derived recording views**, not
+application counters, and no application instrumentation with these names
+exists:
 
-If the deployment uses different collector metric names, update recording rules
-or the dashboard queries at the collector boundary. Do not replace these rules
-with labels that are not present in the telemetry source.
+- `http_server_request_duration_seconds_count` and `_bucket` normalize the
+  HTTP server duration signal and carry `papyrus_service` and
+  `http_response_status_code`. They back request rate, latency, 5xx, and 429
+  alerts.
+- `papyrus_audit_events_total` counts structured `AuditEvent` records (EventId
+  `1001`) and may be grouped by `papyrus_audit_outcome`.
+- `papyrus_audit_redacted_total` counts EventId `1001` records whose redacted
+  allowlist fields equal `[redacted]`.
+- `papyrus_cardinality_collapsed_total` counts request attributes equal to
+  `[other]`, grouped by `papyrus_tag_key`.
+- `papyrus_diagnostic_sampled_total` is a collector view of sampled request
+  diagnostics.
 
-## Response links
+If a collector uses different names, change recording rules at the collector
+boundary and update the dashboard together with these rules. Do not invent
+application labels or a second naming scheme for the same signal.
 
-Every alert maps to the following response material:
+## Response mapping
 
-- **Telemetry investigation:** [`telemetry-runbook.md`](telemetry-runbook.md),
-  especially [querying telemetry](telemetry-runbook.md#4-querying-telemetry),
-  [cardinality and sampling](telemetry-runbook.md#3-cardinality-and-sampling),
-  and [investigating an audit-volume drop](telemetry-runbook.md#5-investigating-an-audit-volume-drop).
-- **Incident handling:** [`incident-runbook.md`](incident-runbook.md), especially
-  [detection](incident-runbook.md#2-detection),
-  [triage](incident-runbook.md#3-triage),
-  [containment](incident-runbook.md#4-containment), and
-  [recovery](incident-runbook.md#5-recovery).
-
-For `PapyrusAuditVolumeDrop`, follow the audit-drop sequence in order: verify
-the telemetry backend, compare request activity, inspect `[redacted]` fields,
-confirm that diagnostic sampling was not mistaken for audit sampling, verify
-the audit emission paths, and finally check whether traffic genuinely dropped.
+- Request latency, errors, and 429s: inspect `Papyrus.Request` by service and
+  endpoint, then follow the [incident triage](incident-runbook.md#3-triage).
+- Audit volume, redaction, cardinality, and sampling: follow the
+  [telemetry investigation](telemetry-runbook.md#5-investigate-an-audit-volume-drop).
+- Application or PostgreSQL health: follow the corresponding Compose incident
+  procedure in [`incident-runbook.md`](incident-runbook.md).

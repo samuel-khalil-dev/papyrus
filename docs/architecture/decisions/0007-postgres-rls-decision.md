@@ -8,16 +8,16 @@ Accepted.
 
 Tenant isolation is a Phase 1 (P0) requirement. The current enforcement model is
 application-level tenant filtering, established by [ADR 0002](0002-tenant-enforcement.md)
-and implemented in [`PapyrusDbContext`](../../src/Papyrus.Infrastructure/PapyrusDbContext.cs:32):
+and implemented in [`PapyrusDbContext`](../../../src/Papyrus.Infrastructure/PapyrusDbContext.cs:32):
 
-- A scoped [`TenantContext`](../../src/Papyrus.Infrastructure/MultiTenancy/TenantContext.cs:7)
+- A scoped [`TenantContext`](../../../src/Papyrus.Infrastructure/MultiTenancy/TenantContext.cs:7)
   resolves the tenant from the `X-Tenant-Id` header (or the configured default,
   `main`), validates it against a strict `^[a-z0-9][a-z0-9-]{0,62}$` pattern, and
   normalizes it.
 - EF Core global query filters scope every tenant-owned entity
   (`Project`, `BlogPost`, `ContentCategory`, `ContentTag`, `ProjectTag`,
   `BlogPostTag`) to the current tenant and exclude soft-deleted rows.
-- [`EnforceTenantBoundary()`](../../src/Papyrus.Infrastructure/PapyrusDbContext.cs:52)
+- [`EnforceTenantBoundary()`](../../../src/Papyrus.Infrastructure/PapyrusDbContext.cs:52)
   stamps `TenantId` on added entities and throws on any attempt to save an entity
   whose tenant differs from the current context, so the filter is not the sole
   control.
@@ -25,11 +25,11 @@ and implemented in [`PapyrusDbContext`](../../src/Papyrus.Infrastructure/Papyrus
 The threat model records cross-tenant read or mutation as **T-01, Closed; Phase 1**,
 with the required control being "scoped tenant context, EF global filters,
 save-boundary enforcement, tenant-partitioned media, and adversarial A/B tests"
-([`threat-model.md`](../security/threat-model.md:13)). The roadmap's EF/PostgreSQL
+([`threat-model.md`](../../security/threat-model.md:13)). The roadmap's EF/PostgreSQL
 standard states that "filters are defense in depth, not the sole control"
-([`roadmap.md`](../project/roadmap.md:140)), and Phase 1 item 4 explicitly asks to
+([`roadmap.md`](../../project/roadmap.md:140)), and Phase 1 item 4 explicitly asks to
 "evaluate PostgreSQL row-level security as defense in depth and document the
-enforcement point" ([`roadmap.md`](../project/roadmap.md:54)).
+  enforcement point" ([`roadmap.md`](../../project/roadmap.md:54)).
 
 This ADR records that evaluation. It is the optional S30.12 (P2) subtask of
 Phase 6 and does not change production code, tests, or infrastructure.
@@ -64,8 +64,8 @@ application filter could not read or mutate another tenant's rows.
   new class of failure (policy misconfiguration) to the release gate.
 - **Test coverage:** The existing suite already proves isolation at the
   application layer. RLS would require a new policy-boundary integration test to
-  prove the database layer independently, adding to the 73 .NET tests and 5
-  Playwright browser tests baseline.
+  prove the database layer independently, adding to the current 84-test CI
+  .NET baseline and the separate 5-test Playwright browser baseline.
 - **Benefit:** Defense in depth against a future query path that omits the EF
   filter (for example, raw SQL or a new read model). This is a real but
   currently hypothetical risk: no such path exists in the codebase today.
@@ -75,15 +75,15 @@ application filter could not read or mutate another tenant's rows.
 - The application already enforces tenant filtering at the query layer via EF
   global filters, backed by save-boundary enforcement that rejects cross-tenant
   writes even when an entity is attached by id
-  ([`TenantIsolationTests.cs`](../../src/Papyrus.Tests/TenantIsolationTests.cs:56)).
+  ([`TenantIsolationTests.cs`](../../../src/Papyrus.Tests/TenantIsolationTests.cs:56)).
 - Adversarial A/B tests prove a tenant cannot read, enumerate, or mutate another
   tenant's data across every tenant-owned entity
-  ([`TenantIsolationTests.cs`](../../src/Papyrus.Tests/TenantIsolationTests.cs:11)),
+  ([`TenantIsolationTests.cs`](../../../src/Papyrus.Tests/TenantIsolationTests.cs:11)),
   and that published feed/sitemap source queries cannot include another tenant
-  ([`TenantIsolationTests.cs`](../../src/Papyrus.Tests/TenantIsolationTests.cs:35)).
+  ([`TenantIsolationTests.cs`](../../../src/Papyrus.Tests/TenantIsolationTests.cs:35)).
 - PostgreSQL integration tests verify the tenant and soft-delete filters apply
   to entities and relationships against a real provider
-  ([`FilterAndProjectionTests.cs`](../../src/Papyrus.Tests/Integration/FilterAndProjectionTests.cs:10)).
+  ([`FilterAndProjectionTests.cs`](../../../src/Papyrus.Tests/Integration/FilterAndProjectionTests.cs:10)).
 - The threat model already records T-01 as **Closed; Phase 1**, so RLS would not
   close an open finding; it would add a redundant layer.
 
@@ -92,15 +92,15 @@ application filter could not read or mutate another tenant's rows.
 - **What changes:** Nothing in production code, tests, or infrastructure. The
   application-level tenant filtering remains the sole enforcement layer, and the
   enforcement point is documented here as the EF global query filters and
-  save-boundary enforcement in [`PapyrusDbContext`](../../src/Papyrus.Infrastructure/PapyrusDbContext.cs:32).
-- **What stays:** The scoped [`TenantContext`](../../src/Papyrus.Infrastructure/MultiTenancy/TenantContext.cs:7),
+  save-boundary enforcement in [`PapyrusDbContext`](../../../src/Papyrus.Infrastructure/PapyrusDbContext.cs:32).
+- **What stays:** The scoped [`TenantContext`](../../../src/Papyrus.Infrastructure/MultiTenancy/TenantContext.cs:7),
   the EF global filters, the save-boundary enforcement, tenant-partitioned media,
   and the adversarial isolation tests remain the compensating controls.
 - **Compensating controls (documented):**
-  1. **Adversarial isolation tests** — [`TenantIsolationTests.cs`](../../src/Papyrus.Tests/TenantIsolationTests.cs:1)
+  1. **Adversarial isolation tests** — [`TenantIsolationTests.cs`](../../../src/Papyrus.Tests/TenantIsolationTests.cs:1)
      proves cross-tenant read, enumeration, and mutation are rejected, including
      the attach-by-id mutation case.
-  2. **PostgreSQL integration tests** — [`FilterAndProjectionTests.cs`](../../src/Papyrus.Tests/Integration/FilterAndProjectionTests.cs:10)
+  2. **PostgreSQL integration tests** — [`FilterAndProjectionTests.cs`](../../../src/Papyrus.Tests/Integration/FilterAndProjectionTests.cs:10)
      verifies the tenant/soft-delete filters against a real PostgreSQL provider.
   3. **Review gates** — the threat model (T-01) and the release gates
      ([`release-gates.md`](../release-gates.md:12)) require the ADRs and threat

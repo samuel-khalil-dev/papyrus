@@ -1,56 +1,24 @@
 # Product Context
 
-Verified against source 2026-08-29 · Phases 0–5 complete · Phase 6 complete (S30.0–S30.12) · 73 .NET tests + 5 Playwright browser tests · 5 migrations · 0-warn/0-error build
+Papyrus serves public readers consuming the blog and portfolio, plus an operator or automation client managing content through the Admin SPA/API.
 
-Papyrus is a personal technical-writing and professional-showcase platform
-with a public blog, a public portfolio, and an authenticated React admin
-surface.
+## User experience
 
-## Current product shape
+- Blog and Portfolio are read-only Razor sites with live-content filtering, search, tags, pagination, RSS, sitemaps, and SEO presentation.
+- The Admin SPA is the only admin UI. `Papyrus.Api.Admin` serves it at `/admin` and exposes the protected versioned API at `/api/v1`.
+- The operator manages projects, blog posts, categories, tags, relationships, and media. Automation can use the same header-authenticated API boundary.
 
-- Blog and Portfolio are read-only Razor Pages sites with live-content
-  filtering, search, tags, pagination, RSS, sitemaps, About pages, and SEO
-  metadata.
-- Admin owns content, taxonomy, relationships, and media mutations through the
-  versioned `/api/v1` minimal API and is consumed by the React SPA
-  (`Papyrus.Admin.UI`), which is the sole admin UI served from `Papyrus.Api.Admin`
-  at `/admin`.
-- Projects and posts share categories/tags; projects can link related posts.
-- Aspire coordinates local PostgreSQL and service startup, including a dev-only
-  `admin-ui` npm resource (Vite HMR + `/api/v1` proxy). The admin API owns
-  migration and seed execution.
+## Security boundaries
 
-## User context
+- Admin requests provide `X-Admin-Api-Key`; candidates are compared in constant time. `AdminApi:ApiKeys` supports multi-key rotation and legacy `AdminApi:ApiKey` remains compatible.
+- `X-Tenant-Id` selects the tenant; absence defaults to `main`. IDs must match `^[a-z0-9][a-z0-9-]{0,62}$`.
+- EF global filters, save-boundary enforcement, relationship constraints, and tenant-scoped media paths prevent cross-tenant access. PostgreSQL RLS is not used.
+- Public projections exclude drafts, future-dated content, deleted content, and cross-tenant content.
+- Media is raster-only, magic-byte validated, capped at 5 MB, atomically written with generated names, tenant-partitioned, and protected from deletion while referenced.
+- Markdown disables HTML and neutralizes unsafe schemes/event attributes.
+- Per-IP rate limiting is 120 requests/minute; request/multipart limits and security headers are active. `/health` and `/alive` are anonymous and must be network-restricted at ingress.
+- There is no browser session cookie, interactive login, legacy cookie gate, or admin Razor-page flow.
 
-- The single operator/author manages content and media through the SPA using an
-  API key; there is no interactive login or browser session.
-- Public readers consume the blog and portfolio read-only sites.
-- Automation/integrations can call the admin API using the same header-based
-  key.
+## Status
 
-## Safety constraints implemented
-
-- Draft, future-dated, deleted, and cross-tenant content is excluded from
-  public projections.
-- Tenant context, EF filters, relationship constraints, save-boundary checks,
-  and tenant-scoped media enforce isolation.
-- Admin automation and the SPA use `X-Admin-Api-Key` and `X-Tenant-Id`; the UI
-  has no server-side browser session cookie.
-- Markdown is rendered by `MarkdownRenderer.ToSafeHtml()` with HTML disabled and
-  unsafe schemes/event attributes neutralized. Media uses magic-byte validation,
-  SVG rejection, generated names, atomic writes, and reference-checked delete.
-- CSP, HSTS, frame/referrer/permissions/nosniff headers, rate limits, multipart
-  limits, and fail-closed production API-key settings are active.
-
-## Delivery status
-
-Phases 0–5 are complete. Phase 6 is complete (S30.0–S30.12), including the S30.5
-K6 load evidence and the S30.12 Postgres RLS decision ADR (DECLINE RLS). Phases
-7 and 8 are not started. The current baseline is 73 passing .NET tests plus 5
-Playwright browser tests, five applied migrations, and a zero-warning, zero-error
-warnings-as-errors build. Residual release gates are W6–W8, O4, and O7–O10
-(O7's load-evidence portion is done; the restore, migration-ownership, and
-media-volume drills remain), plus deployment configuration for
-`Site:PublicBaseUrl`. Managed multi-key API-key rotation now supports an overlap
-window through reloadable `AdminApi:ApiKeys` configuration. `docs/guides/contributing.md` and `docs/security/policy.md` remain
-placeholders until Phase 7.
+Phases 0–6 are complete; Phases 7–8 are not started. The local baseline is 70 passing non-integration .NET tests. CI adds 14 PostgreSQL integration tests for 84 unique .NET tests; the separate Playwright suite contains 5 tests. The build has 0 warnings and 0 errors.

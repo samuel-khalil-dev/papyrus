@@ -1,1 +1,9 @@
-export function StatusBadge({ published }: { published: boolean }) { return <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${published ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'}`}>{published ? 'Published' : 'Draft'}</span>; }
+export function StatusBadge({ published }: { published: boolean }) {
+  return (
+    <span
+      className={`rounded-none border px-2.5 py-1 text-xs font-semibold ${published ? "border-success/60 text-success" : "border-warning/60 text-warning"}`}
+    >
+      {published ? "Published" : "Draft"}
+    </span>
+  );
+}
