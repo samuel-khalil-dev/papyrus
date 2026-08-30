@@ -1,343 +1,127 @@
 # Active Context
 
-Verified against source 2026-08-29 · Phases 0–5 complete · Phase 6 complete (S30.0–S30.12) · 73 .NET tests + 5 Playwright browser tests · 5 migrations · 0-warn/0-error build
+## Current Admin SPA Royal Pharaonic design-system implementation — completed 2026-09-02
 
-## Current task
+The standalone Admin SPA now follows `plans/unified-design-system.md` within the requested scope. Admin-only changes unify Cinzel/Inter/JetBrains Mono typography, canonical dark and light OKLCH semantic tokens, zero-radius surfaces, glass shell treatment, gold-tinted borders, semantic buttons and status badges, theme-aware texture blending, motion timing, page reveals, and reduced-motion behavior. The theme provider now writes both the `.dark` class and `data-theme` attribute so light mode resolves correctly. The Admin Papyrus logo remains `currentColor`-driven.
 
-Phase 6 is complete: all S30.0–S30.12 subtasks are done. This includes the
-architecture, PostgreSQL integration, handler/migration-drift, Playwright,
-telemetry, performance-budget, dashboard/alert, runbook/release-gate, K6 load
-evidence (S30.5), and the Postgres RLS decision ADR (S30.12). The current
-verification baseline is 73 .NET tests plus 5 Playwright browser tests, with a
-  clean zero-warning/zero-error build. O7 is closed: load, restore,
-  migration-ownership, and media-volume evidence is attached for 2026-08-29 UTC.
+Verification passed: `npm run build --prefix src/Papyrus.Admin.UI` and `npm run lint --prefix src/Papyrus.Admin.UI` completed successfully. `git --no-pager diff --check` also passed. Public site source, shared SVG assets, and `docs/assets/` were not modified.
 
-S30.3 is complete. Added InMemory handler coverage for content create/update/
-validation, content lists, public feed/search/detail, taxonomy, and lifecycle
-soft-delete/restore paths. Added migration-drift tests under
-`src/Papyrus.Tests/Migrations`: EF `HasPendingModelChanges()` is the pending
-model gate, while the snapshot/create-script test verifies the migration
-assembly snapshot and all owned tables. No production source or applied
-migration file was changed.
+### Active focus and next steps
 
-S30.6 is complete. The reusable PostgreSQL fixture and integration coverage now
-live under `src/Papyrus.Tests/Integration`; the existing migrations are applied
-against a dedicated `papyrus_test` database and a known integration tenant. No
-production source, secret, or migration files were changed.
+- Active focus: retain the Admin SPA's unified Royal Pharaonic visual system while preserving existing routing, forms, data fetching, and editor behavior.
+- Next steps: manually check the light/dark toggle, font loading, and responsive shell in a browser; future Admin UI changes should keep semantic tokens and zero-radius surfaces.
 
-S30.0 architecture tests now live under `src/Papyrus.Tests/Architecture` using
-pinned `NetArchTest.Rules` 1.3.2. The stray duplicate Phase 6 plan was deleted;
-the canonical plan remains authoritative. Eight architecture tests pass, and
-the full suite now passes 40 tests.
+## Current UI/UX theming fix — completed 2026-09-02
 
-The current feature state: the React Admin SPA is the sole `/admin` experience,
-served by `Papyrus.Api.Admin` (from `wwwroot/admin` in published/container
-builds or the sibling UI's `dist` during development) and registered in Aspire as
-a dev-only `admin-ui` npm resource on port 5173 that proxies `/api/v1` to the
-admin API. All legacy admin Razor pages, the cookie gate, session store, login
-throttle, and Razor antiforgery wiring have been retired under ADR 0006. The SPA
-uses `X-Admin-Api-Key` + `X-Tenant-Id` for protected `/api/v1` calls.
+The public Blog and Portfolio light/dark theming and SVG rendering regression is fixed. The shared stylesheet now defines a complete light token set under `[data-theme="light"]` with `color-scheme: light`, including the requested warm background/surface/text/accent palette, semantic status colors, orb tokens, and subtle grid color. The light-mode background texture now uses multiply blending with slightly increased opacity instead of the dark-mode screen treatment. `Papyrus_Logo.svg` now uses `fill="currentColor"`, allowing the hero logo to inherit `var(--color-accent)` in either theme. SVG assets also retain their previously added `viewBox` attributes, and the obsolete `Papyrus_Background_2.svg` asset is fully removed with no dangling references.
 
-The EF model is synchronized with the migration history; a pending
-`PendingModelChangesWarning` was resolved with `20260826005202_SyncSearchTrigramIndexesModel`,
-recording the seven model-managed trigram indexes without recreating them.
+Verification for this fix passed: `dotnet build .\Papyrus.sln --nologo --no-incremental` completed with 0 warnings and 0 errors, and `git diff --check` passed. Only the shared public CSS/SVG source changes were present for this fix; this memory-bank update records them without modifying source code.
 
-## Current state
+### Active focus and next steps
 
-- Phases 0–5 are complete; Phase 6 (S30.0–S30.12) is complete.
-- S30.5 K6 load evidence is captured (public p95 23.574 ms / 9,030-byte payload;
-  admin p95 21.660 ms / 9,256-byte payload; 0% failed, 100% checks, 0 5xx).
-- S30.12 Postgres RLS decision ADR is complete: DECLINE RLS; application-level
-  tenant filtering remains the sole enforcement layer.
-- Phases 7 and 8 are not started; Phase 8 remains a decision gate.
-- Multi-tenancy (C1), API-key admin auth (C2), header-authenticated mutation
-  protection (C3), and media safety (C4) are implemented and closed for their
-  code scope.
-- The security audit was redone and remediated: no critical findings;
-  W-NEW-01…05 and O-NEW-01…05 are fixed. S30.11 attached evidence for W6, W7,
-  W8, O4, O8, and O10; S30.5 attached the O7 load evidence.
-- W1–W5, O1–O3, O5, and O6 were verified against current code and removed from
-  active risk acceptance. O7 is closed with its load, restore,
-  migration-ownership, and media-volume evidence attached.
-- Five migrations are defined, including the trigram-index migration and its
-  model-sync migration. Existing migration files were not edited or deleted.
-- `Papyrus.Api.Admin` explicitly references
-  `Microsoft.EntityFrameworkCore.Design` 10.0.11 with private assets, so EF
-  Core CLI commands work with the Admin startup project.
-- The suite has 73 passing .NET tests plus 5 passing Playwright browser tests,
-  and the warnings-as-errors build is clean.
-- S30.6 provides the shared `Papyrus` ActivitySource, W3C trace propagation,
-  low-cardinality request seams, and a logger-backed structured audit sink.
-  Admin auth and mutation/error requests emit tenant-scoped events without API
-  keys, cookies, request bodies, or raw credentials; Blog and Portfolio use the
-  same request seam.
-- The AppHost wiring is complete: `admin-api` migrates/seeds; `admin-ui`
-  (NodeJs 9.5.2) is dev-only; blog and portfolio wait for admin-api health and
-  never run migrations.
+- Active focus: preserve the shared public Blog/Portfolio theme tokens and theme-aware SVG asset behavior while continuing release-readiness work.
+- Next steps: manually check the unified public Royal Pharaonic finishing layer in Blog and Portfolio in both themes; future public UI changes should validate SVG `viewBox`/`currentColor` behavior and shared CSS behavior.
 
-## Open items
+## Current task/state
 
-- O7 restore/load gate is closed with dated restore, migration-ownership, and
-  media-volume evidence; the load-evidence portion remains from S30.5.
-- Managed API-key rotation and multi-key support are implemented for the Admin
-  API. Before broader multi-operator or replica-scale deployment, configure the
-  `AdminApi:ApiKeys` set through a reloadable secret/configuration provider and
-  exercise the documented add/overlap/remove rotation procedure.
-- Production `Site:PublicBaseUrl` configuration is now wired as a required
-  deployment input for both public containers; the exact production hostnames
-  remain deployment-owned and are not present in this repository.
-- `docs/guides/contributing.md` and `docs/security/policy.md` remain
-  placeholders pending Phase 7.
+The audit-and-reconstruction effort is complete for the current scope. Phases 0–6 are complete; Phases 7–8 are not started. Papyrus is a .NET 10 modular monolith with 11 solution projects, a standalone React Admin SPA, PostgreSQL 17, Aspire, and Docker Compose. The Phase 4 test-backfill verification has a 0-warning/0-error build and 70 passing non-integration .NET tests; PostgreSQL-backed integration tests require the test database infrastructure.
 
-## Session notes
+## Task Outcomes
 
-- 2026-08-29: Fixed `.github/workflows/release.yml`: pinned Trivy to the
-  immutable commit for `aquasecurity/trivy-action` v0.33.1, pinned the SBOM
-  action to the immutable commit for `anchore/sbom-action` v0.24.1, removed the
-  unused `security-events: write` permission, and restored the missing `PY`
-  here-document terminator in the NuGet vulnerability scan. `actionlint` passed
-  and `git diff --check` passed.
+1. **Discovery/gap analysis (Step 1):** Established the exact project layout, stack, tenant model, API surface, persistence ownership, telemetry design, deployment topology, phase status, and verification baseline from the completed audit.
+2. **G1:** Corrected Phase 6 roadmap status in `docs/project/roadmap.md`.
+3. **G2:** Removed confirmed-empty retired Admin Razor Pages shells under `src/Papyrus.Api.Admin/Pages/`.
+4. **G3:** Removed confirmed-empty obsolete Admin-local Contracts under `src/Papyrus.Api.Admin/Contracts/`.
+5. **G4:** Regenerated `src/Papyrus.Admin.UI/src/api/schema.d.ts` from `docs/api/openapi.json` and changed `src/Papyrus.Admin.UI/package.json` `generate-api` to port 5205.
+6. **G10:** Pinned CI Trivy in `.github/workflows/ci.yml` to the immutable v0.33.1 commit.
+7. **Architecture reconstruction:** Rebuilt C4 context, container, and component documents plus overview, release gates, and ADR index under `docs/architecture/`.
+8. **API reconstruction:** Rebuilt OpenAPI 3.1 `docs/api/openapi.json` and `docs/api/README.md`, including versioned operations, security, tenant header, and schemas.
+9. **Diátaxis reconstruction:** Rebuilt `docs/guides/` and `docs/runbooks/` with tutorial, how-to, reference, explanation, deployment, telemetry, alert, and incident guidance.
+10. **Memory-bank reconstruction:** Read all existing relative `memory-bank/` files and overwrote all seven requested files with current truth. No `.memory-bank/` directory was created.
+11. **Verification:** `dotnet restore .\Papyrus.sln --nologo` passed. `dotnet build .\Papyrus.sln --nologo --no-incremental` passed with 0 warnings and 0 errors. The filtered non-integration run passed 70 tests. The integration inventory contains 14 PostgreSQL tests, producing 84 unique .NET tests in CI when the PostgreSQL service is available; integration tests remain excluded locally because PostgreSQL test infrastructure is unavailable. The separate Playwright inventory contains 5 tests.
 
-- 2026-08-29: Completed the production public URL configuration action. Docker
-  Compose now requires `BLOG_PUBLIC_BASE_URL` and `PORTFOLIO_PUBLIC_BASE_URL`
-  and maps them to each public app's `Site__PublicBaseUrl`. The release workflow
-  passes the corresponding production environment variables. Deployment docs
-  explain the `Site:PublicBaseUrl` binding and its canonical/RSS/sitemap flow.
-  No production hostname was invented. The solution build passed with 0
-  warnings and 0 errors; `git diff --check` passed.
+## Current architecture facts
 
-- 2026-08-29: Implemented managed Admin API-key rotation. `AdminApi:ApiKeys`
-  accepts multiple configured keys, while the legacy `AdminApi:ApiKey` remains
-  supported for compatibility. The authentication handler reads
-  `IOptionsMonitor<AdminApiKeyOptions>` on each request, so reload-capable
-  configuration providers can add a new key, retain the old key during the
-  transition window, and retire it by removing it. Added four xUnit tests.
-  Solution build passed with 0 warnings and 0 errors. Full tests passed 61; 16
-  PostgreSQL integration tests could not connect because 127.0.0.1:5432 refused
-  the connection.
+- Scoped `TenantContext` resolves `X-Tenant-Id`, defaults to `main`, validates `^[a-z0-9][a-z0-9-]{0,62}$`, and is enforced by EF filters plus `EnforceTenantBoundary()`.
+- API-key authentication reads `X-Admin-Api-Key`, uses constant-time multi-key comparison, and fails fast in production for missing or `change-me` configuration.
+- `/api/v1` is documented/authenticated; `/api` is legacy/excluded. Rate limiting is per IP at 120/min.
+- `Papyrus.Api.Admin` is the sole migrator/seed owner. Five migrations are applied. RLS is not used.
+- Telemetry uses `Papyrus` ActivitySource, W3C propagation, structured audit events, fail-closed redaction, cardinality protection, and diagnostic-only sampling. OTLP is gated by `OTEL_EXPORTER_OTLP_ENDPOINT`.
 
-- 2026-08-29: Completed the O7 drills against Docker Compose. The custom-format
-  PostgreSQL backup restored successfully into a disposable database; the two
-  migration-ownership tests and zero-warning solution build passed. The media
-  drill exposed root ownership on a fresh named volume, so `Dockerfile.admin`
-  now creates `/data/media` and assigns it to `APP_UID`; a sentinel survived an
-  Admin restart. Release-gate and runbook evidence was recorded and temporary
-  drill artifacts were removed.
+## Phase 7.1 documentation publication
 
-- 2026-08-29: O7 restore/migration-ownership/media-volume drill execution began.
-  Docker Compose is available, but the first environment diagnostic confirmed that
-  `POSTGRES_PASSWORD` and `ADMIN_API_KEY` are not preset; the drills will use the
-  documented temporary local values without changing checked-in secrets. The
-  repository uses `memory-bank/` as its persistent context directory; no separate
-  `.memory-bank/` directory exists.
+Published public-facing Diátaxis documentation under `docs/`: architecture
+overview, sanitized threat-model summary, local setup and seed/demo guide,
+versioned API reference additions, deployment guidance, and a truthful
+limitations page. Updated repository and section indexes, removed development
+credential literals from published Markdown, and corrected relative links in
+ADR 0007. No source code, dependencies, secrets, or migrations were changed.
 
-- 2026-08-29: S30.5 evidence capture started. The first PowerShell 7 probe
-  (`k6 version`) failed because K6 is not installed or available on PATH; no
-  load numbers were produced. Next step is to use the documented K6 setup or
-  stop with the verified environment blocker.
+## Phase 7.2 showcase assets
 
-- 2026-08-29: Completed S30.5 against the Docker Compose PostgreSQL 17
-  deployment using the official Grafana K6 container and
-  `host.docker.internal` for the host-published ports. Public aggregate p95 was
-  23.574 ms with 9,030-byte payload p95, 0.00% failed, and 100.00% checks.
-  Admin p95 was 21.660 ms with 9,256-byte payload p95, 0.00% failed, 100.00%
-  checks, and zero 5xx. Dated summaries are in `docs/performance/` and O7's
-  load-evidence portion is attached; restore/migration/media drills remain.
-
-- 2026-08-29: Completed S30.12. Created
-  `docs/architecture/decisions/0007-postgres-rls-decision.md` recording the
-  decision to DECLINE Postgres RLS; application-level tenant filtering remains
-  the sole enforcement layer. Phase 6 is now fully complete (S30.0–S30.12).
-
-- 2026-08-28: Fixed the Aspire DCP startup error for the dev-only, proxied
-  non-container `admin-ui` resource. The AppHost now uses
-  `WithHttpEndpoint(targetPort: 5173, name: "http")`, letting Aspire allocate the
-  external port. `dotnet build Papyrus.sln --no-restore` passed with 0 warnings
-  and 0 errors.
-- 2026-08-28: Diagnosed and fixed a 401 from the Admin API under Aspire. The
-  `admin-api` resource was not injecting `AdminApi:ApiKey`; added
-  `.WithEnvironment("AdminApi__ApiKey", "dev-admin-key")` in
-  `src/Papyrus.AppHost/Program.cs`. Build passed with 0 warnings/errors.
-- 2026-08-28: Confirmed Aspire.Hosting.NodeJs 9.5.2 is the latest published
-  version; resolved the package-version blocker and marked
-  `plans/wire-admin-ui-to-aspire.md` Implemented with acceptance criteria
-  checked.
-- 2026-08-26: Retired legacy admin Razor pages and the cookie-gate session model
-  under ADR 0006; removed Razor/antiforgery/session throttling wiring, cookie
-  helpers, and obsolete tests. Retirement verification: 32/32 tests.
-- 2026-08-26: Synchronized EF model to migration history via
-  `20260826005202_SyncSearchTrigramIndexesModel`; no pending model changes.
-- 2026-08-26: Wired the Admin SPA into the backend and
-  `Dockerfile.admin` (Node build stage); Vite base `/admin/`.
-- 2026-08-26: Verified SPA install/build/lint via `npm.cmd` (0 vulnerabilities;
-  lint 0 errors).
-- 2026-08-29: Completed S30.6. No persisted audit table or migration was added;
-  49/49 tests and the zero-warning build passed.
-- 2026-08-29: Completed S30.3. Added 11 handler/migration tests; the full suite
-  passes 60/60 and `dotnet build .\Papyrus.sln --nologo --no-incremental` passes
-  with 0 warnings and 0 errors.
-- 2026-08-29: Completed S30.7. Added fail-closed telemetry redaction, bounded
-  diagnostic cardinality, configurable diagnostic sampling, and tests proving
-  audit logging survives 0% diagnostic sampling. The full suite passes 63/63
-  and the solution build remains 0-warning/0-error.
-- 2026-08-29: Completed S30.2 and S30.4. PostgreSQL integration coverage passes
-  14/14; Playwright 1.55.0 browser smoke passes 5/5; the full xUnit suite passes
-  71/71 and the solution build remains 0-warning/0-error. The admin write
-  smoke exposed that explicit handler transactions conflicted with Npgsql's
-  configured retry execution strategy; content commands now rely on EF's
-  atomic SaveChanges transaction, which is retry-compatible.
-- 2026-08-29: Completed S30.9/S30.10. Added the manual dispatch performance
-  baseline workflow, K6 payload-byte metrics, explicit public/admin/upload/
-  allocation/GC budgets, and PostgreSQL query-count budget tests. The measured
-  baseline shows public feed DB p95 below 0.1 ms and the existing projected,
-  bounded four-query shape; no production optimization was justified. Build
-   passes with 0 warnings/errors and the full .NET suite passes 73/73.
-- 2026-08-29: Completed S30.8 and S30.11. Added the portable Grafana dashboard,
-  nine-family alert runbook, incident/telemetry runbooks, corrected the documented
-  test baseline to 73 .NET plus 5 Playwright tests, and attached release-gate
-  evidence for W6, W7, W8, O4, O8, and O10. O7 remains pending S30.5.
+Captured sanitized local screenshots for the public Blog, public Portfolio,
+React Admin UI, health probe, and .NET Aspire dashboard under `docs/assets/`.
+The captures use seeded demo content; the Aspire image masks environment URLs
+and operational details. Assets are referenced from `README.md`,
+`docs/architecture/public-overview.md`, and `docs/guides/local-setup.md`.
+Static screenshots were used instead of GIFs because the requested showcase
+surfaces are adequately represented without recording an interaction flow.
+Visual inspection found no API keys, connection strings, private URLs, email
+addresses, or other personal data in the committed assets.
 
 ## Self-Healing Log
 
-Errors encountered and resolved across sessions; recorded for traceability.
-No new failures occurred during this memory-bank reconstruction session.
+During the shared public design-system implementation, an initial CSS patch was rejected atomically because its context did not match. A later finishing-layer patch temporarily corrupted a stylesheet comment header; the malformed header was repaired and the stylesheet now has valid comment structure. No Admin UI or `docs/assets/` files were changed by this task.
 
-- **Release workflow validation (2026-08-29)** — the first YAML validation
-  attempt could not run because Python's `yaml` module and Ruby were unavailable.
-  Dockerized `actionlint` then identified a missing `PY` terminator in the
-  dependency-scan here-document. **Resolution:** added the terminator and
-  re-ran Dockerized `actionlint` successfully; `git diff --check` also passed.
+Verification completed after repair: `dotnet restore .\\Papyrus.sln --nologo`, `dotnet build .\\Papyrus.sln --nologo --no-incremental` (0 warnings, 0 errors), and `git --no-pager diff --check` all passed.
 
-- **Configuration patch formatting (2026-08-29)** — the first patch attempt was
-  rejected because it contained a duplicated `*** Begin Patch` header; no files
-  were changed by that attempt. **Resolution:** reapplied the same changes with
-  the valid file-oriented patch format.
+No self-healing issue was encountered during the public theming fix. The build and diff checks passed on the first recorded verification run.
 
-- **Full xUnit verification (2026-08-29)** — 16 PostgreSQL integration tests
-  failed during fixture initialization because no PostgreSQL server was
-  listening on `127.0.0.1:5432`; 61 non-PostgreSQL tests passed. The solution
-  build independently passed with zero warnings and zero errors. No source fix
-  was required; the remaining verification is environment-dependent.
+No unresolved code self-healing issue remains for this reconstruction. The first all-file memory-bank patch was rejected because it contained a duplicated patch header; the same content was reapplied with the valid file-oriented patch format and verified by rereading all seven files. During the broader effort, malformed patches, documentation-link parsing, OpenAPI JSON rewriting, CI YAML validation, Aspire port/key wiring, EF model drift, npm package resolution, retry-strategy transaction handling, K6 container networking, and media-volume ownership issues were diagnosed and resolved. Final verification identified only unavailable PostgreSQL test infrastructure: the non-integration suite is green, while integration execution is blocked by missing Compose environment variables and no local database listener.
 
-- **O7 drill environment diagnostic (2026-08-29)** — PowerShell inspection of
-  `POSTGRES_PASSWORD` and `ADMIN_API_KEY` exited 1 because neither variable was
-  present in the inherited environment. **Resolution:** use temporary process-local
-  Compose values for the disposable local drill; no secret or checked-in
-  configuration will be modified.
+During the test-count reconciliation, the first documentation patch was rejected atomically because it contained a duplicated `*** Begin Patch` header. No files were changed by that failed patch; a corrected documentation-only patch was applied and verified with a repository-wide stale-count search and `git diff --check`.
 
-- **Memory-bank path check (2026-08-29)** — the repository has `memory-bank/`, while
-  the external rule references `./.memory-bank/`; the latter does not exist.
-  **Resolution:** continue with the complete repository `memory-bank/` set already
-  initialized and do not create a duplicate context tree.
+During the Phase 4 security audit, two exploratory file reads returned ENOENT because `ContentCommandHandlers.cs` and `ServiceDefaultsExtensions.cs` were initially guessed paths. No project files were changed by the failed reads. The locations were resolved by listing `src/Papyrus.Application/` and `src/Papyrus.ServiceDefaults/`; the relevant implementations are `ContentCommands.cs` and `Extensions.cs`.
 
-- **S30.0 architecture test build** — initial test anchors referenced nonexistent
-  `Papyrus.Contracts.Paging.PagedResult<>` and
-  `Papyrus.Application.Content.ContentCommands` types. **Fix:** anchor the
-  NetArchTest rules to `PublicCategory` and `ContentCommandHandlers`; added the
-  required reflection import. Verification is pending the next build.
-- **S30.0 architecture test run** — migration ownership source scan also matched
-  its own assertion string, producing two `.MigrateAsync()` call sites. **Fix:**
-  exclude the architecture-test directory from production call-site scanning.
-  Verification is pending the next test run.
-- **S30.0 architecture test run** — startup ownership scan matched the Infrastructure
-  extension declaration as well as the Admin call site. **Fix:** match the explicit
-  `await app.InitializeDatabaseAsync()` invocation. Resolved; the full suite then
-  passed 40/40 tests.
+During Phase 7.1 verification, the first Markdown link-check command reported
+false positives because it scanned generated `node_modules` documentation,
+treated source links with `:line` suffixes as filesystem paths, and passed an
+empty directory path for the root README. The command did not modify files.
+The checker was narrowed to repository documentation and corrected to strip
+line anchors; the remaining ADR 0007 relative links were fixed. An initial
+multi-file repair patch was rejected because one expected context line did not
+match; a corrected focused patch applied successfully.
 
-- **Aspire DCP startup (admin-ui)** — proxied resource failed because `Port` and
-  `TargetPort` mapped to the same value. **Fix:** AppHost uses
-  `WithHttpEndpoint(targetPort: 5173, name: "http")` so Aspire allocates the
-  external port. Resolved 2026-08-28.
-- **Aspire.Hosting.NodeJs version** — restore failed for the requested 13.5.2;
-  NuGet has no 13.x release. **Fix:** pinned 9.5.2, the latest published version;
-  documented in `plans/wire-admin-ui-to-aspire.md`. Resolved 2026-08-28.
-- **Admin API 401 under Aspire** — `ApiKeyAuthenticationHandler` reported the key
-  was not configured because `admin-api` lacked the environment injection. **Fix:**
-  `.WithEnvironment("AdminApi__ApiKey", "dev-admin-key")` on the `admin-api`
-  resource. Resolved 2026-08-28.
-- **EF pending model changes** — startup `PendingModelChangesWarning`; the seven
-  trigram indexes were in the model but absent from the snapshot (preceding
-  migration used raw SQL). **Fix:** generated model-sync migration
-  `20260826005202_SyncSearchTrigramIndexesModel`; verified
-  `has-pending-model-changes` reports none. Resolved 2026-08-26.
-- **npm registry 404** — `@tiptap/extension-markdown@^3.4.1` did not exist.
-  **Fix:** replaced with published `@tiptap/markdown`; install/build/lint then
-  passed. Resolved 2026-08-26.
-- **Playwright admin write smoke** — the first browser test omitted the SPA API
-  key, so the protected write returned unauthorized. **Fix:** seed the key in
-  local storage and reload the SPA before exercising the write path.
-- **Npgsql retry strategy and content writes** — explicit user transactions in
-  content command handlers caused `NpgsqlRetryingExecutionStrategy` failures.
-  **Fix:** removed the redundant explicit transaction; one EF `SaveChangesAsync`
-  unit remains atomic and is compatible with the configured retry strategy.
-- **Compose diagnostics** — a local `docker compose logs` command initially
-  lacked the required interpolation variables. **Fix:** reran it with the
-  documented temporary `POSTGRES_PASSWORD` and `ADMIN_API_KEY` values.
+## Phase 4 Security Audit
 
-- **S30.1 full-suite architecture test** — the repository migration ownership
-  scan found the new fixture's intentional `MigrateAsync()` call and failed
-  45/46. **Fix:** excluded the dedicated `Papyrus.Tests/Integration` harness
-  from production migration call-site scanning, alongside the architecture
-  test exclusion. The fixture remains responsible for applying real migrations.
+Completed 2026-09-02. Tenant isolation, admin API authorization, API-key authentication and rotation, rate limiting, media storage/serving, Markdown sanitization, security headers, ProblemDetails, and SPA key handling were reviewed. No genuine High or Critical vulnerability was identified, so no application source fix was required. Existing tenant-predicate restatements in lifecycle handlers and adversarial tenant tests were verified. The SPA `localStorage` API-key exposure remains a documented Low risk accepted within the requested no-auth-flow-redesign scope. Required verification passed: `dotnet restore .\Papyrus.sln --nologo` and `dotnet build .\Papyrus.sln --nologo --no-incremental` with 0 warnings and 0 errors.
 
-- **S30.1 local Compose startup** — `docker compose --profile test up -d test-db`
-  initially failed because Compose interpolates required `POSTGRES_PASSWORD` and
-  `ADMIN_API_KEY` values from the full file even when only the test profile is
-  selected. **Fix:** supplied temporary PowerShell values
-  (`POSTGRES_PASSWORD=postgres`, `ADMIN_API_KEY=dev-admin-key`); the isolated
-  `test-db` service then started successfully.
+The audit confirmed that tenant selection is an authenticated-admin boundary: the API key authenticates the admin surface, while the validated tenant header selects the administrative tenant context. Public media URLs remain intentionally readable, but the path guard prevents serving a path for a tenant other than the request context and generated names prevent traversal.
 
-- **S30.1 integration index test** — the first assertion expected trigram indexes,
-  but the existing migration set discovered by EF did not include the raw-SQL
-  trigram migration (the test database reported four applied migrations and no
-  trigram indexes). **Fix:** kept S30.1 schema-neutral and asserted the indexes
-  actually owned by the model/migrations: tenant-leading slug uniqueness and
-  `IsDeleted` partial filtering. Trigram coverage remains an S30.2 concern and
-   no migration history was changed.
+During the Archify documentation task, an initial cleanup patch attempted to delete a non-existent visual-check contact-sheet sidecar and therefore failed atomically; the generated HTML and existing JSON sidecars remained intact. The failed deletion was not a source-code or project-configuration change.
 
-- **S30.6 telemetry build** — initial missing hosting/DI imports and an
-  unsupported high-arity `ILogger.Log` overload caused compilation errors.
-  **Fix:** added the required imports and used the structured logging overload;
-  build and tests then passed with 0 warnings/errors and 49/49 tests.
+During Phase 3 public UI implementation, two initial multi-file patches were rejected atomically: the first used escaped newline text in CSS context, and the second included a duplicated patch header. No source files were changed by either failed patch; subsequent edits are being split into focused, valid patches.
 
-- **S30.3 verification** — no terminal, build, test, or EF migration failures
-  occurred. The pending-model gate and snapshot/create-script consistency tests
-  passed against the current five-migration model.
-- **Memory-bank synchronization** — two broad patches initially failed because
-  their expected context did not match the current files. **Fix:** re-read the
-  affected files and apply narrower, line-accurate patches; synchronization is
-  now complete.
+During Phase 2 backend refinement, the first non-integration test run failed while Minimal API endpoints were being initialized because handler parameters were inferred as request-body parameters (`UNKNOWN`) rather than services. The root cause was that Minimal API metadata did not infer the registered handler classes as services in these lambdas. The handlers were explicitly annotated with `[FromServices]`; the solution build remained green and the verification rerun passed.
 
-- **S30.5 K6 local verification** — `k6 version` was unavailable because K6 is
-  not installed on this workstation. **Resolution:** CI installs the locked
-  Grafana K6 tool with `grafana/setup-k6-action@v1`; local run commands and the
-  limitation are documented in `tests/load/README.md`.
+The subsequent test rerun exposed a test-host composition gap: `AdminApiTests` built a minimal host without calling `AddPapyrusApplication`, so the newly required handler services were absent. The test host was aligned with production composition by registering the application module; no runtime fallback or service locator was reintroduced.
 
-- **S30.5 evidence capture (2026-08-29)** — PowerShell 7 confirmed that `k6`
-  is not installed or available on PATH (`k6 version` exited 1). No load test
-  was run and no performance value was recorded; execution remains pending a
-  documented K6 installation or a confirmed deployment/tooling blocker.
+A later tenant-isolation test failure showed that lifecycle handlers used `IgnoreQueryFilters()` without restating the tenant predicate, allowing a cross-tenant entity to be tracked before `SaveChangesAsync` rejected it. The root cause was the filter bypass needed for restore operations lacking an explicit tenant boundary. Each lifecycle lookup now includes `x.TenantId == db.TenantId`; cross-tenant delete/restore requests return not-found without tracking or saving the foreign entity.
 
-- **S30.5 Docker K6 networking (2026-08-29)** — the first Dockerized K6 run
-  used the scripts' localhost defaults, which correctly resolved to the K6
-  container and produced connection-refused results against the host-published
-  web ports. **Fix:** rerun with `host.docker.internal` URLs so K6 reaches the
-  documented Compose deployment; the failed attempt is not evidence.
+## Phase 3 frontend refinement
 
-- **Tooling diagnostic (2026-08-29)** — the editor reported an unresolved
-  `aquasecurity/trivy-action@0.28.0` reference in `.github/workflows/release.yml`.
-  This is unrelated to S30.5 and no workflow change was made.
+- Enabled the React 19 compiler in `src/Papyrus.Admin.UI/vite.config.ts` through `@vitejs/plugin-react` and added the pinned compiler package to the SPA dev dependencies.
+- Removed unnecessary `useCallback` wrappers from `src/Papyrus.Admin.UI/src/hooks/useAuth.ts` and `src/Papyrus.Admin.UI/src/hooks/useTenant.ts`. No other manual `useMemo`, `useCallback`, or `React.memo` usages were present in application source. `useDebounce` intentionally retains effect/state timing semantics because compiler memoization cannot replace a temporal debounce.
+- Completed Radix implementations for Dialog, AlertDialog, Tabs, and DropdownMenu. Native Select remains an intentional design-system exception because it preserves mobile/keyboard behavior and the existing multiple-select React Hook Form contract. Form now exposes the standard provider/controller/item/label/message primitives.
+- Migrated SPA controls and global field styles to semantic shadcn CSS variables while preserving slate and dark-mode behavior. TanStack Query mutations remain unchanged; React Actions were not introduced because React Query owns cache invalidation and mutation state.
+- SPA lint and production build both pass with zero reported errors. No self-healing entry was needed for this phase.
 
-- **S30.9 initial budget-test build** — the command interceptor test used an
-  incorrect nullable scalar override, attempted async disposal of a non-disposable
-  interceptor, and passed the interceptor into the optional tenant argument.
-  **Fix:** use the EF-compatible `object` signature, normal local lifetime, and
-  `CreateDbContext(null, interceptor)`. Resolved; build and tests pass.
+During the Phase 4 test backfill, the first non-integration test run failed because a newly added theory case expected the valid category values `slug` and `name` to be rejected. The test data was corrected to contain only invalid empty slug/name cases; the test suite was then rerun.
 
-- **S30.8 dashboards and alerts** — added the portable Grafana dashboard at
-  `ops/dashboards/papyrus-dashboard.json`, the alert-family runbook at
-  `docs/runbooks/alerts.md`, and a telemetry-runbook cross-reference. Dashboard
-  JSON validation passed with `schemaVersion` 39; `git diff --check` passed.
-- **S30.8 dashboard validation** — the first validation found a missing root
-  closing brace in the dashboard artifact. **Fix:** added the final brace and
-  revalidated successfully with PowerShell `ConvertFrom-Json`.
+## Phase 1–2 Royal Pharaonic Admin UI overhaul
+
+- Updated the standalone React Admin SPA with an Obsidian/Basalt/Royal Gold/Sand/Alabaster OKLCH token system, zero-radius primitives, and a 5% repeating papyrus texture.
+- Added Phosphor icons with regular weights, an inline `PapyrusLogo`, semantic empty-state watermark treatment, and token-based admin shell styling. Razor Pages projects were not modified.
+- Verification passed: `npm run build --prefix src/Papyrus.Admin.UI` and `npm run lint --prefix src/Papyrus.Admin.UI`.
+
+During initial icon migration verification, the first build failed because renamed Phosphor imports left legacy JSX identifiers and Phosphor does not export `Activity`. The imports were aliased to equivalent Phosphor icons (`Pulse`, `Folder`, `TrendUp`, and regular icon equivalents), the stale Lucide dependency was removed, and the build/lint rerun passed.

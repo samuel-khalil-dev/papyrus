@@ -1,7 +1,6 @@
 # Security Policy
 
-Please do not disclose security vulnerabilities in public issues. The supported
-reporting process is still being established; until then, contact the project
-maintainer privately with a concise description and reproduction details.
-
-Do not include credentials, personal data, or other secrets in reports.
+The repository-level [security policy](../../SECURITY.md) is the authoritative
+public disclosure policy for Papyrus. Do not disclose vulnerabilities in public
+issues or pull requests, and do not include credentials, personal data, or
+other secrets in reports.

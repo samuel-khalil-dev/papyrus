@@ -8,7 +8,8 @@ Accepted.
 
 The admin UI is served by the React SPA in [`src/Papyrus.Admin.UI/`](../../../src/Papyrus.Admin.UI/package.json:1), integrated as the primary `/admin` experience. The SPA authenticates every `/api/v1` call with the `X-Admin-Api-Key` header and `X-Tenant-Id` header ([`api.ts`](../../../src/Papyrus.Admin.UI/src/lib/api.ts:9)); it never uses a cookie session.
 
-The Razor admin pages in [`src/Papyrus.Api.Admin/Pages/`](../../../src/Papyrus.Api.Admin/Pages/Index.cshtml:1) are legacy code retained "for compatibility" when the SPA was integrated:
+The former Razor admin pages were legacy code retained "for compatibility" when
+the SPA was integrated. They have since been retired:
 
 - The legacy dashboard was moved off `/admin` to `/admin/legacy`.
 - The child pages (`/admin/posts`, `/admin/projects`, `/admin/media`, and the Edit pages) are not linked from the SPA and are only reachable by direct URL.

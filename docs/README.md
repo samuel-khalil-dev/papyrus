@@ -18,11 +18,12 @@ managing content through an authenticated admin surface.
 
 ## Current status
 
-- Phases 0–5 are complete.
-- Phase 6 (observability, deeper tests, and performance budgets) is in
-  progress; S30.0–S30.4, S30.6, S30.7, S30.9, and S30.10 are complete.
-- The current baseline is 73 .NET tests plus 5 Playwright browser tests and a
-  zero-warning, zero-error warnings-as-errors build.
+- Phases 0–6 are complete; Phase 7 is release readiness and showcase work.
+- The current local baseline is 70 passing non-integration .NET tests and a
+  zero-warning, zero-error warnings-as-errors build. PostgreSQL-backed
+  integration tests require the test database infrastructure and run in CI.
+- Five Playwright browser tests are tracked; they are not part of the local
+  non-integration baseline.
 - Five EF Core migrations are applied. The admin migration job is the sole
   migration owner.
 

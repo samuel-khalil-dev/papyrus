@@ -1,2 +1,18 @@
-import type { SelectHTMLAttributes } from 'react';
-export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) { return <select className={`h-10 rounded-md border border-slate-300 bg-transparent px-3 text-sm dark:border-slate-700 ${props.className ?? ''}`} {...props} />; }
+import type { SelectHTMLAttributes } from "react";
+import { cn } from "@/lib/utils";
+
+// Native select is intentional: it preserves keyboard/mobile behavior and supports the existing multiple-select form fields.
+export function Select({
+  className,
+  ...props
+}: SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <select
+      className={cn(
+        "flex h-10 w-full rounded-none border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm outline-none transition-[border-color,box-shadow] focus:border-primary focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+        className,
+      )}
+      {...props}
+    />
+  );
+}

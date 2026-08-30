@@ -1,172 +1,183 @@
 # Incident Response Runbook
 
-**Scope:** Papyrus production and staging incidents. This runbook is tailored to
-the Papyrus architecture: an Aspire-orchestrated .NET 10 modular monolith with an
-admin API/UI, public blog, public portfolio, a single PostgreSQL 17 database, and
-OpenTelemetry-based telemetry. It is a release-gate artifact for **W6** (deployment
-and operations) and **W7** (observability and alerting).
+**Mode:** Diátaxis **How-To + Reference**. Use this procedure for Papyrus
+production or staging incidents. It is grounded in the Compose topology: one
+PostgreSQL 17 database, `admin-api`, read-only `blog` and `portfolio`, and the
+shared telemetry seam.
 
 **Owner:** on-call operator / project owner
-**Related documents:** [`telemetry-runbook.md`](telemetry-runbook.md),
-[`deployment.md`](../guides/deployment.md), [`audit-register.md`](../security/audit-register.md)
 
----
-
-## 1. Architecture at a glance
-
-| Component | Role | Notes |
-| --- | --- | --- |
-| `admin-api` | Writes, auth, media, migrations, seed | Sole migration owner; API-key authenticated |
-| `admin-ui` | React SPA served at `/admin` | Dev-only Aspire npm resource; proxied `/api/v1` |
-| `blog` | Public read-only host | Waits on admin-api health; never migrates |
-| `portfolio` | Public read-only host | Waits on admin-api health; never migrates |
-| PostgreSQL 17 | Single database | Durable volume; `papyrus` database |
-| Telemetry | OpenTelemetry via shared `Papyrus` ActivitySource | Structured audit events, redaction, sampling |
-
-All three web hosts share the same request telemetry seam. The admin host owns
-migrations and seed; public hosts are read-only. Health endpoints `/health` and
-`/alive` are anonymous but must be network-restricted to orchestrator/monitoring
-networks.
-
----
-
-## 2. Detection
-
-Signals come from the telemetry pipeline (see
-[`telemetry-runbook.md`](telemetry-runbook.md)) and platform health checks.
-
-### 2.1 Alert sources
-
-- **Health checks:** `/health` and `/alive` on each container; the orchestrator
-  probes these. A failing probe indicates a container or dependency problem.
-- **HTTP error rate:** K6/load and request telemetry thresholds (`<1%` errors;
-  admin `5xx = 0`). See [`phase6-baseline.md`](../performance/phase6-baseline.md).
-- **Latency:** public/admin HTTP p95 budget `≤ 1000 ms` (target `≤ 500 ms`).
-- **Audit volume drop:** a sudden drop in structured audit events can indicate a
-  telemetry outage or a redaction/sampling misconfiguration. Investigate per
-  [`telemetry-runbook.md`](telemetry-runbook.md#investigating-an-audit-volume-drop).
-- **Database:** PostgreSQL connection failures, slow queries, or disk/volume
-  pressure on the durable media and database volumes.
-- **Migration failures:** the release `migrate` job failing before `deploy`.
-
-### 2.2 Severity classification
-
-| Severity | Definition | Example |
-| --- | --- | --- |
-| **SEV-1** | Public outage or data loss; admin write path unavailable | Blog/portfolio down; database unreachable |
-| **SEV-2** | Degraded service; admin API errors; media unavailable | Elevated 5xx, high latency, media volume full |
-| **SEV-3** | Non-urgent operational issue | Telemetry gap, stale config, non-blocking alert |
-
----
-
-## 3. Triage
-
-1. **Confirm the signal.** Check the telemetry dashboard and container logs
-   (`docker compose logs <service>`). Do not act on a single flapping probe.
-2. **Identify the affected component.** Is it `admin-api`, `blog`, `portfolio`,
-   PostgreSQL, or the ingress/proxy?
-3. **Check recent changes.** Review the last release, migration, or configuration
-   change. A migration or config change is a common root cause.
-4. **Classify severity** (SEV-1/2/3) and assign an incident owner.
-5. **Open a tracking issue** with the detection time, affected component, and
-   current impact.
-
----
-
-## 4. Containment
-
-Containment limits blast radius before recovery. Choose the least disruptive
-action that stops the bleeding.
-
-- **Public site degraded:** If `blog` or `portfolio` is unhealthy, remove it from
-  the load balancer/ingress rotation rather than restarting in a loop.
-- **Admin write path failing:** Stop admin writes by removing `admin-api` from
-  rotation or blocking the admin ingress. Public reads are unaffected because
-  public hosts are read-only and independent.
-- **Database pressure:** If PostgreSQL is the bottleneck, do **not** run
-  migrations or heavy queries. Pause non-essential load and consider scaling the
-  database volume/instance.
-- **Suspected compromise:** If an API key or credential is suspected exposed,
-  rotate `AdminApi__ApiKey` immediately (see
-  [`deployment.md`](../guides/deployment.md)) and revoke the affected key.
-- **Media volume full:** Stop uploads (admin write path) and free space on the
-  durable media volume before recovery.
-
----
-
-## 5. Recovery
-
-Recovery restores service to a known-good state. Prefer the least invasive step
-first.
-
-1. **Restart the affected container** with the same immutable image tag:
-   `docker compose up -d <service>`. Public hosts wait on admin-api health.
-2. **Verify health** on `/health` and `/alive` before returning traffic.
-3. **Roll back a bad release:** redeploy the previous immutable image tag. Do not
-   edit or delete applied migrations; if a migration is the problem, generate a
-   corrective migration rather than editing history (see
-   [`deployment.md`](../guides/deployment.md)).
-4. **Database recovery:** restore from the latest verified PostgreSQL backup,
-   then re-apply the migration history up to the release point. Verify the
-   migration history before and after restore.
-5. **Media recovery:** restore the durable media volume from backup if media is
-   missing or corrupt.
-6. **Confirm telemetry:** verify audit events and request traces are flowing again
-   before declaring recovery complete.
-
----
-
-## 6. Post-incident review
-
-After the service is stable:
-
-1. **Document the timeline:** detection, triage, containment, recovery, and
-   resolution times.
-2. **Identify root cause** and contributing factors.
-3. **Define corrective actions** (code, config, runbook, or process changes) and
-   assign owners.
-4. **Update the runbooks** with any new detection signal or recovery step learned.
-5. **Record the incident** in the changelog and, if it affects a release gate,
-   update [`audit-register.md`](../security/audit-register.md) evidence.
-
----
-
-## 7. Escalation and contacts
-
-- **On-call operator:** first responder for SEV-2/SEV-3.
-- **Project owner:** SEV-1 decision authority and release-gate owner.
-- **Database administrator:** PostgreSQL restore and volume recovery.
-- **Security contact:** for suspected compromise or credential exposure.
-
----
-
-## 8. Runbook exercise (release gate W6)
-
-Before release, execute a deployment/restore drill that covers:
-
-- Clean deployment of the three images and PostgreSQL.
-- A database backup and restore cycle.
-- Media persistence across a container restart.
-- A migration-ownership drill confirming only `admin-api` applies migrations.
-
-Record the drill outcome as **W6** evidence in
+**Related:** [`telemetry-runbook.md`](telemetry-runbook.md),
+[`alerts.md`](alerts.md), [`deployment.md`](../guides/deployment.md), and
 [`release-gates.md`](../architecture/release-gates.md).
 
-### Recorded exercise — 2026-08-29 UTC
+## 1. Topology reference
 
-- **Deployment:** Compose PostgreSQL 17 plus the Admin, Blog, and Portfolio images
-  started successfully with healthy PostgreSQL and the expected published ports.
-- **Restore:** a custom-format `pg_dump` was restored with `pg_restore
-  --exit-on-error` into a disposable database; the restored schema contained
-  seven public tables and four migration-history rows.
-- **Migration ownership:** the two structural ownership tests passed; only the
-  Infrastructure initialization path contains the production migration call and
-  only `Papyrus.Api.Admin` invokes it at startup. Applied migration history was
-  left unchanged.
-- **Media persistence:** the first write attempt identified a permissions gap
-  on an empty named volume. The Admin image was corrected to pre-create and
-  assign `/data/media` to its non-root `APP_UID`; a rebuilt container wrote a
-  sentinel, restarted, and read the sentinel successfully from the same named
-  volume.
-- **Outcome:** W6 evidence is attached and O7 is closed. The temporary backup,
-  restore database, credentials file, and sentinel were cleaned up.
+| Component | Role | Operational fact |
+| --- | --- | --- |
+| `admin-api` | API, auth, media, migration, seed | Sole migrator; serves `/admin`; container port `8080`, published `5205` by default |
+| `blog` | Public read-only site | Published `5075`; never migrates |
+| `portfolio` | Public read-only site | Published `5024`; never migrates |
+| `db` | PostgreSQL 17 | Database `papyrus`; durable `papyrus-postgres-data` volume |
+| `papyrus-media` | Admin media storage | Mounted at `/data/media`; must survive Admin restarts |
+
+All hosts expose anonymous `/health` and `/alive` probes. Restrict those probes
+to orchestrator and monitoring networks. Request activities are
+`Papyrus.Request`; audit records are logger-backed `Papyrus.AuditEvent` events
+and EventId `1001`. See the [telemetry runbook](telemetry-runbook.md) for
+redaction, sampling, and collector-derived metrics.
+
+## 2. Detection and first response
+
+1. Record detection time, alert name, affected URL/service, and current impact.
+2. Check the dashboard and preserve the relevant trace ID, correlation ID, and
+   structured log entries. Never copy API keys or credentials into the ticket.
+3. Check service state and recent logs:
+
+   ```powershell
+   docker compose ps
+   docker compose logs --tail 200 admin-api
+   docker compose logs --tail 200 db
+   ```
+
+4. Probe `/health` and `/alive` from the permitted monitoring network.
+5. Classify impact: SEV-1 is an outage or data-loss risk, SEV-2 is material
+   degradation such as elevated 5xx or unavailable media, and SEV-3 is a
+   non-urgent telemetry or configuration issue.
+6. Assign an incident owner and contain before making a risky change.
+
+## 3. Containment and recovery rules
+
+- Remove an unhealthy public host from ingress rotation rather than restarting
+  it in a loop.
+- Remove `admin-api` from write traffic or block Admin ingress when writes are
+  unsafe; public reads are still read-only.
+- Do not run migrations or heavy queries while PostgreSQL is under pressure.
+- Do not edit or delete an applied migration. Roll back the image only when its
+  schema compatibility is known; otherwise create a corrective migration.
+- After each recovery action, verify `/health`, `/alive`, request telemetry,
+  audit events, and the user-facing path before returning traffic.
+
+## 4. Common incidents
+
+### 4.1 PostgreSQL down or unhealthy
+
+1. Confirm `db` health and inspect only the recent database logs:
+
+   ```powershell
+   docker compose ps db
+   docker compose logs --tail 200 db
+   ```
+
+2. Check host disk and the durable `papyrus-postgres-data` volume through the
+   platform. Do not remove the volume.
+3. Keep Blog, Portfolio, and Admin write traffic contained while the database
+   is unavailable; do not repeatedly restart all web services.
+4. If the database container is otherwise recoverable, restart only it:
+
+   ```powershell
+   docker compose up -d db
+   ```
+
+5. Wait for its health check, then restart `admin-api` and verify its health.
+   Blog and Portfolio should be returned after their database-backed pages
+   respond normally.
+6. If data is damaged, restore the latest verified PostgreSQL backup into the
+   approved database recovery target, verify migration history, and document
+   the restore before re-applying any needed release migration.
+
+### 4.2 Admin API unhealthy
+
+1. Check `admin-api` logs, `/health`, `/alive`, and the database health state.
+2. If the issue is a transient process failure, restart the same immutable image:
+
+   ```powershell
+   docker compose up -d admin-api
+   ```
+
+3. If the issue followed a release, remove Admin write traffic and redeploy the
+   previous immutable image tag after checking database compatibility.
+4. Confirm `/admin` and an authenticated, non-destructive API read. Public
+   hosts remain read-only, but their database dependency may still require the
+   database and Admin startup ordering to be healthy.
+
+### 4.3 Media volume full or unwritable
+
+1. Stop or block uploads at the Admin ingress while preserving public reads.
+2. Check capacity and ownership of the durable `papyrus-media` volume; do not
+   delete files that are referenced by content.
+3. Free or expand capacity according to the storage platform, then restart
+   `admin-api` if required:
+
+   ```powershell
+   docker compose up -d admin-api
+   ```
+
+4. Verify a permitted media operation and persistence across an Admin restart.
+   The Admin image pre-creates `/data/media` and assigns it to non-root
+   `APP_UID`; do not switch the production container to root.
+5. Restore the media volume from its verified backup if files are missing or
+   corrupt, then confirm tenant-scoped media URLs.
+
+### 4.4 Migration failure
+
+1. Treat a failed release `migrate` job as a deployment stop. The `deploy` job
+   must not run until migration is understood.
+2. Capture the migration job output and database migration history. Do not edit
+   or delete the applied migration files.
+3. Confirm the release used `dotnet-ef` `10.0.11`, the Infrastructure project,
+   and the Admin API startup project.
+4. Restore from the pre-release backup only if the database change requires it
+   and the approved recovery procedure supports it.
+5. Correct the model or migration by adding a later corrective migration, then
+   rerun one coordinated migration job. Blog and Portfolio never run it.
+6. Deploy the web images only after the migration job succeeds and health checks
+   pass.
+
+### 4.5 API-key exposure or rotation
+
+1. Treat the key as compromised. Block or restrict Admin ingress if necessary
+   and preserve audit events and trace IDs without recording the key itself.
+2. For a simple Compose rotation, change the secret-manager value mapped to
+   `ADMIN_API_KEY` and recreate `admin-api`:
+
+   ```powershell
+   docker compose up -d --force-recreate admin-api
+   ```
+
+3. Verify the new key and reject the old key before returning write traffic.
+4. For an overlap window, configure the reloadable `AdminApi:ApiKeys` set with
+   the new key while retaining the old one, move clients, then remove the old
+   key. The legacy single `AdminApi:ApiKey` setting remains a compatibility
+   alias; never store keys in the database or source tree.
+5. Confirm successful and failed authentication audit events, and check that
+   redaction has not emitted credentials. Document the rotation time and
+   affected clients.
+
+## 5. Telemetry seam during an incident
+
+1. Query `Papyrus.Request` by service, endpoint, status, and `trace_id`.
+2. Query `Papyrus.AuditEvent` or structured EventId `1001` by tenant, action,
+   target, outcome, and status.
+3. If audit volume drops, follow the ordered checks in
+   [Investigate an audit-volume drop](telemetry-runbook.md#5-investigate-an-audit-volume-drop).
+   Diagnostic sampling at `0` does not explain missing audit events.
+4. Treat `[redacted]` and `[other]` as safety-control outputs, not as permission
+   to bypass redaction or cardinality limits.
+
+## 6. Close-out
+
+After stabilization, record the timeline, impact, root cause, containment,
+recovery, and corrective actions. Update the runbook or alert mapping if the
+incident revealed a missing signal. Record release-gate evidence when the
+incident involves deployment, restore, migration ownership, media persistence,
+or telemetry operation.
+
+## 7. Release exercise
+
+Before release, exercise a clean Compose deployment, PostgreSQL backup/restore,
+media persistence across an Admin restart, and migration ownership. The
+recorded 2026-08-29 exercise confirmed PostgreSQL 17 startup, disposable
+database restore, sole Admin migration ownership, and media persistence after
+the image created `/data/media` with non-root ownership. Temporary drill
+artifacts were removed; record subsequent exercises under W6/O7.

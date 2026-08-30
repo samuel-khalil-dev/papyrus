@@ -116,8 +116,9 @@ querying guidance.
 
 ## Test and code-review coverage
 
-The current suite contains 73 .NET tests plus 5 Playwright browser tests and
-covers tenant A/B filtering and mutation attempts, header-based API-key
+The current suite contains 70 local non-integration .NET tests plus 14
+PostgreSQL integration tests exercised in CI (84 unique .NET tests total), and
+5 separate Playwright browser tests. It covers tenant A/B filtering and mutation attempts, header-based API-key
 authentication and matching, raster media signatures and tenant paths, Markdown
 HTML and scheme attacks, public live-content filtering, tag resolution, admin
 create/update relationships, PostgreSQL integration behavior,
@@ -129,7 +130,8 @@ process-local. The review also confirmed EF no-tracking on the current
 projection/read paths and parameterized LINQ query construction.
 
 The code-level gaps identified in W-NEW-01 through W-NEW-05 are remediated and
-covered by the current 73-test .NET baseline plus the 5-test browser smoke
+covered by the current 70-test local non-integration baseline, with the
+PostgreSQL integration subset adding 14 CI tests, plus the 5-test browser smoke
 suite. Remaining assurance work is operational: production-provider tenant
 integration, HTTP security/header and feed/sitemap smoke coverage, cancellation
 drills, and replica behavior for the process-local security stores. These are
@@ -139,9 +141,10 @@ release-gate or Phase 6 work, not unresolved critical defects.
 
 - Full-solution [`dotnet build`](../../Papyrus.sln:1) completed successfully on
   2026-08-29 with 0 warnings and 0 errors.
-- Full-solution [`dotnet test`](../../Papyrus.sln:1) completed successfully on
-  2026-08-29 with 73 passing tests, 0 failures, and 0 skipped tests; the
-  Playwright browser smoke suite passes 5/5.
+- The local filtered [`dotnet test`](../../Papyrus.sln:1) completed with 70
+  passing non-integration tests, 0 failures, and 0 skipped tests. CI supplies
+  the PostgreSQL service for the additional 14 integration tests (84 unique
+  .NET tests total); the Playwright browser smoke suite contains 5 tests.
 - No [CRITICAL] finding was discovered. Remediation changed production code, one
   new migration, and focused tests; no secrets, dependencies, or existing
   migrations were changed.

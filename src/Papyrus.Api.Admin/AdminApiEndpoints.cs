@@ -42,59 +42,32 @@ internal static class AdminApiEndpoints
             return await PaginateQueryAsync(query, page, pageSize, versioned, cancellationToken);
         }), versioned);
 
-        api.MapGet("/categories/{id:guid}", async (Guid id, PapyrusDbContext db) =>
+        api.MapGet("/categories/{id:guid}", async (Guid id, PapyrusDbContext db, CancellationToken cancellationToken) =>
         {
-            var category = await db.ContentCategories.AsNoTracking().FirstOrDefaultAsync(category => category.Id == id);
+            var category = await db.ContentCategories.AsNoTracking().FirstOrDefaultAsync(category => category.Id == id, cancellationToken);
             return category is null ? Results.NotFound() : Results.Ok(category.ToResponse());
         }).Produces<ContentCategoryResponse>().Produces(StatusCodes.Status404NotFound);
 
-        api.MapPost("/categories", async (CategoryUpsertRequest request, PapyrusDbContext db) =>
+        api.MapPost("/categories", async (CategoryUpsertRequest request, [FromServices] TaxonomyCommandHandlers handlers, CancellationToken cancellationToken) =>
         {
-            var category = new ContentCategory
-            {
-                Id = Guid.NewGuid(),
-                TenantId = db.TenantId,
-                Slug = request.Slug,
-                Name = request.Name,
-                Description = request.Description,
-                IsPublished = request.IsPublished,
-                CreatedAt = DateTimeOffset.UtcNow
-            };
-
-            db.ContentCategories.Add(category);
-            await db.SaveChangesAsync();
-            return Results.Created($"/api/categories/{category.Id}", category.ToResponse());
+            var result = await handlers.SaveCategoryAsync(new(null, request.Slug, request.Name, request.Description, request.IsPublished), cancellationToken);
+            return result.IsSuccess
+                ? Results.Created($"/api/categories/{result.Value!.Id}", result.Value.ToResponse())
+                : ValidationProblem(result.Errors);
         }).Produces<ContentCategoryResponse>(StatusCodes.Status201Created).Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest);
 
-        api.MapPut("/categories/{id:guid}", async (Guid id, CategoryUpsertRequest request, PapyrusDbContext db) =>
+        api.MapPut("/categories/{id:guid}", async (Guid id, CategoryUpsertRequest request, [FromServices] TaxonomyCommandHandlers handlers, CancellationToken cancellationToken) =>
         {
-            var category = await db.ContentCategories.FirstOrDefaultAsync(category => category.Id == id);
-            if (category is null)
-            {
-                return Results.NotFound();
-            }
-
-            category.Slug = request.Slug;
-            category.Name = request.Name;
-            category.Description = request.Description;
-            category.IsPublished = request.IsPublished;
-            category.UpdatedAt = DateTimeOffset.UtcNow;
-
-            await db.SaveChangesAsync();
-            return Results.Ok(category.ToResponse());
+            var result = await handlers.SaveCategoryAsync(new(id, request.Slug, request.Name, request.Description, request.IsPublished), cancellationToken);
+            return result.IsSuccess
+                ? Results.Ok(result.Value!.ToResponse())
+                : result.Errors.Any(error => error.Code == "category.not_found") ? Results.NotFound() : ValidationProblem(result.Errors);
         }).Produces<ContentCategoryResponse>().Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest).Produces(StatusCodes.Status404NotFound);
 
-        api.MapDelete("/categories/{id:guid}", async (Guid id, PapyrusDbContext db) =>
+        api.MapDelete("/categories/{id:guid}", async (Guid id, [FromServices] ContentLifecycleHandlers handlers, CancellationToken cancellationToken) =>
         {
-            var category = await db.ContentCategories.FirstOrDefaultAsync(category => category.Id == id);
-            if (category is null)
-            {
-                return Results.NotFound();
-            }
-
-            db.ContentCategories.Remove(category);
-            await db.SaveChangesAsync();
-            return Results.NoContent();
+            return await handlers.SoftDeleteCategoryAsync(id, "Deleted through the admin API.", cancellationToken)
+                ? Results.NoContent() : Results.NotFound();
         }).Produces(StatusCodes.Status204NoContent).Produces(StatusCodes.Status404NotFound);
     }
 
@@ -108,55 +81,32 @@ internal static class AdminApiEndpoints
             return await PaginateQueryAsync(query, page, pageSize, versioned, cancellationToken);
         }), versioned);
 
-        api.MapGet("/tags/{id:guid}", async (Guid id, PapyrusDbContext db) =>
+        api.MapGet("/tags/{id:guid}", async (Guid id, PapyrusDbContext db, CancellationToken cancellationToken) =>
         {
-            var tag = await db.ContentTags.AsNoTracking().FirstOrDefaultAsync(tag => tag.Id == id);
+            var tag = await db.ContentTags.AsNoTracking().FirstOrDefaultAsync(tag => tag.Id == id, cancellationToken);
             return tag is null ? Results.NotFound() : Results.Ok(tag.ToResponse());
         }).Produces<ContentTagResponse>().Produces(StatusCodes.Status404NotFound);
 
-        api.MapPost("/tags", async (TagUpsertRequest request, PapyrusDbContext db) =>
+        api.MapPost("/tags", async (TagUpsertRequest request, [FromServices] TaxonomyCommandHandlers handlers, CancellationToken cancellationToken) =>
         {
-            var tag = new ContentTag
-            {
-                Id = Guid.NewGuid(),
-                TenantId = db.TenantId,
-                Slug = request.Slug,
-                Name = request.Name,
-                CreatedAt = DateTimeOffset.UtcNow
-            };
-
-            db.ContentTags.Add(tag);
-            await db.SaveChangesAsync();
-            return Results.Created($"/api/tags/{tag.Id}", tag.ToResponse());
+            var result = await handlers.SaveTagAsync(new(null, request.Slug, request.Name), cancellationToken);
+            return result.IsSuccess
+                ? Results.Created($"/api/tags/{result.Value!.Id}", result.Value.ToResponse())
+                : ValidationProblem(result.Errors);
         }).Produces<ContentTagResponse>(StatusCodes.Status201Created).Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest);
 
-        api.MapPut("/tags/{id:guid}", async (Guid id, TagUpsertRequest request, PapyrusDbContext db) =>
+        api.MapPut("/tags/{id:guid}", async (Guid id, TagUpsertRequest request, [FromServices] TaxonomyCommandHandlers handlers, CancellationToken cancellationToken) =>
         {
-            var tag = await db.ContentTags.FirstOrDefaultAsync(tag => tag.Id == id);
-            if (tag is null)
-            {
-                return Results.NotFound();
-            }
-
-            tag.Slug = request.Slug;
-            tag.Name = request.Name;
-            tag.UpdatedAt = DateTimeOffset.UtcNow;
-
-            await db.SaveChangesAsync();
-            return Results.Ok(tag.ToResponse());
+            var result = await handlers.SaveTagAsync(new(id, request.Slug, request.Name), cancellationToken);
+            return result.IsSuccess
+                ? Results.Ok(result.Value!.ToResponse())
+                : result.Errors.Any(error => error.Code == "tag.not_found") ? Results.NotFound() : ValidationProblem(result.Errors);
         }).Produces<ContentTagResponse>().Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest).Produces(StatusCodes.Status404NotFound);
 
-        api.MapDelete("/tags/{id:guid}", async (Guid id, PapyrusDbContext db) =>
+        api.MapDelete("/tags/{id:guid}", async (Guid id, [FromServices] ContentLifecycleHandlers handlers, CancellationToken cancellationToken) =>
         {
-            var tag = await db.ContentTags.FirstOrDefaultAsync(tag => tag.Id == id);
-            if (tag is null)
-            {
-                return Results.NotFound();
-            }
-
-            db.ContentTags.Remove(tag);
-            await db.SaveChangesAsync();
-            return Results.NoContent();
+            return await handlers.SoftDeleteTagAsync(id, "Deleted through the admin API.", cancellationToken)
+                ? Results.NoContent() : Results.NotFound();
         }).Produces(StatusCodes.Status204NoContent).Produces(StatusCodes.Status404NotFound);
     }
 
@@ -180,9 +130,8 @@ internal static class AdminApiEndpoints
             return project is null ? Results.NotFound() : Results.Ok(project);
         }).Produces<ProjectResponse>().Produces(StatusCodes.Status404NotFound);
 
-        api.MapPost("/projects", async (ProjectUpsertRequest request, PapyrusDbContext db, IServiceProvider services, CancellationToken cancellationToken) =>
+        api.MapPost("/projects", async (ProjectUpsertRequest request, PapyrusDbContext db, [FromServices] ContentCommandHandlers handlers, CancellationToken cancellationToken) =>
         {
-            var handlers = services.GetService<ContentCommandHandlers>() ?? new ContentCommandHandlers(db);
             var result = await handlers.SaveProjectAsync(new(null, request.Slug, request.Title, request.Summary, request.Description,
                 request.RepositoryUrl, request.LiveUrl, request.CoverImageUrl, request.CategoryId, request.IsFeatured,
                 request.IsPublished, request.PublishedAt, request.TagIds), cancellationToken);
@@ -192,9 +141,8 @@ internal static class AdminApiEndpoints
             return Results.Created(ResourcePath("projects", project.Id, versioned), created!.ToResponse());
         }).Produces<ProjectResponse>(StatusCodes.Status201Created).Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest);
 
-        api.MapPut("/projects/{id:guid}", async (Guid id, ProjectUpsertRequest request, PapyrusDbContext db, IServiceProvider services, CancellationToken cancellationToken) =>
+        api.MapPut("/projects/{id:guid}", async (Guid id, ProjectUpsertRequest request, PapyrusDbContext db, [FromServices] ContentCommandHandlers handlers, CancellationToken cancellationToken) =>
         {
-            var handlers = services.GetService<ContentCommandHandlers>() ?? new ContentCommandHandlers(db);
             var result = await handlers.SaveProjectAsync(new(id, request.Slug, request.Title, request.Summary, request.Description,
                 request.RepositoryUrl, request.LiveUrl, request.CoverImageUrl, request.CategoryId, request.IsFeatured,
                 request.IsPublished, request.PublishedAt, request.TagIds), cancellationToken);
@@ -203,17 +151,10 @@ internal static class AdminApiEndpoints
             return Results.Ok(updated!.ToResponse());
         }).Produces<ProjectResponse>().Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest).Produces(StatusCodes.Status404NotFound);
 
-        api.MapDelete("/projects/{id:guid}", async (Guid id, PapyrusDbContext db) =>
+        api.MapDelete("/projects/{id:guid}", async (Guid id, [FromServices] ContentLifecycleHandlers handlers, CancellationToken cancellationToken) =>
         {
-            var project = await db.Projects.FirstOrDefaultAsync(item => item.Id == id);
-            if (project is null)
-            {
-                return Results.NotFound();
-            }
-
-            db.Projects.Remove(project);
-            await db.SaveChangesAsync();
-            return Results.NoContent();
+            return await handlers.SoftDeleteProjectAsync(id, "Deleted through the admin API.", cancellationToken)
+                ? Results.NoContent() : Results.NotFound();
         }).Produces(StatusCodes.Status204NoContent).Produces(StatusCodes.Status404NotFound);
     }
 
@@ -236,9 +177,8 @@ internal static class AdminApiEndpoints
             return blogPost is null ? Results.NotFound() : Results.Ok(blogPost);
         }).Produces<BlogPostResponse>().Produces(StatusCodes.Status404NotFound);
 
-        api.MapPost("/blog-posts", async (BlogPostUpsertRequest request, PapyrusDbContext db, IServiceProvider services, CancellationToken cancellationToken) =>
+        api.MapPost("/blog-posts", async (BlogPostUpsertRequest request, PapyrusDbContext db, [FromServices] ContentCommandHandlers handlers, CancellationToken cancellationToken) =>
         {
-            var handlers = services.GetService<ContentCommandHandlers>() ?? new ContentCommandHandlers(db);
             var result = await handlers.SaveBlogPostAsync(new(null, request.Slug, request.Title, request.Summary, request.ContentMarkdown,
                 request.CoverImageUrl, request.ProjectId, request.CategoryId, request.IsFeatured, request.IsPublished,
                 request.PublishedAt, request.TagIds), cancellationToken);
@@ -248,9 +188,8 @@ internal static class AdminApiEndpoints
             return Results.Created(ResourcePath("blog-posts", blogPost.Id, versioned), created!.ToResponse());
         }).Produces<BlogPostResponse>(StatusCodes.Status201Created).Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest);
 
-        api.MapPut("/blog-posts/{id:guid}", async (Guid id, BlogPostUpsertRequest request, PapyrusDbContext db, IServiceProvider services, CancellationToken cancellationToken) =>
+        api.MapPut("/blog-posts/{id:guid}", async (Guid id, BlogPostUpsertRequest request, PapyrusDbContext db, [FromServices] ContentCommandHandlers handlers, CancellationToken cancellationToken) =>
         {
-            var handlers = services.GetService<ContentCommandHandlers>() ?? new ContentCommandHandlers(db);
             var result = await handlers.SaveBlogPostAsync(new(id, request.Slug, request.Title, request.Summary, request.ContentMarkdown,
                 request.CoverImageUrl, request.ProjectId, request.CategoryId, request.IsFeatured, request.IsPublished,
                 request.PublishedAt, request.TagIds), cancellationToken);
@@ -259,17 +198,10 @@ internal static class AdminApiEndpoints
             return Results.Ok(updated!.ToResponse());
         }).Produces<BlogPostResponse>().Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest).Produces(StatusCodes.Status404NotFound);
 
-        api.MapDelete("/blog-posts/{id:guid}", async (Guid id, PapyrusDbContext db) =>
+        api.MapDelete("/blog-posts/{id:guid}", async (Guid id, [FromServices] ContentLifecycleHandlers handlers, CancellationToken cancellationToken) =>
         {
-            var blogPost = await db.BlogPosts.FirstOrDefaultAsync(post => post.Id == id);
-            if (blogPost is null)
-            {
-                return Results.NotFound();
-            }
-
-            db.BlogPosts.Remove(blogPost);
-            await db.SaveChangesAsync();
-            return Results.NoContent();
+            return await handlers.SoftDeleteBlogPostAsync(id, "Deleted through the admin API.", cancellationToken)
+                ? Results.NoContent() : Results.NotFound();
         }).Produces(StatusCodes.Status204NoContent).Produces(StatusCodes.Status404NotFound);
     }
 
@@ -301,7 +233,7 @@ internal static class AdminApiEndpoints
 
         api.MapDelete("/media/{fileName}", async (string fileName, LocalMediaService media, PapyrusDbContext db, CancellationToken cancellationToken) =>
         {
-            if (await AdminContentSupport.IsMediaReferencedAsync(db, fileName))
+            if (await AdminContentSupport.IsMediaReferencedAsync(db, fileName, cancellationToken))
             {
                 return Results.Conflict("The media file is still referenced by published content or an admin draft.");
             }
@@ -326,23 +258,6 @@ internal static class AdminApiEndpoints
             .Include(post => post.Project)
             .Include(post => post.BlogPostTags).ThenInclude(blogPostTag => blogPostTag.Tag)
             .FirstOrDefaultAsync(post => post.Id == blogPostId, cancellationToken);
-
-    private static async Task<bool> CategoryExistsAsync(PapyrusDbContext db, Guid? categoryId) =>
-        categoryId is null || await db.ContentCategories.AsNoTracking().AnyAsync(category => category.Id == categoryId.Value);
-
-    private static async Task<bool> ProjectExistsAsync(PapyrusDbContext db, Guid? projectId) =>
-        projectId is null || await db.Projects.AsNoTracking().AnyAsync(project => project.Id == projectId.Value);
-
-    private static async Task<Guid[]?> ResolveTagIdsAsync(PapyrusDbContext db, Guid[] tagIds)
-    {
-        if (tagIds.Length == 0)
-        {
-            return Array.Empty<Guid>();
-        }
-
-        var availableTagIds = await db.ContentTags.AsNoTracking().Where(tag => tagIds.Contains(tag.Id)).Select(tag => tag.Id).ToArrayAsync();
-        return availableTagIds.Length == tagIds.Distinct().Count() ? availableTagIds : null;
-    }
 
     private static System.Linq.Expressions.Expression<Func<ContentCategory, ContentCategoryResponse>> CategoryProjection() =>
         category => new ContentCategoryResponse(category.Id, category.Slug, category.Name, category.Description,
@@ -437,28 +352,6 @@ internal static class AdminApiEndpoints
                 .ToDictionary(group => group.Key, group => group.Select(error => error.Message).ToArray()),
             title: "The request contains validation errors.",
             detail: "Correct the indicated fields and try again.");
-
-    private static async Task SetProjectTagsAsync(PapyrusDbContext db, Guid projectId, IReadOnlyCollection<Guid> tagIds)
-    {
-        var current = await db.ProjectTags.Where(projectTag => projectTag.ProjectId == projectId).ToListAsync();
-        db.ProjectTags.RemoveRange(current);
-
-        foreach (var tagId in tagIds)
-        {
-            db.ProjectTags.Add(new ProjectTag { ProjectId = projectId, TagId = tagId, TenantId = db.TenantId });
-        }
-    }
-
-    private static async Task SetBlogPostTagsAsync(PapyrusDbContext db, Guid blogPostId, IReadOnlyCollection<Guid> tagIds)
-    {
-        var current = await db.BlogPostTags.Where(blogPostTag => blogPostTag.BlogPostId == blogPostId).ToListAsync();
-        db.BlogPostTags.RemoveRange(current);
-
-        foreach (var tagId in tagIds)
-        {
-            db.BlogPostTags.Add(new BlogPostTag { BlogPostId = blogPostId, TagId = tagId, TenantId = db.TenantId });
-        }
-    }
 
     private static ContentCategoryResponse ToResponse(this ContentCategory category) =>
         new(category.Id, category.Slug, category.Name, category.Description, category.IsPublished, category.CreatedAt, category.UpdatedAt);

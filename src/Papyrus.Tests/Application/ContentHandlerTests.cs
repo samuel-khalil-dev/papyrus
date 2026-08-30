@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Papyrus.Application.Content;
 using Papyrus.Core.Content;
+using Papyrus.Infrastructure;
+using Papyrus.Infrastructure.MultiTenancy;
 
 namespace Papyrus.Tests.Application;
 
@@ -160,6 +162,43 @@ public sealed class TaxonomyAndLifecycleHandlerTests
     }
 
     [Fact]
+    public async Task Taxonomy_handlers_update_category_and_tag_in_the_current_tenant()
+    {
+        await using var db = TestDb.Create();
+        var category = new ContentCategory { Id = Guid.NewGuid(), Slug = "old-category", Name = "Old category" };
+        var tag = new ContentTag { Id = Guid.NewGuid(), Slug = "old-tag", Name = "Old tag" };
+        db.AddRange(category, tag);
+        await db.SaveChangesAsync();
+        var handlers = new TaxonomyCommandHandlers(db);
+
+        var updatedCategory = await handlers.SaveCategoryAsync(
+            new SaveCategoryCommand(category.Id, "new-category", "New category", "Description", true), CancellationToken.None);
+        var updatedTag = await handlers.SaveTagAsync(
+            new SaveTagCommand(tag.Id, "new-tag", "New tag"), CancellationToken.None);
+
+        Assert.True(updatedCategory.IsSuccess);
+        Assert.True(updatedTag.IsSuccess);
+        Assert.Equal("new-category", (await db.ContentCategories.SingleAsync()).Slug);
+        Assert.Equal("New tag", (await db.ContentTags.SingleAsync()).Name);
+        Assert.Equal(db.TenantId, updatedCategory.Value!.TenantId);
+        Assert.Equal(db.TenantId, updatedTag.Value!.TenantId);
+    }
+
+    [Theory]
+    [InlineData("", "Valid name")]
+    [InlineData("valid-slug", "")]
+    public async Task Taxonomy_handlers_reject_invalid_category_values(string slug, string name)
+    {
+        await using var db = TestDb.Create();
+        var result = await new TaxonomyCommandHandlers(db).SaveCategoryAsync(
+            new SaveCategoryCommand(null, slug, name, null, false), CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains(result.Errors, error => error.Code == "category.invalid");
+        Assert.Empty(await db.ContentCategories.ToListAsync());
+    }
+
+    [Fact]
     public async Task Lifecycle_handlers_soft_delete_and_restore_project_and_post()
     {
         await using var db = TestDb.Create();
@@ -178,5 +217,29 @@ public sealed class TaxonomyAndLifecycleHandlerTests
         Assert.Single(await db.Projects.ToListAsync());
         Assert.Single(await db.BlogPosts.ToListAsync());
         Assert.False(await handlers.RestoreProjectAsync(Guid.NewGuid(), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Lifecycle_handlers_ignore_cross_tenant_ids_without_tracking_or_modifying_them()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var options = new DbContextOptionsBuilder<PapyrusDbContext>().UseInMemoryDatabase(databaseName).Options;
+        var projectId = Guid.NewGuid();
+
+        await using (var otherDb = new PapyrusDbContext(options, new TenantContext("other")))
+        {
+            otherDb.Projects.Add(new Project { Id = projectId, Slug = "other", Title = "Other", Summary = "Other" });
+            await otherDb.SaveChangesAsync();
+        }
+
+        await using var mainDb = new PapyrusDbContext(options, new TenantContext("main"));
+        var deleted = await new ContentLifecycleHandlers(mainDb).SoftDeleteProjectAsync(projectId, "attack", CancellationToken.None);
+
+        Assert.False(deleted);
+        Assert.Empty(mainDb.ChangeTracker.Entries<Project>());
+        await using var verificationDb = new PapyrusDbContext(options, new TenantContext("other"));
+        var project = await verificationDb.Projects.IgnoreQueryFilters().SingleAsync();
+        Assert.False(project.IsDeleted);
+        Assert.Equal("other", project.TenantId);
     }
 }

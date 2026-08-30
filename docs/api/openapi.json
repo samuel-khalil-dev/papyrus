@@ -888,6 +888,19 @@
         "name": "X-Admin-Api-Key",
         "type": "apiKey"
       }
+    },
+    "parameters": {
+      "TenantId": {
+        "name": "X-Tenant-Id",
+        "in": "header",
+        "description": "Tenant identifier used for request isolation. Defaults to main.",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "pattern": "[a-z0-9][a-z0-9-]{0,62}$",
+          "default": "main"
+        }
+      }
     }
   },
   "info": {
@@ -936,9 +949,6 @@
             "description": "OK"
           }
         },
-        "security": [
-          {}
-        ],
         "tags": [
           "Papyrus.Api.Admin"
         ]
@@ -976,13 +986,15 @@
             "description": "Bad Request"
           }
         },
-        "security": [
-          {}
-        ],
         "tags": [
           "Papyrus.Api.Admin"
         ]
-      }
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/TenantId"
+        }
+      ]
     },
     "/api/v1/blog-posts/{id}": {
       "delete": {
@@ -1005,9 +1017,6 @@
             "description": "Not Found"
           }
         },
-        "security": [
-          {}
-        ],
         "tags": [
           "Papyrus.Api.Admin"
         ]
@@ -1039,9 +1048,6 @@
             "description": "Not Found"
           }
         },
-        "security": [
-          {}
-        ],
         "tags": [
           "Papyrus.Api.Admin"
         ]
@@ -1093,13 +1099,15 @@
             "description": "Not Found"
           }
         },
-        "security": [
-          {}
-        ],
         "tags": [
           "Papyrus.Api.Admin"
         ]
-      }
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/TenantId"
+        }
+      ]
     },
     "/api/v1/categories": {
       "get": {
@@ -1141,9 +1149,6 @@
             "description": "OK"
           }
         },
-        "security": [
-          {}
-        ],
         "tags": [
           "Papyrus.Api.Admin"
         ]
@@ -1181,13 +1186,15 @@
             "description": "Bad Request"
           }
         },
-        "security": [
-          {}
-        ],
         "tags": [
           "Papyrus.Api.Admin"
         ]
-      }
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/TenantId"
+        }
+      ]
     },
     "/api/v1/categories/{id}": {
       "delete": {
@@ -1210,9 +1217,6 @@
             "description": "Not Found"
           }
         },
-        "security": [
-          {}
-        ],
         "tags": [
           "Papyrus.Api.Admin"
         ]
@@ -1244,9 +1248,6 @@
             "description": "Not Found"
           }
         },
-        "security": [
-          {}
-        ],
         "tags": [
           "Papyrus.Api.Admin"
         ]
@@ -1298,13 +1299,15 @@
             "description": "Not Found"
           }
         },
-        "security": [
-          {}
-        ],
         "tags": [
           "Papyrus.Api.Admin"
         ]
-      }
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/TenantId"
+        }
+      ]
     },
     "/api/v1/media": {
       "get": {
@@ -1323,9 +1326,6 @@
             "description": "OK"
           }
         },
-        "security": [
-          {}
-        ],
         "tags": [
           "Papyrus.Api.Admin"
         ]
@@ -1363,13 +1363,15 @@
             "description": "Bad Request"
           }
         },
-        "security": [
-          {}
-        ],
         "tags": [
           "Papyrus.Api.Admin"
         ]
-      }
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/TenantId"
+        }
+      ]
     },
     "/api/v1/media/{fileName}": {
       "delete": {
@@ -1401,13 +1403,15 @@
             "description": "Conflict"
           }
         },
-        "security": [
-          {}
-        ],
         "tags": [
           "Papyrus.Api.Admin"
         ]
-      }
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/TenantId"
+        }
+      ]
     },
     "/api/v1/projects": {
       "get": {
@@ -1449,9 +1453,6 @@
             "description": "OK"
           }
         },
-        "security": [
-          {}
-        ],
         "tags": [
           "Papyrus.Api.Admin"
         ]
@@ -1489,13 +1490,15 @@
             "description": "Bad Request"
           }
         },
-        "security": [
-          {}
-        ],
         "tags": [
           "Papyrus.Api.Admin"
         ]
-      }
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/TenantId"
+        }
+      ]
     },
     "/api/v1/projects/{id}": {
       "delete": {
@@ -1518,9 +1521,6 @@
             "description": "Not Found"
           }
         },
-        "security": [
-          {}
-        ],
         "tags": [
           "Papyrus.Api.Admin"
         ]
@@ -1552,9 +1552,6 @@
             "description": "Not Found"
           }
         },
-        "security": [
-          {}
-        ],
         "tags": [
           "Papyrus.Api.Admin"
         ]
@@ -1606,13 +1603,15 @@
             "description": "Not Found"
           }
         },
-        "security": [
-          {}
-        ],
         "tags": [
           "Papyrus.Api.Admin"
         ]
-      }
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/TenantId"
+        }
+      ]
     },
     "/api/v1/tags": {
       "get": {
@@ -1654,9 +1653,6 @@
             "description": "OK"
           }
         },
-        "security": [
-          {}
-        ],
         "tags": [
           "Papyrus.Api.Admin"
         ]
@@ -1694,13 +1690,15 @@
             "description": "Bad Request"
           }
         },
-        "security": [
-          {}
-        ],
         "tags": [
           "Papyrus.Api.Admin"
         ]
-      }
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/TenantId"
+        }
+      ]
     },
     "/api/v1/tags/{id}": {
       "delete": {
@@ -1723,9 +1721,6 @@
             "description": "Not Found"
           }
         },
-        "security": [
-          {}
-        ],
         "tags": [
           "Papyrus.Api.Admin"
         ]
@@ -1757,9 +1752,6 @@
             "description": "Not Found"
           }
         },
-        "security": [
-          {}
-        ],
         "tags": [
           "Papyrus.Api.Admin"
         ]
@@ -1811,13 +1803,15 @@
             "description": "Not Found"
           }
         },
-        "security": [
-          {}
-        ],
         "tags": [
           "Papyrus.Api.Admin"
         ]
-      }
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/TenantId"
+        }
+      ]
     }
   },
   "servers": [
@@ -1828,6 +1822,11 @@
   "tags": [
     {
       "name": "Papyrus.Api.Admin"
+    }
+  ],
+  "security": [
+    {
+      "AdminApiKey": []
     }
   ]
 }

@@ -36,14 +36,36 @@ public sealed class TaxonomyCommandHandlers(PapyrusDbContext db)
 
 public sealed class ContentLifecycleHandlers(PapyrusDbContext db)
 {
+    public Task<bool> SoftDeleteCategoryAsync(Guid id, string reason, CancellationToken cancellationToken) =>
+        SetCategoryStateAsync(id, true, reason, cancellationToken);
+
+    public Task<bool> SoftDeleteTagAsync(Guid id, string reason, CancellationToken cancellationToken) =>
+        SetTagStateAsync(id, true, reason, cancellationToken);
+
     public async Task<bool> SoftDeleteProjectAsync(Guid id, string reason, CancellationToken cancellationToken) => await SetProjectStateAsync(id, true, reason, cancellationToken);
     public async Task<bool> RestoreProjectAsync(Guid id, CancellationToken cancellationToken) => await SetProjectStateAsync(id, false, null, cancellationToken);
     public async Task<bool> SoftDeleteBlogPostAsync(Guid id, string reason, CancellationToken cancellationToken) => await SetPostStateAsync(id, true, reason, cancellationToken);
     public async Task<bool> RestoreBlogPostAsync(Guid id, CancellationToken cancellationToken) => await SetPostStateAsync(id, false, null, cancellationToken);
 
+    private async Task<bool> SetCategoryStateAsync(Guid id, bool deleted, string? reason, CancellationToken cancellationToken)
+    {
+        var category = await db.ContentCategories.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == id && x.TenantId == db.TenantId, cancellationToken);
+        if (category is null) return false;
+        category.IsDeleted = deleted; category.DeletedAt = deleted ? DateTimeOffset.UtcNow : null; category.DeleteReason = deleted ? reason : null;
+        await db.SaveChangesAsync(cancellationToken); return true;
+    }
+
+    private async Task<bool> SetTagStateAsync(Guid id, bool deleted, string? reason, CancellationToken cancellationToken)
+    {
+        var tag = await db.ContentTags.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == id && x.TenantId == db.TenantId, cancellationToken);
+        if (tag is null) return false;
+        tag.IsDeleted = deleted; tag.DeletedAt = deleted ? DateTimeOffset.UtcNow : null; tag.DeleteReason = deleted ? reason : null;
+        await db.SaveChangesAsync(cancellationToken); return true;
+    }
+
     private async Task<bool> SetProjectStateAsync(Guid id, bool deleted, string? reason, CancellationToken cancellationToken)
     {
-        var project = await db.Projects.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        var project = await db.Projects.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == id && x.TenantId == db.TenantId, cancellationToken);
         if (project is null) return false;
         project.IsDeleted = deleted; project.DeletedAt = deleted ? DateTimeOffset.UtcNow : null; project.DeleteReason = deleted ? reason : null;
         await db.SaveChangesAsync(cancellationToken); return true;
@@ -51,7 +73,7 @@ public sealed class ContentLifecycleHandlers(PapyrusDbContext db)
 
     private async Task<bool> SetPostStateAsync(Guid id, bool deleted, string? reason, CancellationToken cancellationToken)
     {
-        var post = await db.BlogPosts.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        var post = await db.BlogPosts.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == id && x.TenantId == db.TenantId, cancellationToken);
         if (post is null) return false;
         post.IsDeleted = deleted; post.DeletedAt = deleted ? DateTimeOffset.UtcNow : null; post.DeleteReason = deleted ? reason : null;
         await db.SaveChangesAsync(cancellationToken); return true;

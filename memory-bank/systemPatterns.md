@@ -1,78 +1,29 @@
 # System Patterns
 
-Verified against source 2026-08-29 · Phases 0–5 complete · Phase 6 complete (S30.0–S30.12) · 73 .NET tests + 5 Playwright browser tests · 5 migrations · 0-warn/0-error build
+## Modular monolith and layering
 
-## Architecture
-
-Papyrus is a modular monolith with three runnable web apps, one PostgreSQL
-database, and 11 solution projects. AppHost coordinates Admin API/UI, Blog, and
-Portfolio. The Admin API owns writes, migration, seed, authentication, and media;
-the public hosts are read-only. The React admin SPA is a dev-only `AddNpmApp`
-resource in Aspire but is served same-origin from the Admin API at `/admin` in
-production.
-
-## Layering
-
-- Core: entities, tenant marker, and hardened Markdown rendering.
-- Application: validated commands, queries, and no-tracking public projections.
-- Contracts: explicit REST request/response DTOs and pagination envelopes.
-- Infrastructure: EF mappings, tenant/soft-delete filters, save enforcement,
-  migrations, seed, and database adapters.
-- Delivery: Admin API/UI and the two public Razor sites; Web.Shared contains
-  shared public chrome and URL/feed helpers.
+Core owns entities and safe Markdown. Application owns CQRS commands/queries and projections. Contracts owns explicit REST DTOs and pagination. Infrastructure owns EF mappings, filters, persistence enforcement, migrations, and seed. Admin owns authenticated writes, media, SPA serving, and the sole startup migration/seed call. Blog and Portfolio are read-only delivery hosts.
 
 ## Tenant and persistence pattern
 
-`TenantContext` resolves `X-Tenant-Id` or `Tenant:DefaultTenantId`, defaults to
-`main`, and validates `^[a-z0-9][a-z0-9-]{0,62}$`. EF global query filters,
-tenant-leading composite relationships, save-boundary validation, and
-tenant-scoped media prevent cross-tenant access. Soft-deleted rows are excluded
-by default.
+Scoped `TenantContext` resolves `X-Tenant-Id`, defaults to `main`, and validates `^[a-z0-9][a-z0-9-]{0,62}$`. EF global filters apply tenant and soft-delete predicates. `EnforceTenantBoundary()` validates tracked changes at save time, tenant-leading composite relationships prevent cross-tenant associations, and media uses `{root}/{tenantId}/`. Application-level enforcement is the sole layer; RLS is not used.
 
-## Authentication pattern
+## CQRS and projections
 
-The API and React SPA use `X-Admin-Api-Key` with fixed-time comparison plus
-`X-Tenant-Id`. The SPA is served at `/admin` and sends the key on protected
-`/api/v1` requests. Legacy admin Razor pages, the cookie gate, the session store,
-and login throttling were retired under ADR 0006; there is no browser session
-cookie.
+Application separates commands from queries. `PublicContentQueries` returns asynchronous, bounded, no-tracking DTO projections with live-content predicates. Search uses bounded PostgreSQL `ILIKE` and trigram indexes. Feeds and sitemaps reuse tenant and publication rules.
 
-## Public query pattern
+## Audit and soft delete
 
-Public queries are asynchronous, no-tracking DTO projections bounded by
-pagination and live-content predicates. Search uses PostgreSQL `ILIKE` with
-bounded input and trigram indexes. Feeds and sitemaps use the same tenant/live
-predicates and bounded materialization.
+`PapyrusSaveChangesInterceptor` sets audit timestamps and actors and converts deletes into soft deletes. Global filters exclude soft-deleted rows by default.
 
-## Security and operations
+## API-key authentication
 
-Header-authenticated admin mutations require API authorization. Uploads are
-raster-only, magic-byte validated, capped at 5 MB, atomically written, and cannot
-delete referenced files. CSP excludes `unsafe-inline`; security headers,
-multipart/rate limits, minimal health responses, and cancellation-aware paths
-are active. The Admin API rate limiter is per-IP at 120 requests per minute.
-Infrastructure has a fallback development connection string and retries failed
-database operations up to 5 times with a 10-second delay; tests use the in-memory
-path. Health endpoints remain anonymous but must be network-restricted in
-production.
+`ApiKeyAuthenticationHandler` reads `X-Admin-Api-Key` and uses constant-time `AdminApiKey.MatchesAny` comparison. Reloadable `AdminApi:ApiKeys` supports add/overlap/remove rotation; `AdminApi:ApiKey` is a compatibility alias. Production fails fast when no key is configured or it is `change-me`.
 
-## Roadmap state
+## Telemetry
 
-Phases 0–5 are complete. Phase 6 is complete (S30.0–S30.12), including the K6
-load evidence (S30.5) and the Postgres RLS decision ADR (S30.12, DECLINE RLS).
-Phases 7 and 8 are not started; Phase 8 is a measured decision gate. W6–W8, O4,
-and O7–O10 remain release-gate verifications, not blanket-accepted code defects.
-O7's load-evidence portion is done; O7 remains open only pending the restore,
-migration-ownership, and media-volume drills.
+The shared seam uses the `Papyrus` ActivitySource and W3C propagation. `TelemetryRequestMiddleware` creates bounded request activities. `StructuredAuditEventSink` emits tenant-scoped audit events independently of OTLP and diagnostic sampling. `Redactor` fails closed, `CardinalityGuard` defaults to 100, and `TelemetrySamplingPolicy` samples diagnostics only at a default rate of 1.0. Keys, cookies, bodies, and raw secrets are never recorded.
 
-## Observability
+## Sole migrator
 
-- All delivery hosts use the shared `Papyrus.ServiceDefaults.Telemetry` request
-  seam and W3C trace IDs. The single `Papyrus` ActivitySource is registered in
-  the existing OpenTelemetry pipeline and retains the OTLP endpoint gate.
-- Admin API-key authentication and mutation/error requests publish structured,
-  tenant-scoped audit events through `IAuditEventSink`. Audit logging remains
-  active without an OTLP listener and is not subject to diagnostic sampling;
-  S30.7 adds fail-closed redaction, bounded diagnostic tag cardinality, and
-  configurable sampling for high-volume request diagnostics. Audit events are
-  redacted at the sink seam and always logged.
+Infrastructure owns migration capability; `Papyrus.Api.Admin` is the only startup caller through `InitializeDatabaseAsync()`. Blog, Portfolio, and other services never migrate. Seed follows the same Admin-owned initialization path.

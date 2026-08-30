@@ -1,4 +1,50 @@
-import { AlertCircle, Loader2 } from 'lucide-react';
-export function LoadingState({ label = 'Loading workspace…' }: { label?: string }) { return <div className="flex items-center gap-2 py-12 text-sm text-slate-500"><Loader2 className="animate-spin" size={18} />{label}</div>; }
-export function EmptyState({ title, description }: { title: string; description: string }) { return <div className="rounded-2xl border border-dashed border-slate-300 p-12 text-center dark:border-slate-700"><p className="font-semibold">{title}</p><p className="mt-1 text-sm text-slate-500">{description}</p></div>; }
-export function ErrorState({ message = 'Unable to load this data.' }: { message?: string }) { return <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300"><AlertCircle size={18} />{message}</div>; }
+import { WarningCircle, CircleNotch } from "@phosphor-icons/react";
+export function LoadingState({
+  label = "Loading workspace…",
+}: {
+  label?: string;
+}) {
+  return (
+    <div className="flex items-center gap-2 py-12 text-sm text-muted-foreground">
+      <CircleNotch
+        className="animate-spin text-primary"
+        size={18}
+        weight="regular"
+      />
+      {label}
+    </div>
+  );
+}
+export function EmptyState({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="relative overflow-hidden rounded-none border border-dashed border-primary/50 p-12 text-center">
+      <img
+        src="/src/assets/Papyrus_Background.svg"
+        alt=""
+        className="pointer-events-none absolute inset-0 m-auto h-full w-full object-cover opacity-[.05]"
+      />
+      <div className="relative">
+        <p className="font-semibold">{title}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+      </div>
+    </div>
+  );
+}
+export function ErrorState({
+  message = "Unable to load this data.",
+}: {
+  message?: string;
+}) {
+  return (
+    <div className="flex items-center gap-2 rounded-none border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+      <WarningCircle size={18} weight="regular" />
+      {message}
+    </div>
+  );
+}

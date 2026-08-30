@@ -1,5 +1,7 @@
 # Security
 
+- [Threat-model summary](threat-model-summary.md) — sanitized public overview of
+  assets, controls, and residual release risks.
 - [Threat model](threat-model.md) — assets, trust boundaries, and threat status.
 - [Audit register](audit-register.md) — current findings and release-gate evidence.
 - [Risk disposition](risk-acceptance.md) — historical findings removed from active
