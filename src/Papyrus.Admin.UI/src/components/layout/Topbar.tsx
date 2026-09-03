@@ -36,7 +36,7 @@ export function Topbar({
     <>
       <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-glass-border bg-[var(--color-glass)] px-4 backdrop-blur-[16px] backdrop-saturate-150 transition-colors sm:px-8">
         <button
-          className="lg:hidden"
+          className="min-h-11 min-w-11 lg:hidden"
           onClick={onMenu}
           aria-label="Open navigation"
         >
@@ -61,7 +61,7 @@ export function Topbar({
           </label>
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="p-2 hover:bg-muted"
+            className="min-h-11 min-w-11 p-2 hover:bg-muted"
             aria-label="Toggle theme"
           >
             {theme === "dark" ? (
@@ -78,7 +78,7 @@ export function Topbar({
           </span>
           <button
             onClick={() => setCommandOpen(true)}
-            className="p-2 hover:bg-muted"
+            className="min-h-11 min-w-11 p-2 hover:bg-muted"
             aria-label="Open command menu"
           >
             <Command size={18} weight="regular" />

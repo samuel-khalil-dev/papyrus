@@ -1,5 +1,11 @@
 # Active Context
 
+## Current UI bug-fix task — completed 2026-09-03
+
+Fixed cross-frontend logo and background rendering, public footer spacing, and favicon wiring. Shared and Admin background assets now have explicit 1024px dimensions and gold fills; background CSS uses one cover-sized, non-repeating image with theme-compatible blending. The public shell is a flex column with growing main content, and both public hosts receive SVG and ICO favicon links. The Admin SPA receives a base-aware public SVG favicon and its source-asset empty states now use Vite imports so production paths resolve correctly. Removed the duplicate Admin secondary foreground token.
+
+Verification passed: `npm run build --prefix src/Papyrus.Admin.UI` and `dotnet build .\\Papyrus.sln --nologo --no-incremental` completed successfully; `git --no-pager diff --check` passed.
+
 ## Current Admin SPA Royal Pharaonic design-system implementation — completed 2026-09-02
 
 The standalone Admin SPA now follows `plans/unified-design-system.md` within the requested scope. Admin-only changes unify Cinzel/Inter/JetBrains Mono typography, canonical dark and light OKLCH semantic tokens, zero-radius surfaces, glass shell treatment, gold-tinted borders, semantic buttons and status badges, theme-aware texture blending, motion timing, page reveals, and reduced-motion behavior. The theme provider now writes both the `.dark` class and `data-theme` attribute so light mode resolves correctly. The Admin Papyrus logo remains `currentColor`-driven.
@@ -70,6 +76,8 @@ Visual inspection found no API keys, connection strings, private URLs, email
 addresses, or other personal data in the committed assets.
 
 ## Self-Healing Log
+
+During this task, an initial asset-edit command was sent through the default cmd wrapper and returned `The system cannot find the file specified`; the retry also exposed cmd quote parsing and created an unintended `')` file. The stray file was removed, and the SVG edits were completed with targeted filesystem edits. No unintended file remains.
 
 During the shared public design-system implementation, an initial CSS patch was rejected atomically because its context did not match. A later finishing-layer patch temporarily corrupted a stylesheet comment header; the malformed header was repaired and the stylesheet now has valid comment structure. No Admin UI or `docs/assets/` files were changed by this task.
 

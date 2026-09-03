@@ -20,11 +20,12 @@ export function Sidebar({
 }) {
   return (
     <aside
+      aria-label="Admin navigation"
       className={`fixed inset-y-0 left-0 z-40 w-72 transform border-r border-glass-border bg-[var(--color-glass)] p-5 backdrop-blur-[16px] backdrop-saturate-150 transition-transform duration-250 lg:static lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
     >
-      <div className="flex items-center justify-between px-2 py-3">
+      <header className="flex items-center justify-between px-2 py-3">
         <div className="flex items-center gap-3">
-          <PapyrusLogo className="size-9 text-primary" />
+          <PapyrusLogo className="size-10 shrink-0 text-primary" />
           <div>
             <p className="font-display text-xl font-bold tracking-tight">
               papyrus<span className="text-primary">.</span>
@@ -33,14 +34,14 @@ export function Sidebar({
           </div>
         </div>
         <button
-          className="lg:hidden"
+          className="min-h-11 min-w-11 lg:hidden"
           onClick={onClose}
           aria-label="Close navigation"
         >
           <X size={20} weight="regular" />
         </button>
-      </div>
-      <nav className="mt-8 space-y-1">
+      </header>
+      <nav className="mt-8 space-y-1" aria-label="Content management">
         {items.map((item) => {
           const Icon = item.icon;
           return (
@@ -50,7 +51,7 @@ export function Sidebar({
                 onNavigate(item.id);
                 onClose();
               }}
-              className={`flex w-full items-center gap-3 rounded-none border-l-2 px-3 py-3 text-left text-sm font-medium transition ${view === item.id ? "border-primary bg-primary/10 text-primary" : "border-transparent text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+              className={`flex min-h-11 w-full items-center gap-3 rounded-none border-l-2 px-3 py-3 text-left text-sm font-medium transition ${view === item.id ? "border-primary bg-primary/10 text-primary" : "border-transparent text-muted-foreground hover:bg-muted hover:text-foreground"}`}
             >
               <Icon size={18} weight="regular" />
               {item.label}

@@ -18,6 +18,11 @@
 - Solution build passes with 0 warnings and 0 errors; restore also passes.
 - Five EF Core migrations are applied.
 
+## UI bug-fix milestone
+
+- Completed logo/background asset rendering fixes, non-repeating theme-aware backgrounds, sticky public footer layout, Admin/public favicon links, production-safe Admin background imports, and duplicate token cleanup.
+- Verified with the Admin production build, solution build (0 warnings/0 errors), and `git --no-pager diff --check`.
+
 ## Reconstruction status
 
 - Admin SPA Royal Pharaonic design-system implementation is complete: Cinzel/Inter/JetBrains Mono typography, canonical dark/light tokens, theme attribute wiring, zero-radius UI primitives, glass shell surfaces, semantic button and badge variants, tokenized texture/motion, responsive feature surfaces, and currentColor logo behavior are in place.

@@ -1,4 +1,6 @@
 import { WarningCircle, CircleNotch } from "@phosphor-icons/react";
+import papyrusBackground from "@/assets/Papyrus_Background.svg";
+
 export function LoadingState({
   label = "Loading workspace…",
 }: {
@@ -25,7 +27,7 @@ export function EmptyState({
   return (
     <div className="relative overflow-hidden rounded-none border border-dashed border-primary/50 p-12 text-center">
       <img
-        src="/src/assets/Papyrus_Background.svg"
+        src={papyrusBackground}
         alt=""
         className="pointer-events-none absolute inset-0 m-auto h-full w-full object-cover opacity-[.05]"
       />

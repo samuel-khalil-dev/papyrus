@@ -1,4 +1,5 @@
 import { useState } from "react";
+import papyrusBackground from "@/assets/Papyrus_Background.svg";
 import { CloudArrowUp as UploadCloud, Trash as Trash2 } from "@phosphor-icons/react";
 import { useDataMutations, useMedia } from "@/hooks/useData";
 import { RasterDropzone } from "@/components/shared/raster-dropzone";
@@ -92,7 +93,7 @@ export function MediaPage() {
         ))}
         {query.data?.length === 0 && (
           <div className="relative col-span-full overflow-hidden rounded-none border border-dashed border-primary/50 p-12 text-center text-sm text-muted-foreground">
-            <img src="/src/assets/Papyrus_Background.svg" alt="" className="pointer-events-none absolute inset-0 m-auto h-full w-full object-cover opacity-[.05]" /><UploadCloud className="relative mx-auto mb-2 text-primary" weight="regular" />
+            <img src={papyrusBackground} alt="" className="pointer-events-none absolute inset-0 m-auto h-full w-full object-cover opacity-[.05]" /><UploadCloud className="relative mx-auto mb-2 text-primary" weight="regular" />
             No media uploaded yet.
           </div>
         )}
