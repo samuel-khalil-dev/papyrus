@@ -59,3 +59,28 @@ Use reloadable `AdminApi:ApiKeys` configuration with constant-time comparison ac
   and operational environment details; the Aspire capture masks its URL/source
   area. Prefer static PNG captures because the five requested surfaces do not
   require a GIF to communicate their documented state.
+
+## Phase 7 release-readiness decisions
+
+- **Release workflow secret-scan permission:** Add `security-events: write` to
+  the workflow-level `permissions` block in `.github/workflows/release.yml` so
+  the gitleaks `gitleaks/gitleaks-action@v2` step (already present in the
+  `dependency-scan` job) can upload the redacted SARIF secret-scan artifact.
+  The CI workflow already granted this permission; the release workflow lacked
+  it, which was the only missing piece for closing gates W8 and O9. The
+  permission is scoped to the workflow level and does not broaden the release
+  workflow's other access.
+- **O9 gate documentation:** Document the O9 gate (Release artifacts and
+  sanitized publication evidence) in `docs/architecture/release-gates.md` with
+  status `partial`, reflecting that CI secret-scanning evidence is still pending.
+  The gate is recorded truthfully rather than omitted or marked complete.
+- **Release tag held open:** Do not create the release tag (roadmap item 4)
+  until the open/partial release gates pass — specifically O8 re-measurement,
+  W7/W8/O4 production verification, and CI integration-test confirmation. The
+  tag remains intentionally open to avoid tagging a release that has not met
+  its release gates.
+- **Test-count reconciliation:** Correct the documented test counts in
+  `docs/architecture/release-gates.md` to the verified baseline (86 unique .NET
+  tests, 16 PostgreSQL-backed integration tests) rather than the stale 84/14
+  figures, so the release-gate documentation matches the actual verification
+  baseline.
