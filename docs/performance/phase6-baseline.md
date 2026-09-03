@@ -1,8 +1,8 @@
 # Phase 6 performance baseline and budgets
 
-**Subtasks:** S30.9 baseline + S30.10 measured optimization  
-**Capture date:** 2026-08-29 UTC  
-**Status:** baseline committed; no S30.10 production optimization justified
+**Subtasks:** S30.9 baseline + S30.10 measured optimization
+**Capture date:** 2026-08-29 UTC (baseline); 2026-09-03 UTC (production-like re-measurement)
+**Status:** baseline committed; production-like re-measurement attached; no S30.10 production optimization justified
 
 ## Scope and environment
 
@@ -84,6 +84,33 @@ and the existing projection evidence reports no sequential scan or N+1 behavior.
 Consequently, changing query shape, adding an index migration, or applying an
 allocation micro-optimization would be speculative. Re-measure with a
 production-like dataset before considering an S30.10 change.
+
+## Production-like re-measurement (2026-09-03 UTC)
+
+The O8 release gate requires a re-measurement against a production-like dataset
+with `Site__PublicBaseUrl` set, rather than the single-post application seed.
+This was executed on 2026-09-03 UTC against PostgreSQL 17 with a production-like
+fixture seeded by [`seed-production-like.sql`](../../tests/load/seed-production-like.sql):
+8 categories, 12 tags, 200 projects, 2,000 blog posts, and their tag links. The
+three Release web hosts ran with `Site__PublicBaseUrl` set to the production-like
+origins (`https://blog.example.com`, `https://portfolio.example.com`).
+
+| Workload | HTTP p95 (ms) | `response_payload_bytes` p95 (bytes) | Error/check baseline |
+| --- | ---: | ---: | --- |
+| Public feed + search | 32.79 | 16,887 | 0.00% failed; 100.00% checks |
+| Admin collection + write | 19.35 | 19,827 | 0.00% failed; 100.00% checks; 0 5xx |
+
+All values are within the explicit budgets (p95 ≤ 1000 ms, errors < 1%, public
+payload ≤ 256 KiB, admin payload ≤ 128 KiB). `dotnet-counters` captured the
+`System.Runtime` counters during the admin workload: total allocated ~8.95 MB
+across the ~70 s run (~66 KiB/request, well under the ≤ 1 MiB/request admin
+budget), Gen2 collections = 0 during the smoke, total GC pause time 0.117 s, and
+max heap size ~8.3 MiB.
+
+Raw artifacts: [`s30.9-k6-public-20260903.json`](s30.9-k6-public-20260903.json),
+[`s30.9-k6-admin-20260903.json`](s30.9-k6-admin-20260903.json), and
+[`s30.9-admin-counters-20260903.json`](s30.9-admin-counters-20260903.json). The
+reproducible workflow is [`perf-baseline.yml`](../../.github/workflows/perf-baseline.yml).
 
 ## Reproduction and evidence handling
 

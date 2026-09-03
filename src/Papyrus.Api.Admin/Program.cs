@@ -129,10 +129,10 @@ if (adminSpaRoot is not null)
 
     app.MapGet("/admin", () => Results.File(
         File.OpenRead(Path.Combine(adminSpaRoot, "index.html")),
-        "text/html; charset=utf-8"));
+        "text/html; charset=utf-8")).ExcludeFromDescription();
     app.MapGet("/admin/{**path:nonfile}", () => Results.File(
         File.OpenRead(Path.Combine(adminSpaRoot, "index.html")),
-        "text/html; charset=utf-8"));
+        "text/html; charset=utf-8")).ExcludeFromDescription();
 }
 
 app.Run();

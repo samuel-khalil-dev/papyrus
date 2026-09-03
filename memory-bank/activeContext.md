@@ -1,5 +1,34 @@
 # Active Context
 
+## Current CI verification and OpenAPI contract fix — completed 2026-09-03
+
+After pushing to GitHub (`https://github.com/samuel-khalil-dev/Papyrus.git`, private), the CI run on commit `cb312eb` failed in two workflows. The GitHub CLI (`gh`) was installed via winget and authenticated as `samuel-khalil-dev`. Investigation found two distinct failures:
+
+1. **Gitleaks secret-scan failure (CI workflow):** The `gitleaks/gitleaks-action@v2` step failed with `fatal: ambiguous argument '59eb87df^..cb312eb': unknown revision` because `actions/checkout@v4` defaults to a shallow clone (`fetch-depth: 1`), so gitleaks could not resolve the parent commit to compute its diff range. **No actual secrets were found** (`no leaks found in partial scan`), and the redacted SARIF artifact (`gitleaks-results.sarif`) **was uploaded successfully** (Artifact ID `9912911890`). Fix: added `fetch-depth: 0` to the checkout step in both `.github/workflows/ci.yml` and `.github/workflows/release.yml`. This closes gate W8 (CI secret-scan artifact) and gate O9 (release artifacts / sanitized publication evidence) at the code level.
+
+2. **OpenAPI contract drift (OpenAPI schema workflow):** The committed `docs/api/openapi.json` did not match the runtime-generated schema. Root cause was code drift, not a stale contract: the `AdminOpenApiDocumentTransformer` used the one-arg `OpenApiSecuritySchemeReference(SchemeName)` constructor which does not bind to the document, so per-operation security serialized as empty `[{}]` (meaning "no auth required"); the `/admin` and `/admin/{path}` Admin SPA routes leaked into the OpenAPI; and the `X-Tenant-Id` parameter component was missing. Fixes:
+   - `src/Papyrus.Api.Admin/Program.cs`: added `.ExcludeFromDescription()` to the two `/admin` SPA routes.
+   - `src/Papyrus.Api.Admin/AdminOpenApiDocumentTransformer.cs`: rewrote to register the `AdminApiKey` security scheme, add the reusable `TenantId` header parameter component, set **top-level** `document.Security` to require `AdminApiKey` (using the two-arg `OpenApiSecuritySchemeReference(SchemeName, document)`), and add path-level `TenantId` parameter refs to every documented path.
+   - Regenerated `docs/api/openapi.json` from the corrected code (now exactly matches the runtime document).
+   - Regenerated `src/Papyrus.Admin.UI/src/api/schema.d.ts` via `npm run generate-api`.
+
+Verification passed: `dotnet build Papyrus.sln --configuration Release --no-restore /p:TreatWarningsAsErrors=true` (0 warnings, 0 errors), `npm run build --prefix src/Papyrus.Admin.UI` (success), 70 non-integration .NET tests pass, `git --no-pager diff --check` passes, and `docs/api/openapi.json` exactly matches the generated runtime schema.
+
+## CI/OpenAPI verification of `cb312eb` — completed 2026-09-03
+
+A dedicated verification task confirmed the `cb312eb` CI/OpenAPI fixes are sound and require no further code changes:
+
+- **CI workflow review:** `ci.yml` and `release.yml` both correctly use `fetch-depth: 0` and carry `security-events: write`. No defects block the gitleaks SARIF upload or the 16 PostgreSQL-backed integration tests.
+- **Local build:** `dotnet build .\Papyrus.sln --nologo --no-incremental` → 0 warnings, 0 errors.
+- **Non-integration tests:** 70 passed, 0 failed.
+- **OpenAPI contract:** `docs/api/openapi.json` is byte-for-byte identical to the runtime-generated contract (no drift). `schema.d.ts` has no content drift — only cosmetic key-ordering from `openapi-typescript` 7.13.0 vs the declared `^7.9.1`.
+
+The remaining open release gates (W8/O9 secret-scan artifact, O8 re-measurement, W7/O4 production verification) are **execution steps, not code defects** — they still require an actual CI run and production verification to close, but no source changes are outstanding.
+
+### Non-blocking observation — `openapi-typescript` version pinning
+
+`openapi-typescript` is declared as `^7.9.1` in `src/Papyrus.Admin.UI/package.json` (line 54), so `npm ci` installs 7.13.0, which sorts keys alphabetically. This causes cosmetic key-ordering differences in the regenerated `schema.d.ts` (no content drift). Consider pinning to an exact version for byte-stable regeneration. This is an observation only — no dependency change was made.
+
 ## Current UI bug-fix task — completed 2026-09-03
 
 Fixed cross-frontend logo and background rendering, public footer spacing, and favicon wiring. Shared and Admin background assets now have explicit 1024px dimensions and gold fills; background CSS uses one cover-sized, non-repeating image with theme-compatible blending. The public shell is a flex column with growing main content, and both public hosts receive SVG and ICO favicon links. The Admin SPA receives a base-aware public SVG favicon and its source-asset empty states now use Vite imports so production paths resolve correctly. Removed the duplicate Admin secondary foreground token.
@@ -30,7 +59,23 @@ Verification for this fix passed: `dotnet build .\Papyrus.sln --nologo --no-incr
 
 ## Current task/state
 
-The audit-and-reconstruction effort is complete for the current scope. Phases 0–6 are complete; Phases 7–8 are not started. Papyrus is a .NET 10 modular monolith with 11 solution projects, a standalone React Admin SPA, PostgreSQL 17, Aspire, and Docker Compose. The Phase 4 test-backfill verification has a 0-warning/0-error build and 70 passing non-integration .NET tests; PostgreSQL-backed integration tests require the test database infrastructure.
+The audit-and-reconstruction effort is complete for the current scope. Phases 0–6 are complete; Phase 7 (release readiness and showcase) is in progress with the release tag (item 4) and the operational gates (O8, W7, O4) still open; Phase 8 is not started. Papyrus is a .NET 10 modular monolith with 11 solution projects, a standalone React Admin SPA, PostgreSQL 17, Aspire, and Docker Compose. The Phase 7 verification baseline (commit `2b54b25`) has a 0-warning/0-error build, a passing Admin UI production build, and 70 passing non-integration .NET tests; the 16 PostgreSQL-backed integration tests are CI-only and require `postgres:17-alpine`.
+
+## Phase 7 release readiness and showcase — in progress (release tag pending)
+
+Phase 7.1 (public documentation) and 7.2 (showcase assets) were completed earlier. This session finalized the remaining Phase 7 work: reconciled the stale Phase 7 status in `docs/project/roadmap.md` from "Not started" to "In progress" (items 1–3 complete, item 4 tag-a-release open); added a Phase 7 section to `docs/project/changelog.md` under `[Unreleased]`; verified `docs/guides/contributing.md`, `SECURITY.md`, `LICENSE`, the README Support section, and `docs/architecture/feature-matrix.md` are complete/truthful (no changes needed); and fixed `docs/architecture/release-gates.md` (corrected stale test counts 84→86 unique / 14→16 integration and added the previously-missing O9 gate section, status partial, CI secret-scan pending). All Phase 7 work was committed in `2b54b25` (20 files, +147/−40); the working tree is clean.
+
+A follow-up change closed the remaining secret-scan wiring gap: `security-events: write` was added to the workflow-level `permissions` block in `.github/workflows/release.yml` (line 8). The gitleaks `gitleaks/gitleaks-action@v2` step already existed in both `ci.yml` (line 53, `verify` job) and `release.yml` (line 51, `dependency-scan` job), but the release workflow lacked the permission needed to upload the redacted SARIF secret-scan artifact. Adding it closes gate W8 (CI secret-scan artifact) and gate O9 (release artifacts / sanitized publication evidence) at the code level, pending a CI run to actually produce the artifact.
+
+### Active focus and next steps
+
+- Active focus: close the remaining open release gates before tagging a release.
+- Next steps:
+  - W8/O9 (secret-scan artifact) — run CI to produce the redacted SARIF secret-scan artifact and confirm the release workflow can upload it; then move W8 and O9 from partial to closed.
+  - O8 (re-measurement) — re-measure and close.
+  - W7, O4 (production verification) — complete production verification to move from partial to closed.
+  - CI integration-test confirmation — confirm the 16 PostgreSQL-backed integration tests pass in CI against `postgres:17-alpine`.
+  - Release tag — create the release tag only after the open/partial gates pass (item 4 remains intentionally open).
 
 ## Task Outcomes
 
@@ -77,11 +122,19 @@ addresses, or other personal data in the committed assets.
 
 ## Self-Healing Log
 
+During Phase 7 verification, `dotnet test` reported 70 pass / 16 fail locally. The 16 failures are the PostgreSQL-backed integration tests, which require a local `postgres:17-alpine` listener that is not present in this environment. These are expected and CI-only, not a defect; the non-integration suite is green and the solution build is 0 warnings/0 errors. No code change was required.
+
+During the Phase 7 release-gate closure, a gap was identified rather than an error: the gitleaks `gitleaks/gitleaks-action@v2` step existed in both `ci.yml` and `release.yml`, but the release workflow's `permissions` block lacked `security-events: write`, so it could not upload the redacted SARIF secret-scan artifact. The permission was added to `.github/workflows/release.yml` (line 8), closing gates W8 and O9 at the code level. A CI run is still required to produce the artifact and confirm the upload.
+
 During this task, an initial asset-edit command was sent through the default cmd wrapper and returned `The system cannot find the file specified`; the retry also exposed cmd quote parsing and created an unintended `')` file. The stray file was removed, and the SVG edits were completed with targeted filesystem edits. No unintended file remains.
 
 During the shared public design-system implementation, an initial CSS patch was rejected atomically because its context did not match. A later finishing-layer patch temporarily corrupted a stylesheet comment header; the malformed header was repaired and the stylesheet now has valid comment structure. No Admin UI or `docs/assets/` files were changed by this task.
 
 Verification completed after repair: `dotnet restore .\\Papyrus.sln --nologo`, `dotnet build .\\Papyrus.sln --nologo --no-incremental` (0 warnings, 0 errors), and `git --no-pager diff --check` all passed.
+
+During the CI verification task, the gitleaks secret-scan step failed in CI with `fatal: ambiguous argument '59eb87df^..cb312eb': unknown revision or path not in the working tree`. This was not a secret leak — it was a shallow-clone configuration issue: `actions/checkout@v4` defaults to `fetch-depth: 1`, so gitleaks could not resolve the parent commit to compute its diff range. The redacted SARIF artifact was still uploaded successfully and no leaks were found. The fix added `fetch-depth: 0` to the checkout step in both `ci.yml` and `release.yml`.
+
+During the same task, the OpenAPI schema workflow failed because the committed `docs/api/openapi.json` did not match the runtime-generated schema. The root cause was code drift: the `AdminOpenApiDocumentTransformer` used the one-arg `OpenApiSecuritySchemeReference(SchemeName)` constructor, which does not bind to the document and serialized per-operation security as empty `[{}]` (meaning "no auth required"); the `/admin` Admin SPA routes leaked into the OpenAPI; and the `X-Tenant-Id` parameter component was missing. The transformer was rewritten to use the two-arg `OpenApiSecuritySchemeReference(SchemeName, document)`, set top-level `document.Security`, add the `TenantId` parameter component and path-level refs, and the `/admin` routes were excluded from the description. The contract and Admin UI schema were regenerated and now match exactly.
 
 No self-healing issue was encountered during the public theming fix. The build and diff checks passed on the first recorded verification run.
 

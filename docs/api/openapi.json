@@ -1,5 +1,17 @@
 {
   "components": {
+    "parameters": {
+      "TenantId": {
+        "description": "Tenant identifier used for request isolation. Defaults to main.",
+        "in": "header",
+        "name": "X-Tenant-Id",
+        "schema": {
+          "default": "main",
+          "pattern": "[a-z0-9][a-z0-9-]{0,62}$",
+          "type": "string"
+        }
+      }
+    },
     "schemas": {
       "BlogPostResponse": {
         "properties": {
@@ -888,19 +900,6 @@
         "name": "X-Admin-Api-Key",
         "type": "apiKey"
       }
-    },
-    "parameters": {
-      "TenantId": {
-        "name": "X-Tenant-Id",
-        "in": "header",
-        "description": "Tenant identifier used for request isolation. Defaults to main.",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "pattern": "[a-z0-9][a-z0-9-]{0,62}$",
-          "default": "main"
-        }
-      }
     }
   },
   "info": {
@@ -953,6 +952,11 @@
           "Papyrus.Api.Admin"
         ]
       },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/TenantId"
+        }
+      ],
       "post": {
         "requestBody": {
           "content": {
@@ -989,12 +993,7 @@
         "tags": [
           "Papyrus.Api.Admin"
         ]
-      },
-      "parameters": [
-        {
-          "$ref": "#/components/parameters/TenantId"
-        }
-      ]
+      }
     },
     "/api/v1/blog-posts/{id}": {
       "delete": {
@@ -1052,6 +1051,11 @@
           "Papyrus.Api.Admin"
         ]
       },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/TenantId"
+        }
+      ],
       "put": {
         "parameters": [
           {
@@ -1102,12 +1106,7 @@
         "tags": [
           "Papyrus.Api.Admin"
         ]
-      },
-      "parameters": [
-        {
-          "$ref": "#/components/parameters/TenantId"
-        }
-      ]
+      }
     },
     "/api/v1/categories": {
       "get": {
@@ -1153,6 +1152,11 @@
           "Papyrus.Api.Admin"
         ]
       },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/TenantId"
+        }
+      ],
       "post": {
         "requestBody": {
           "content": {
@@ -1189,12 +1193,7 @@
         "tags": [
           "Papyrus.Api.Admin"
         ]
-      },
-      "parameters": [
-        {
-          "$ref": "#/components/parameters/TenantId"
-        }
-      ]
+      }
     },
     "/api/v1/categories/{id}": {
       "delete": {
@@ -1252,6 +1251,11 @@
           "Papyrus.Api.Admin"
         ]
       },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/TenantId"
+        }
+      ],
       "put": {
         "parameters": [
           {
@@ -1302,12 +1306,7 @@
         "tags": [
           "Papyrus.Api.Admin"
         ]
-      },
-      "parameters": [
-        {
-          "$ref": "#/components/parameters/TenantId"
-        }
-      ]
+      }
     },
     "/api/v1/media": {
       "get": {
@@ -1330,6 +1329,11 @@
           "Papyrus.Api.Admin"
         ]
       },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/TenantId"
+        }
+      ],
       "post": {
         "requestBody": {
           "content": {
@@ -1366,12 +1370,7 @@
         "tags": [
           "Papyrus.Api.Admin"
         ]
-      },
-      "parameters": [
-        {
-          "$ref": "#/components/parameters/TenantId"
-        }
-      ]
+      }
     },
     "/api/v1/media/{fileName}": {
       "delete": {
@@ -1457,6 +1456,11 @@
           "Papyrus.Api.Admin"
         ]
       },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/TenantId"
+        }
+      ],
       "post": {
         "requestBody": {
           "content": {
@@ -1493,12 +1497,7 @@
         "tags": [
           "Papyrus.Api.Admin"
         ]
-      },
-      "parameters": [
-        {
-          "$ref": "#/components/parameters/TenantId"
-        }
-      ]
+      }
     },
     "/api/v1/projects/{id}": {
       "delete": {
@@ -1556,6 +1555,11 @@
           "Papyrus.Api.Admin"
         ]
       },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/TenantId"
+        }
+      ],
       "put": {
         "parameters": [
           {
@@ -1606,12 +1610,7 @@
         "tags": [
           "Papyrus.Api.Admin"
         ]
-      },
-      "parameters": [
-        {
-          "$ref": "#/components/parameters/TenantId"
-        }
-      ]
+      }
     },
     "/api/v1/tags": {
       "get": {
@@ -1657,6 +1656,11 @@
           "Papyrus.Api.Admin"
         ]
       },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/TenantId"
+        }
+      ],
       "post": {
         "requestBody": {
           "content": {
@@ -1693,12 +1697,7 @@
         "tags": [
           "Papyrus.Api.Admin"
         ]
-      },
-      "parameters": [
-        {
-          "$ref": "#/components/parameters/TenantId"
-        }
-      ]
+      }
     },
     "/api/v1/tags/{id}": {
       "delete": {
@@ -1756,6 +1755,11 @@
           "Papyrus.Api.Admin"
         ]
       },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/TenantId"
+        }
+      ],
       "put": {
         "parameters": [
           {
@@ -1806,14 +1810,14 @@
         "tags": [
           "Papyrus.Api.Admin"
         ]
-      },
-      "parameters": [
-        {
-          "$ref": "#/components/parameters/TenantId"
-        }
-      ]
+      }
     }
   },
+  "security": [
+    {
+      "AdminApiKey": []
+    }
+  ],
   "servers": [
     {
       "url": "http://127.0.0.1:5205/"
@@ -1822,11 +1826,6 @@
   "tags": [
     {
       "name": "Papyrus.Api.Admin"
-    }
-  ],
-  "security": [
-    {
-      "AdminApiKey": []
     }
   ]
 }

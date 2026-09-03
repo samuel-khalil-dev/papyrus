@@ -22,6 +22,13 @@ jobs:
       PAPYRUS_LOAD_PORTFOLIO_URL: http://127.0.0.1:5024
       PAPYRUS_LOAD_ADMIN_KEY: dev-admin-key
       PAPYRUS_LOAD_TENANT_ID: main
+      # O8 release-gate re-measurement: set the production-like public base URL
+      # so canonical/RSS/sitemap absolute-URL behavior is exercised, and pin the
+      # dataset to the production-like seed rather than the single-post seed.
+      Site__PublicBaseUrl: https://blog.example.com
+      Site__MediaBaseUrl: https://admin.example.com
+      Site__BlogBaseUrl: https://blog.example.com
+      Site__PortfolioBaseUrl: https://portfolio.example.com
     services:
       postgres:
         image: postgres:17-alpine
@@ -43,6 +50,12 @@ jobs:
         with:
           dotnet-version: 10.0.x
       - uses: grafana/setup-k6-action@v1
+      - name: Install PostgreSQL client and dotnet-counters
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client
+          dotnet tool install -g dotnet-counters
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
       - name: Restore
         run: dotnet restore Papyrus.sln
       - name: Build
@@ -57,7 +70,7 @@ jobs:
           echo $! > "$RUNNER_TEMP/papyrus-blog-baseline.pid"
       - name: Start Portfolio site
         run: |
-          ASPNETCORE_URLS=http://127.0.0.1:5024 dotnet run --project src/Papyrus.Web.Portfolio/Papyrus.Web.Portfolio.csproj --configuration Release --no-build > "$RUNNER_TEMP/papyrus-portfolio-baseline.log" 2>&1 &
+          ASPNETCORE_URLS=http://127.0.0.1:5024 Site__PublicBaseUrl=https://portfolio.example.com dotnet run --project src/Papyrus.Web.Portfolio/Papyrus.Web.Portfolio.csproj --configuration Release --no-build > "$RUNNER_TEMP/papyrus-portfolio-baseline.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/papyrus-portfolio-baseline.pid"
       - name: Wait for web hosts
         run: |
@@ -68,20 +81,33 @@ jobs:
             done
             curl --fail --silent "$url" > /dev/null
           done
+      - name: Seed production-like dataset
+        run: |
+          PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -d papyrus_test -v ON_ERROR_STOP=1 -f tests/load/seed-production-like.sql
       - name: Run query budget tests
         env:
           PAPYRUS_TEST_CONNECTION_STRING: Host=localhost;Port=5432;Database=papyrus_test;Username=postgres;Password=postgres
         run: dotnet test src/Papyrus.Tests/Papyrus.Tests.csproj --configuration Release --no-build --no-restore --filter FullyQualifiedName~PerformanceBudgetTests --logger trx
-      - name: Run public baseline
-        run: k6 run --summary-export public-summary.json tests/load/k6/public-listing.js
-      - name: Run admin baseline
-        run: k6 run --summary-export admin-summary.json tests/load/k6/admin-write.js
+      - name: Capture dotnet-counters during public baseline
+        run: |
+          dotnet-counters monitor --counters System.Runtime --interval 1s --output public-counters.txt > /dev/null 2>&1 &
+          echo $! > "$RUNNER_TEMP/public-counters.pid"
+          k6 run --summary-export public-summary.json tests/load/k6/public-listing.js
+          kill "$(cat "$RUNNER_TEMP/public-counters.pid")" || true
+      - name: Capture dotnet-counters during admin baseline
+        run: |
+          dotnet-counters monitor --counters System.Runtime --interval 1s --output admin-counters.txt > /dev/null 2>&1 &
+          echo $! > "$RUNNER_TEMP/admin-counters.pid"
+          k6 run --summary-export admin-summary.json tests/load/k6/admin-write.js
+          kill "$(cat "$RUNNER_TEMP/admin-counters.pid")" || true
       - name: Upload baseline artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: papyrus-performance-baseline
-          path: '*-summary.json'
+          path: |
+            *-summary.json
+            *-counters.txt
           if-no-files-found: ignore
       - name: Stop baseline web hosts
         if: always()

@@ -1,0 +1,159 @@
+{
+    "metrics": {
+        "http_req_blocked": {
+            "avg": 0.15197655813953498,
+            "min": 0.004548,
+            "med": 0.006322,
+            "max": 7.13549,
+            "p(90)": 0.013911000000000001,
+            "p(95)": 0.04037799999999994
+        },
+        "data_sent": {
+            "count": 49140,
+            "rate": 767.8195238330463
+        },
+        "http_req_waiting": {
+            "med": 9.238193,
+            "max": 321.743722,
+            "p(90)": 12.36412,
+            "p(95)": 18.900582799999967,
+            "avg": 13.341029434108524,
+            "min": 7.058299
+        },
+        "checks": {
+            "passes": 129,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.99": false
+            },
+            "value": 1
+        },
+        "vus_max": {
+            "value": 6,
+            "min": 6,
+            "max": 6
+        },
+        "http_req_connecting": {
+            "avg": 0.10675598449612404,
+            "min": 0,
+            "med": 0,
+            "max": 2.721044,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "http_req_duration{expected_response:true}": {
+            "p(90)": 13.217994000000001,
+            "p(95)": 19.34982699999997,
+            "avg": 13.689486488372095,
+            "min": 7.188812,
+            "med": 9.491545,
+            "max": 323.275825
+        },
+        "admin_server_errors": {
+            "passes": 0,
+            "fails": 129,
+            "thresholds": {
+                "rate==0": false
+            },
+            "value": 0
+        },
+        "http_req_sending": {
+            "max": 1.604941,
+            "p(90)": 0.08309280000000001,
+            "p(95)": 0.1159092,
+            "avg": 0.06374834883720928,
+            "min": 0.030439,
+            "med": 0.042231
+        },
+        "vus": {
+            "max": 0,
+            "value": 0,
+            "min": 0
+        },
+        "http_reqs": {
+            "count": 129,
+            "rate": 2.0156434386337603
+        },
+        "response_payload_bytes": {
+            "med": 459,
+            "max": 24742,
+            "p(90)": 14927,
+            "p(95)": 19827,
+            "avg": 6078.325581395349,
+            "min": 456
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 129,
+            "thresholds": {
+                "rate<0.01": false
+            },
+            "value": 0
+        },
+        "iterations": {
+            "count": 129,
+            "rate": 2.0156434386337603
+        },
+        "data_received": {
+            "count": 863784,
+            "rate": 13496.748465091658
+        },
+        "http_req_tls_handshaking": {
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0
+        },
+        "http_req_duration": {
+            "p(90)": 13.217994000000001,
+            "p(95)": 19.34982699999997,
+            "avg": 13.689486488372095,
+            "min": 7.188812,
+            "med": 9.491545,
+            "max": 323.275825,
+            "thresholds": {
+                "p(95)<1000": false
+            }
+        },
+        "http_req_receiving": {
+            "med": 0.150292,
+            "max": 3.352954,
+            "p(90)": 0.7434656000000001,
+            "p(95)": 0.8614749999999998,
+            "avg": 0.2847087054263567,
+            "min": 0.095976
+        },
+        "iteration_duration": {
+            "p(90)": 13.6228736,
+            "p(95)": 19.70805119999997,
+            "avg": 14.171993217054254,
+            "min": 7.439318,
+            "med": 9.83474,
+            "max": 330.970615
+        }
+    },
+    "root_group": {
+        "checks": {
+            "admin write returns HTTP 201 or expected 429": {
+                "name": "admin write returns HTTP 201 or expected 429",
+                "path": "::admin write returns HTTP 201 or expected 429",
+                "id": "63f2f214055932a53a2e8bfed7e22321",
+                "passes": 65,
+                "fails": 0
+            },
+            "admin read returns HTTP 200 or expected 429": {
+                "name": "admin read returns HTTP 200 or expected 429",
+                "path": "::admin read returns HTTP 200 or expected 429",
+                "id": "e0adeb022e809b72d7528b55ea8c9a1b",
+                "passes": 64,
+                "fails": 0
+            }
+        },
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {}
+    }
+}

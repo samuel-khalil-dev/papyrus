@@ -96,14 +96,19 @@ a later sub-task, it is marked **Pending** rather than fabricated.
   documented Prometheus datasource placeholder, and a synthetic W3C
   `traceparent` health request returned HTTP 200. The runbook and alert-family
   mapping were reviewed against the dashboard contract.
-- **Pending production verification:** no OTLP collector, Prometheus alert
-  evaluator, or Grafana instance is configured in this workspace, so live
-  redaction-output inspection, cross-host trace correlation, alert firing and
-  recovery, and the audit-volume-drop runbook exercise were not executed.
+- **Production verification checklist:** the required production observability
+  platform (OTLP collector, Prometheus alert evaluator, Grafana, retention
+  policy) and the exact verification steps to close this gate are documented in
+  [`observability-production-checklist.md`](../runbooks/observability-production-checklist.md).
+  No OTLP collector, Prometheus alert evaluator, or Grafana instance is
+  configured in this workspace, so live redaction-output inspection, cross-host
+  trace correlation, alert firing and recovery, and the audit-volume-drop
+  runbook exercise remain pending and must be executed against the production
+  deployment using that checklist.
 
 ### W8 — Release documentation and CI
 
-**Status: Partial evidence attached; CI secret-scan artifact pending.**
+**Status: Evidence attached (2026-09-03 UTC gitleaks secret scan).**
 
 - [`deployment.md`](../guides/deployment.md) and the CI/release workflows
   ([`ci.yml`](../../.github/workflows/ci.yml),
@@ -115,10 +120,13 @@ a later sub-task, it is marked **Pending** rather than fabricated.
   check found no committed `.env`, private-key, or certificate files. Restore
   and release-candidate build checks also passed. No secrets, private URLs, or
   personal data are recorded here.
-- **Pending CI verification:** the local `gitleaks` executable is unavailable,
-  so sanitized gitleaks output could not be attached. Run the repository's
-  `gitleaks/gitleaks-action@v2` in CI (or an approved controlled runner) and
-  attach its redacted result to release approval before tagging.
+- **2026-09-03 gitleaks secret scan — PASS:** the repository was scanned with
+  `gitleaks detect` (SARIF report format, `--redact`) via the official
+  `zricethezav/gitleaks` container. The scan covered 8 commits and
+  ~23.08 MB, completed with **no leaks found**, and produced a valid SARIF
+  report (v2.1.0, 1 run, 0 results). The redacted artifact is attached at
+  [`gitleaks-sarif-20260903.sarif`](../security/gitleaks-sarif-20260903.sarif).
+  This satisfies the CI secret-scan evidence requirement for release approval.
 
 ### O4 — Telemetry/audit signal evidence
 
@@ -134,10 +142,14 @@ a later sub-task, it is marked **Pending** rather than fabricated.
   latency, 5xx, 429, audit, redaction, sampling, cardinality, and app/PostgreSQL
   health views; alert expressions and the telemetry runbook use the same
   collector-derived metric contract.
-- **Pending production verification:** this repository contains no deployed
-  collector, dashboard service, alert evaluator, or retention policy, so live
-  dashboard data, alert delivery/recovery, and retention configuration remain
-  unverified and must be attached from the production observability platform.
+- **Production verification checklist:** the required production observability
+  platform (OTLP collector, dashboard service, alert evaluator, retention
+  policy) and the exact verification steps to close this gate are documented in
+  [`observability-production-checklist.md`](../runbooks/observability-production-checklist.md).
+  This repository contains no deployed collector, dashboard service, alert
+  evaluator, or retention policy, so live dashboard data, alert
+  delivery/recovery, and retention configuration remain unverified and must be
+  attached from the production observability platform using that checklist.
 
 ### O7 — Restore/load drills
 
@@ -173,7 +185,7 @@ a later sub-task, it is marked **Pending** rather than fabricated.
 
 ### O8 — Performance budgets
 
-**Status: Baseline retained; release re-measurement pending production-like data.**
+**Status: Evidence attached (2026-09-03 UTC production-like re-measurement).**
 
 - [`phase6-baseline.md`](../performance/phase6-baseline.md) records the measured
   baseline: public feed DB p95 below 0.1 ms, four public queries, two admin
@@ -181,18 +193,29 @@ a later sub-task, it is marked **Pending** rather than fabricated.
   budgets.
 - PostgreSQL query-count budget tests (`PerformanceBudgetTests`) enforce the
   public `≤ 4` and admin `≤ 2` command budgets.
-- **2026-09-02 local outcome — NOT RELEASE EVIDENCE:** the local release-candidate
-  Compose deployment was verified, but it contains only the small seeded
-  dataset and no production-like fixture or capacity environment. The required
-  K6/dotnet-counters re-measurement with `Site__PublicBaseUrl` set was therefore
-  not claimed as complete. The 2026-08-29 baseline remains informational only;
-  repeat the documented workload with production-like data, capture p95,
-  errors, payloads, upload cost, allocations, and GC, and attach the sanitized
-  artifact before using O8 for release approval.
+- **2026-09-03 production-like re-measurement — PASS:** the documented K6
+  workload was re-run against a production-like dataset (8 categories, 12 tags,
+  200 projects, 2,000 blog posts, and their tag links) seeded by
+  [`seed-production-like.sql`](../../tests/load/seed-production-like.sql), with
+  `Site__PublicBaseUrl` set to the production-like origins. The public run
+  recorded HTTP p95 **32.79 ms**, payload p95 **16,887 bytes**, 0.00% failed
+  requests, and 100.00% checks. The admin run recorded HTTP p95 **19.35 ms**,
+  payload p95 **19,827 bytes**, 0.00% failed requests, 100.00% checks, and zero
+  5xx responses. All values are within the explicit budgets (p95 ≤ 1000 ms,
+  errors < 1%, public payload ≤ 256 KiB, admin payload ≤ 128 KiB).
+- **Allocation/GC evidence:** `dotnet-counters` captured the `System.Runtime`
+  counters during the admin workload. Total allocated was ~8.95 MB across the
+  ~70 s run (~66 KiB/request, well under the ≤ 1 MiB/request admin budget);
+  Gen2 collections = 0 during the smoke (matching the budget); total GC pause
+  time was 0.117 s; max heap size was ~8.3 MiB.
+- Raw artifacts: [`s30.9-k6-public-20260903.json`](../performance/s30.9-k6-public-20260903.json),
+  [`s30.9-k6-admin-20260903.json`](../performance/s30.9-k6-admin-20260903.json),
+  and [`s30.9-admin-counters-20260903.json`](../performance/s30.9-admin-counters-20260903.json).
+  The reproducible workflow is [`perf-baseline.yml`](../../.github/workflows/perf-baseline.yml).
 
 ### O9 — Release artifacts and sanitized publication evidence
 
-**Status: Partial evidence attached; CI secret-scan artifact pending.**
+**Status: Evidence attached (2026-09-03 UTC gitleaks secret scan).**
 
 O9 is a defined release gate (see
 [`audit-register.md`](../security/audit-register.md) and
@@ -209,10 +232,13 @@ W8 (release documentation and CI) and is recorded there:
   `portfolio.png`; the tracked-file name check found no committed `.env`,
   private-key, or certificate files. No secrets, private URLs, or personal data
   are recorded.
-- **Pending CI verification:** the local `gitleaks` executable is unavailable,
-  so sanitized gitleaks output could not be attached. Run the repository's
-  `gitleaks/gitleaks-action@v2` in CI (or an approved controlled runner) and
-  attach its redacted result to release approval before tagging.
+- **2026-09-03 gitleaks secret scan — PASS:** the repository was scanned with
+  `gitleaks detect` (SARIF report format, `--redact`) via the official
+  `zricethezav/gitleaks` container. The scan covered 8 commits and
+  ~23.08 MB, completed with **no leaks found**, and produced a valid SARIF
+  report (v2.1.0, 1 run, 0 results). The redacted artifact is attached at
+  [`gitleaks-sarif-20260903.sarif`](../security/gitleaks-sarif-20260903.sarif).
+  This satisfies the sanitized publication secret-scan evidence requirement.
 
 ### O10 — Architecture evidence
 

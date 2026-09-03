@@ -133,3 +133,9 @@ Follow this order for `PapyrusAuditVolumeDrop`:
 Before release, verify no secrets are emitted, trace propagation works across
 hosts, the dashboard and alert rules use the same collector contract, and the
 audit-volume-drop drill completes. Record the result under release gate W7/O4.
+
+The production observability platform requirements and the exact verification
+steps to close gates W7 and O4 are documented in
+[`observability-production-checklist.md`](observability-production-checklist.md).
+Execute that checklist against the production deployment and attach the
+sanitized evidence before closing the gates.
