@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
+using System.Text.Json.Nodes;
 
 namespace Papyrus.Api.Admin;
 
 internal sealed class AdminOpenApiDocumentTransformer : IOpenApiDocumentTransformer
 {
     private const string SchemeName = "AdminApiKey";
+    private const string TenantParameterName = "TenantId";
 
     public Task TransformAsync(
         OpenApiDocument document,
@@ -22,26 +24,44 @@ internal sealed class AdminOpenApiDocumentTransformer : IOpenApiDocumentTransfor
             Description = "Admin API key supplied in the X-Admin-Api-Key header."
         };
 
+        // Register the reusable tenant header parameter.
+        components.Parameters ??= new Dictionary<string, IOpenApiParameter>();
+        components.Parameters[TenantParameterName] = new OpenApiParameter
+        {
+            Name = "X-Tenant-Id",
+            In = ParameterLocation.Header,
+            Description = "Tenant identifier used for request isolation. Defaults to main.",
+            Required = false,
+            Schema = new OpenApiSchema
+            {
+                Type = JsonSchemaType.String,
+                Pattern = "[a-z0-9][a-z0-9-]{0,62}$",
+                Default = "main"
+            }
+        };
+
+        // Require the AdminApiKey scheme at the document level.
+        document.Security = [
+            new OpenApiSecurityRequirement
+            {
+                [new OpenApiSecuritySchemeReference(SchemeName, document)] = []
+            }
+        ];
+
         if (document.Paths is null)
         {
             return Task.CompletedTask;
         }
 
+        // Apply the tenant header to every documented path.
         foreach (var pathItem in document.Paths.Values)
         {
-            if (pathItem.Operations is null)
+            if (pathItem is not OpenApiPathItem concretePathItem)
             {
                 continue;
             }
-
-            foreach (var operation in pathItem.Operations.Values)
-            {
-                operation.Security ??= [];
-                operation.Security.Add(new OpenApiSecurityRequirement
-                {
-                    [new OpenApiSecuritySchemeReference(SchemeName)] = []
-                });
-            }
+            concretePathItem.Parameters ??= [];
+            concretePathItem.Parameters.Add(new OpenApiParameterReference(TenantParameterName, document));
         }
 
         return Task.CompletedTask;

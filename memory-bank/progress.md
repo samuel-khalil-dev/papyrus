@@ -9,14 +9,33 @@
 | 4 | REST contracts, projections, and frontend synchronization | Complete |
 | 5 | Containers, Aspire, Compose, and CI/CD | Complete |
 | 6 | Observability, test depth, and performance budgets | Complete |
-| 7 | Release readiness and showcase | Phase 7.2 sanitized visual assets complete |
+| 7 | Release readiness and showcase | In progress — release tag and operational gates (W8, O9, O8, W7, O4) open; CI/OpenAPI verification complete |
 | 8 | Measured future scale decision gate | Not started |
 
 ## Verification baseline
 
-- 70 non-integration .NET tests pass locally after the Phase 4 test backfill. CI adds 14 PostgreSQL-backed integration tests for 84 unique .NET tests; those integration tests were excluded locally because no database listener is available. The separate Playwright browser suite currently contains 5 tests.
+- 70 non-integration .NET tests pass locally. CI adds 16 PostgreSQL-backed integration tests for 86 unique .NET tests; those integration tests are excluded locally because no local PostgreSQL listener is available (they require `postgres:17-alpine`). The separate Playwright browser suite currently contains 5 tests.
 - Solution build passes with 0 warnings and 0 errors; restore also passes.
 - Five EF Core migrations are applied.
+- Phase 7 verification baseline (commit `2b54b25`): `dotnet restore` + `dotnet build .\Papyrus.sln --nologo --no-incremental` = 0 warnings/0 errors; Admin UI `npm ci` + `npm run build` = success; `dotnet test` = 70 pass / 16 fail locally (the 16 are CI-only PostgreSQL integration tests, not a defect).
+
+## CI verification and OpenAPI contract milestone — COMPLETE
+
+- Verification of the `cb312eb` CI/OpenAPI fixes is complete and requires no further code changes:
+  - CI workflow review: `ci.yml` and `release.yml` both use `fetch-depth: 0` and have `security-events: write`; no defects block the gitleaks SARIF upload or the 16 PostgreSQL integration tests.
+  - Local build: `dotnet build .\Papyrus.sln --nologo --no-incremental` → 0 warnings, 0 errors.
+  - Non-integration tests: 70 passed, 0 failed.
+  - OpenAPI contract: `docs/api/openapi.json` is byte-for-byte identical to the runtime-generated contract (no drift); `schema.d.ts` has no content drift (only cosmetic key-ordering from `openapi-typescript` 7.13.0 vs declared `^7.9.1`).
+  - Remaining open release gates (W8/O9 secret-scan artifact, O8 re-measurement, W7/O4 production verification) are execution steps requiring an actual CI run and production verification — not code defects.
+  - Non-blocking observation: consider pinning `openapi-typescript` to an exact version for byte-stable `schema.d.ts` regeneration (recorded in `decisionLog.md`).
+
+## CI verification and OpenAPI contract milestone
+
+- Installed and authenticated the GitHub CLI (`gh`) to inspect the CI run on the pushed commit `cb312eb`.
+- Fixed the gitleaks secret-scan failure by adding `fetch-depth: 0` to the checkout step in both `ci.yml` and `release.yml` (shallow clone prevented gitleaks from resolving the parent commit). The redacted SARIF artifact was already uploading successfully and no secrets were found.
+- Fixed the OpenAPI contract drift by correcting the runtime code: excluded the `/admin` Admin SPA routes from the OpenAPI, fixed the `AdminApiKey` security serialization (two-arg `OpenApiSecuritySchemeReference` + top-level `document.Security`), and restored the `X-Tenant-Id` parameter component with path-level refs.
+- Regenerated `docs/api/openapi.json` (now exactly matches the runtime document) and `src/Papyrus.Admin.UI/src/api/schema.d.ts`.
+- Verified with `dotnet build` (0 warnings/0 errors, warnings-as-errors), Admin UI production build, 70 passing non-integration tests, and `git --no-pager diff --check`.
 
 ## UI bug-fix milestone
 
@@ -43,6 +62,18 @@
   the sanitized captures; no GIF was needed for the static showcase surfaces.
 - Audit fixes G1–G4 and G10 are complete: roadmap status, empty Admin directories, frontend schema/port synchronization, and CI Trivy pinning.
 - This relative `memory-bank/` directory is the current context source; no `.memory-bank/` directory is used.
+
+## Phase 7 release readiness and showcase
+
+- Phase 7.1 (public documentation) and 7.2 (showcase assets) were completed earlier.
+- This session finalized the remaining Phase 7 work:
+  1. Reconciliated the stale Phase 7 status in `docs/project/roadmap.md` from "Not started" to "In progress", recording items 1–3 complete and item 4 (tag a release) open.
+  2. Added a Phase 7 section to `docs/project/changelog.md` under the `[Unreleased]` heading.
+  3. Verified `docs/guides/contributing.md`, `SECURITY.md`, `LICENSE`, the README Support section, and `docs/architecture/feature-matrix.md` are complete/truthful — no changes needed.
+  4. Fixed `docs/architecture/release-gates.md`: corrected the stale test-count claim (84→86 unique tests, 14→16 integration) and added the previously-missing O9 gate section (Release artifacts and sanitized publication evidence, status: partial, CI secret-scan pending).
+- Committed all Phase 7 work in commit `2b54b25` ("docs: finalize Phase 7 release-readiness documentation and assets", 20 files, +147/−40). Working tree is clean.
+- The gitleaks CI/release secret-scan wiring is now complete: `security-events: write` was added to the workflow-level `permissions` block in `.github/workflows/release.yml` (line 8). The gitleaks `gitleaks/gitleaks-action@v2` step already existed in both `ci.yml` (line 53, `verify` job) and `release.yml` (line 51, `dependency-scan` job); the release workflow now has the permission needed to upload the redacted SARIF secret-scan artifact. This closes gates W8 (CI secret-scan artifact) and O9 (release artifacts / sanitized publication evidence) at the code level, pending a CI run to produce the artifact.
+- Release gate status: W6, O7, O10 closed; W8, O9 code in place (artifact pending a CI run); W7, O4 partial (production verification pending); O8 open (re-measurement pending). No release tag was created — item 4 remains intentionally open.
 
 # Current documentation milestone
 

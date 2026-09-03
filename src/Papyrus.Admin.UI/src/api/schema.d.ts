@@ -4,191 +4,13 @@
  */
 
 export interface paths {
-    "/api/v1/blog-posts": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: {
-                    page?: number | string;
-                    pageSize?: number | string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PageResponseOfBlogPostResponse"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["BlogPostUpsertRequest"];
-                };
-            };
-            responses: {
-                /** @description Created */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["BlogPostResponse"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ValidationProblemDetails"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/blog-posts/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["BlogPostResponse"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["BlogPostUpsertRequest"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["BlogPostResponse"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ValidationProblemDetails"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        post?: never;
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description No Content */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/categories": {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Tenant identifier used for request isolation. Defaults to main. */
+                "X-Tenant-Id"?: components["parameters"]["TenantId"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -198,7 +20,10 @@ export interface paths {
                     page?: number | string;
                     pageSize?: number | string;
                 };
-                header?: never;
+                header?: {
+                    /** @description Tenant identifier used for request isolation. Defaults to main. */
+                    "X-Tenant-Id"?: components["parameters"]["TenantId"];
+                };
                 path?: never;
                 cookie?: never;
             };
@@ -219,7 +44,10 @@ export interface paths {
         post: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    /** @description Tenant identifier used for request isolation. Defaults to main. */
+                    "X-Tenant-Id"?: components["parameters"]["TenantId"];
+                };
                 path?: never;
                 cookie?: never;
             };
@@ -258,14 +86,20 @@ export interface paths {
     "/api/v1/categories/{id}": {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Tenant identifier used for request isolation. Defaults to main. */
+                "X-Tenant-Id"?: components["parameters"]["TenantId"];
+            };
             path?: never;
             cookie?: never;
         };
         get: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    /** @description Tenant identifier used for request isolation. Defaults to main. */
+                    "X-Tenant-Id"?: components["parameters"]["TenantId"];
+                };
                 path: {
                     id: string;
                 };
@@ -294,7 +128,10 @@ export interface paths {
         put: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    /** @description Tenant identifier used for request isolation. Defaults to main. */
+                    "X-Tenant-Id"?: components["parameters"]["TenantId"];
+                };
                 path: {
                     id: string;
                 };
@@ -337,306 +174,10 @@ export interface paths {
         delete: {
             parameters: {
                 query?: never;
-                header?: never;
-                path: {
-                    id: string;
+                header?: {
+                    /** @description Tenant identifier used for request isolation. Defaults to main. */
+                    "X-Tenant-Id"?: components["parameters"]["TenantId"];
                 };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description No Content */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/media": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["MediaFileResult"][];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "multipart/form-data": components["schemas"]["IFormFile"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["MediaUploadResult"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": string;
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/media/{fileName}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    fileName: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description No Content */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Conflict */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": string;
-                    };
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/projects": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: {
-                    page?: number | string;
-                    pageSize?: number | string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PageResponseOfProjectResponse"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["ProjectUpsertRequest"];
-                };
-            };
-            responses: {
-                /** @description Created */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectResponse"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ValidationProblemDetails"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/projects/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectResponse"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["ProjectUpsertRequest"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectResponse"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ValidationProblemDetails"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        post?: never;
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
                 path: {
                     id: string;
                 };
@@ -668,7 +209,10 @@ export interface paths {
     "/api/v1/tags": {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Tenant identifier used for request isolation. Defaults to main. */
+                "X-Tenant-Id"?: components["parameters"]["TenantId"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -678,7 +222,10 @@ export interface paths {
                     page?: number | string;
                     pageSize?: number | string;
                 };
-                header?: never;
+                header?: {
+                    /** @description Tenant identifier used for request isolation. Defaults to main. */
+                    "X-Tenant-Id"?: components["parameters"]["TenantId"];
+                };
                 path?: never;
                 cookie?: never;
             };
@@ -699,7 +246,10 @@ export interface paths {
         post: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    /** @description Tenant identifier used for request isolation. Defaults to main. */
+                    "X-Tenant-Id"?: components["parameters"]["TenantId"];
+                };
                 path?: never;
                 cookie?: never;
             };
@@ -738,14 +288,20 @@ export interface paths {
     "/api/v1/tags/{id}": {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Tenant identifier used for request isolation. Defaults to main. */
+                "X-Tenant-Id"?: components["parameters"]["TenantId"];
+            };
             path?: never;
             cookie?: never;
         };
         get: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    /** @description Tenant identifier used for request isolation. Defaults to main. */
+                    "X-Tenant-Id"?: components["parameters"]["TenantId"];
+                };
                 path: {
                     id: string;
                 };
@@ -774,7 +330,10 @@ export interface paths {
         put: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    /** @description Tenant identifier used for request isolation. Defaults to main. */
+                    "X-Tenant-Id"?: components["parameters"]["TenantId"];
+                };
                 path: {
                     id: string;
                 };
@@ -817,7 +376,10 @@ export interface paths {
         delete: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    /** @description Tenant identifier used for request isolation. Defaults to main. */
+                    "X-Tenant-Id"?: components["parameters"]["TenantId"];
+                };
                 path: {
                     id: string;
                 };
@@ -846,82 +408,619 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects": {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Tenant identifier used for request isolation. Defaults to main. */
+                "X-Tenant-Id"?: components["parameters"]["TenantId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    page?: number | string;
+                    pageSize?: number | string;
+                };
+                header?: {
+                    /** @description Tenant identifier used for request isolation. Defaults to main. */
+                    "X-Tenant-Id"?: components["parameters"]["TenantId"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PageResponseOfProjectResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Tenant identifier used for request isolation. Defaults to main. */
+                    "X-Tenant-Id"?: components["parameters"]["TenantId"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ProjectUpsertRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProjectResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{id}": {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Tenant identifier used for request isolation. Defaults to main. */
+                "X-Tenant-Id"?: components["parameters"]["TenantId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Tenant identifier used for request isolation. Defaults to main. */
+                    "X-Tenant-Id"?: components["parameters"]["TenantId"];
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProjectResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Tenant identifier used for request isolation. Defaults to main. */
+                    "X-Tenant-Id"?: components["parameters"]["TenantId"];
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ProjectUpsertRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProjectResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Tenant identifier used for request isolation. Defaults to main. */
+                    "X-Tenant-Id"?: components["parameters"]["TenantId"];
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/blog-posts": {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Tenant identifier used for request isolation. Defaults to main. */
+                "X-Tenant-Id"?: components["parameters"]["TenantId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    page?: number | string;
+                    pageSize?: number | string;
+                };
+                header?: {
+                    /** @description Tenant identifier used for request isolation. Defaults to main. */
+                    "X-Tenant-Id"?: components["parameters"]["TenantId"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PageResponseOfBlogPostResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Tenant identifier used for request isolation. Defaults to main. */
+                    "X-Tenant-Id"?: components["parameters"]["TenantId"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["BlogPostUpsertRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BlogPostResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/blog-posts/{id}": {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Tenant identifier used for request isolation. Defaults to main. */
+                "X-Tenant-Id"?: components["parameters"]["TenantId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Tenant identifier used for request isolation. Defaults to main. */
+                    "X-Tenant-Id"?: components["parameters"]["TenantId"];
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BlogPostResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Tenant identifier used for request isolation. Defaults to main. */
+                    "X-Tenant-Id"?: components["parameters"]["TenantId"];
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["BlogPostUpsertRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BlogPostResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Tenant identifier used for request isolation. Defaults to main. */
+                    "X-Tenant-Id"?: components["parameters"]["TenantId"];
+                };
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/media": {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Tenant identifier used for request isolation. Defaults to main. */
+                "X-Tenant-Id"?: components["parameters"]["TenantId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Tenant identifier used for request isolation. Defaults to main. */
+                    "X-Tenant-Id"?: components["parameters"]["TenantId"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MediaFileResult"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Tenant identifier used for request isolation. Defaults to main. */
+                    "X-Tenant-Id"?: components["parameters"]["TenantId"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "multipart/form-data": components["schemas"]["IFormFile"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MediaUploadResult"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": string;
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/media/{fileName}": {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Tenant identifier used for request isolation. Defaults to main. */
+                "X-Tenant-Id"?: components["parameters"]["TenantId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description Tenant identifier used for request isolation. Defaults to main. */
+                    "X-Tenant-Id"?: components["parameters"]["TenantId"];
+                };
+                path: {
+                    fileName: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": string;
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         BlogPostResponse: {
-            category: null | components["schemas"]["ContentCategoryResponse"];
-            contentMarkdown: string;
-            coverImageUrl: null | string;
-            /** Format: date-time */
-            createdAt: string;
             /** Format: uuid */
             id: string;
+            slug: string;
+            title: string;
+            summary: string;
+            contentMarkdown: string;
+            coverImageUrl: null | string;
             isFeatured: boolean;
             isPublished: boolean;
-            project: null | components["schemas"]["ProjectSummaryResponse"];
             /** Format: date-time */
             publishedAt: null | string;
-            slug: string;
-            summary: string;
-            tags: components["schemas"]["ContentTagResponse"][];
-            title: string;
+            /** Format: date-time */
+            createdAt: string;
             /** Format: date-time */
             updatedAt: null | string;
+            category: null | components["schemas"]["ContentCategoryResponse"];
+            project: null | components["schemas"]["ProjectSummaryResponse"];
+            tags: components["schemas"]["ContentTagResponse"][];
         };
         BlogPostSummaryResponse: {
             /** Format: uuid */
             id: string;
+            slug: string;
+            title: string;
+            summary: string;
             isFeatured: boolean;
             isPublished: boolean;
             /** Format: date-time */
             publishedAt: null | string;
-            slug: string;
-            summary: string;
-            title: string;
         };
         BlogPostUpsertRequest: {
-            /** Format: uuid */
-            categoryId: null | string;
+            slug: string;
+            title: string;
+            summary: string;
             contentMarkdown: string;
             coverImageUrl: null | string;
-            isFeatured: boolean;
-            isPublished: boolean;
             /** Format: uuid */
             projectId: null | string;
+            /** Format: uuid */
+            categoryId: null | string;
+            isFeatured: boolean;
+            isPublished: boolean;
             /** Format: date-time */
             publishedAt: null | string;
-            slug: string;
-            summary: string;
             tagIds: string[];
-            title: string;
         };
         CategoryUpsertRequest: {
+            slug: string;
+            name: string;
             description: null | string;
             isPublished: boolean;
-            name: string;
-            slug: string;
         };
         ContentCategoryResponse: {
-            /** Format: date-time */
-            createdAt: string;
-            description: null | string;
             /** Format: uuid */
             id: string;
-            isPublished: boolean;
-            name: string;
             slug: string;
+            name: string;
+            description: null | string;
+            isPublished: boolean;
+            /** Format: date-time */
+            createdAt: string;
             /** Format: date-time */
             updatedAt: null | string;
         };
         ContentTagResponse: {
-            /** Format: date-time */
-            createdAt: string;
             /** Format: uuid */
             id: string;
-            name: string;
             slug: string;
+            name: string;
+            /** Format: date-time */
+            createdAt: string;
             /** Format: date-time */
             updatedAt: null | string;
         };
@@ -929,18 +1028,18 @@ export interface components {
         IFormFile: string;
         MediaFileResult: {
             fileName: string;
+            url: string;
+            /** Format: int64 */
+            size: number | string;
             /** Format: date-time */
             lastModified: string;
-            /** Format: int64 */
-            size: number | string;
-            url: string;
         };
         MediaUploadResult: {
-            contentType: string;
+            url: string;
             fileName: string;
+            contentType: string;
             /** Format: int64 */
             size: number | string;
-            url: string;
         };
         PageResponseOfBlogPostResponse: {
             items: components["schemas"]["BlogPostResponse"][];
@@ -987,75 +1086,78 @@ export interface components {
             totalPages: number | string;
         };
         ProjectResponse: {
-            blogPosts: components["schemas"]["BlogPostSummaryResponse"][];
-            category: null | components["schemas"]["ContentCategoryResponse"];
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            title: string;
+            summary: string;
+            description: null | string;
+            repositoryUrl: null | string;
+            liveUrl: null | string;
             coverImageUrl: null | string;
+            isFeatured: boolean;
+            isPublished: boolean;
+            /** Format: date-time */
+            publishedAt: null | string;
             /** Format: date-time */
             createdAt: string;
-            description: null | string;
-            /** Format: uuid */
-            id: string;
-            isFeatured: boolean;
-            isPublished: boolean;
-            liveUrl: null | string;
-            /** Format: date-time */
-            publishedAt: null | string;
-            repositoryUrl: null | string;
-            slug: string;
-            summary: string;
-            tags: components["schemas"]["ContentTagResponse"][];
-            title: string;
             /** Format: date-time */
             updatedAt: null | string;
+            category: null | components["schemas"]["ContentCategoryResponse"];
+            tags: components["schemas"]["ContentTagResponse"][];
+            blogPosts: components["schemas"]["BlogPostSummaryResponse"][];
         };
         ProjectSummaryResponse: {
-            coverImageUrl: null | string;
             /** Format: uuid */
             id: string;
+            slug: string;
+            title: string;
+            summary: string;
+            coverImageUrl: null | string;
             isFeatured: boolean;
             isPublished: boolean;
             /** Format: date-time */
             publishedAt: null | string;
-            slug: string;
-            summary: string;
-            title: string;
         };
         ProjectUpsertRequest: {
-            /** Format: uuid */
-            categoryId: null | string;
-            coverImageUrl: null | string;
+            slug: string;
+            title: string;
+            summary: string;
             description: null | string;
-            isFeatured: boolean;
-            isPublished: boolean;
-            /** Format: uri */
-            liveUrl: null | string;
-            /** Format: date-time */
-            publishedAt: null | string;
             /** Format: uri */
             repositoryUrl: null | string;
-            slug: string;
-            summary: string;
+            /** Format: uri */
+            liveUrl: null | string;
+            coverImageUrl: null | string;
+            /** Format: uuid */
+            categoryId: null | string;
+            isFeatured: boolean;
+            isPublished: boolean;
+            /** Format: date-time */
+            publishedAt: null | string;
             tagIds: string[];
-            title: string;
         };
         TagUpsertRequest: {
-            name: string;
             slug: string;
+            name: string;
         };
         ValidationProblemDetails: {
+            type?: null | string;
+            title?: null | string;
+            /** Format: int32 */
+            status?: null | number | string;
             detail?: null | string;
+            instance?: null | string;
             errors?: {
                 [key: string]: string[];
             };
-            instance?: null | string;
-            /** Format: int32 */
-            status?: null | number | string;
-            title?: null | string;
-            type?: null | string;
         };
     };
     responses: never;
-    parameters: never;
+    parameters: {
+        /** @description Tenant identifier used for request isolation. Defaults to main. */
+        TenantId: string;
+    };
     requestBodies: never;
     headers: never;
     pathItems: never;

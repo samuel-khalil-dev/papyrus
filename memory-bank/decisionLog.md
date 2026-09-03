@@ -59,3 +59,68 @@ Use reloadable `AdminApi:ApiKeys` configuration with constant-time comparison ac
   and operational environment details; the Aspire capture masks its URL/source
   area. Prefer static PNG captures because the five requested surfaces do not
   require a GIF to communicate their documented state.
+
+## Phase 7 release-readiness decisions
+
+- **Release workflow secret-scan permission:** Add `security-events: write` to
+  the workflow-level `permissions` block in `.github/workflows/release.yml` so
+  the gitleaks `gitleaks/gitleaks-action@v2` step (already present in the
+  `dependency-scan` job) can upload the redacted SARIF secret-scan artifact.
+  The CI workflow already granted this permission; the release workflow lacked
+  it, which was the only missing piece for closing gates W8 and O9. The
+  permission is scoped to the workflow level and does not broaden the release
+  workflow's other access.
+- **O9 gate documentation:** Document the O9 gate (Release artifacts and
+  sanitized publication evidence) in `docs/architecture/release-gates.md` with
+  status `partial`, reflecting that CI secret-scanning evidence is still pending.
+  The gate is recorded truthfully rather than omitted or marked complete.
+- **Release tag held open:** Do not create the release tag (roadmap item 4)
+  until the open/partial release gates pass — specifically O8 re-measurement,
+  W7/W8/O4 production verification, and CI integration-test confirmation. The
+  tag remains intentionally open to avoid tagging a release that has not met
+  its release gates.
+- **Test-count reconciliation:** Correct the documented test counts in
+  `docs/architecture/release-gates.md` to the verified baseline (86 unique .NET
+  tests, 16 PostgreSQL-backed integration tests) rather than the stale 84/14
+  figures, so the release-gate documentation matches the actual verification
+  baseline.
+
+## CI verification and OpenAPI contract decisions (2026-09-03)
+
+- **Gitleaks shallow-clone fix:** Add `fetch-depth: 0` to the `actions/checkout@v4`
+  step in both `.github/workflows/ci.yml` and `.github/workflows/release.yml`.
+  The gitleaks action computes a diff range against the parent commit, which is
+  unavailable in a shallow clone (`fetch-depth: 1`), causing the scan to fail
+  with an ambiguous-revision error even though no secrets were found. Full
+  history is required for the secret scan to run correctly.
+- **OpenAPI contract is the source of truth:** Keep the committed
+  `docs/api/openapi.json` as the canonical contract and fix the runtime code to
+  match it, rather than regenerating the contract to match drifted code. The
+  committed contract reflects the documented intent (23 `/api/v1` operations,
+  top-level `AdminApiKey` security, `X-Tenant-Id` on every path) and the drift
+  was caused by code bugs, not an intentional contract change.
+- **OpenAPI security serialization fix:** Use the two-argument
+  `OpenApiSecuritySchemeReference(SchemeName, document)` constructor in
+  `AdminOpenApiDocumentTransformer` so the security requirement binds to the
+  document and serializes as `AdminApiKey` rather than an empty `[{}]` (which
+  OpenAPI interprets as "no auth required"). Set top-level `document.Security`
+  to require `AdminApiKey` for all operations.
+- **Exclude Admin SPA routes from OpenAPI:** Add `.ExcludeFromDescription()` to
+  the `/admin` and `/admin/{path}` Admin SPA serving routes in `Program.cs` so
+  they do not leak into the API contract. These are UI routes, not API
+  operations.
+- **Tenant header parameter component:** Register a reusable `TenantId` header
+  parameter component (`X-Tenant-Id`) in the transformer and add a path-level
+  `$ref` to it on every documented path, matching the committed contract and the
+  tenant-enforcement architecture.
+
+## OpenAPI regeneration observation (2026-09-03)
+
+- **Pin `openapi-typescript` to an exact version for byte-stable regeneration:**
+  `openapi-typescript` is declared as `^7.9.1` in
+  `src/Papyrus.Admin.UI/package.json` (line 54), so `npm ci` installs 7.13.0,
+  which sorts keys alphabetically. This produces cosmetic key-ordering
+  differences in the regenerated `src/Papyrus.Admin.UI/src/api/schema.d.ts`
+  (no content drift). Pinning to an exact version (e.g. `7.13.0`) would make
+  regeneration byte-stable and eliminate spurious diffs. This is a recorded
+  observation only — no dependency change was made.
