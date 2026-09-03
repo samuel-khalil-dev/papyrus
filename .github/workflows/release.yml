@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    tags: ['v*.*.*']
+    tags: ["v*.*.*"]
   workflow_dispatch:
 
 permissions:
@@ -19,11 +19,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Set up .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
       - name: Restore dependencies
@@ -52,7 +52,7 @@ jobs:
               raise SystemExit('Vulnerable NuGet packages detected.')
           PY
       - name: Scan repository for leaked secrets
-        uses: gitleaks/gitleaks-action@v2.3.6
+        uses: gitleaks/gitleaks-action@v3.0.0
 
   images:
     needs: dependency-scan
@@ -69,7 +69,7 @@ jobs:
             dockerfile: Dockerfile.portfolio
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -85,7 +85,7 @@ jobs:
         with:
           image-ref: ${{ env.IMAGE_PREFIX }}/${{ matrix.name }}:${{ github.ref_name }}
           format: table
-          exit-code: '1'
+          exit-code: "1"
           ignore-unfixed: true
           severity: HIGH,CRITICAL
       - name: Generate SPDX SBOM
@@ -95,7 +95,7 @@ jobs:
           format: spdx-json
           output-file: sbom-${{ matrix.name }}.spdx.json
       - name: Upload SBOM artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: sbom-${{ matrix.name }}
           path: sbom-${{ matrix.name }}.spdx.json
@@ -106,19 +106,20 @@ jobs:
   migrate:
     needs: dependency-scan
     runs-on: ubuntu-latest
-    environment: production-migrations
+    environment:
+      name: production-migrations
+    env:
+      CONNECTION_STRING: ${{ secrets.PRODUCTION_CONNECTION_STRING }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Set up .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
       - name: Install EF Core CLI
         run: dotnet tool install --global dotnet-ef --version 10.0.11
       - name: Apply database migrations as the dedicated migration job
-        env:
-          CONNECTION_STRING: ${{ secrets.PRODUCTION_CONNECTION_STRING }}
         run: |
           test -n "$CONNECTION_STRING"
           dotnet ef database update \
@@ -129,10 +130,17 @@ jobs:
   deploy:
     needs: [images, migrate]
     runs-on: self-hosted
-    environment: production
+    environment:
+      name: production
+    env:
+      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+      BLOG_PUBLIC_BASE_URL: ${{ vars.BLOG_PUBLIC_BASE_URL }}
+      PORTFOLIO_PUBLIC_BASE_URL: ${{ vars.PORTFOLIO_PUBLIC_BASE_URL }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -141,11 +149,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Deploy only after migration and approval checks
         env:
-          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
-          BLOG_PUBLIC_BASE_URL: ${{ vars.BLOG_PUBLIC_BASE_URL }}
-          PORTFOLIO_PUBLIC_BASE_URL: ${{ vars.PORTFOLIO_PUBLIC_BASE_URL }}
           PAPYRUS_ADMIN_IMAGE: ${{ env.IMAGE_PREFIX }}/admin:${{ github.ref_name }}
           PAPYRUS_BLOG_IMAGE: ${{ env.IMAGE_PREFIX }}/blog:${{ github.ref_name }}
           PAPYRUS_PORTFOLIO_IMAGE: ${{ env.IMAGE_PREFIX }}/portfolio:${{ github.ref_name }}
