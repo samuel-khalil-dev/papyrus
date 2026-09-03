@@ -22,21 +22,8 @@
 - Solution build passes with 0 warnings and 0 errors; restore also passes.
 - Five EF Core migrations are applied.
 - Phase 7 verification baseline (commit `2b54b25`): `dotnet restore` + `dotnet build .\Papyrus.sln --nologo --no-incremental` = 0 warnings/0 errors; Admin UI `npm ci` + `npm run build` = success; `dotnet test` = 70 pass / 16 fail locally (the 16 are CI-only PostgreSQL integration tests, not a defect).
-
-## GitHub Actions CI fixes milestone — COMPLETE
-
-- A CI investigation identified several failing/likely-failing GitHub Actions steps. Three fixes were applied and verified:
-  1. **Admin API startup failure (highest impact):** Added `ASPNETCORE_ENVIRONMENT=Development` to the "Start admin API for OpenAPI generation" step in `.github/workflows/ci.yml` (verify job) and `.github/workflows/openapi-schema.yml` (openapi job) — the Admin API throws at startup in non-Development environments without an API key.
-  2. **`python` vs `python3`:** Changed `python - <<'PY'` to `python3 - <<'PY'` in `.github/workflows/ci.yml` and `.github/workflows/release.yml`.
-  3. **Deprecated gitleaks action:** Replaced `gitleaks/gitleaks-action@v2` with `gitleaks/gitleaks-action@v2.3.6` in `.github/workflows/ci.yml` and `.github/workflows/release.yml`.
-- All three workflow files (`ci.yml`, `openapi-schema.yml`, `release.yml`) were verified as well-formed YAML with no unintended changes.
-
-### Remaining known risks (NOT fixed — pending user approval)
-
-- **Trivy hard gates:** `exit-code: '1'` and `severity: HIGH,CRITICAL` in `ci.yml` and `release.yml` will fail on any HIGH/CRITICAL CVE in base images.
-- **Strict k6 latency thresholds:** `p(95)<1000ms` in `tests/load/k6/*.js` is flaky on shared CI runners.
-- **Release workflow prerequisites:** requires configured secrets/vars (`PRODUCTION_CONNECTION_STRING`, `POSTGRES_PASSWORD`, `ADMIN_API_KEY`, `BLOG_PUBLIC_BASE_URL`, `PORTFOLIO_PUBLIC_BASE_URL`) and a registered self-hosted runner.
-<<<<<<< HEAD
+<<<<<<<<< Temporary merge branch 1
+=========
 
 ## CI verification and OpenAPI contract milestone — COMPLETE
 
