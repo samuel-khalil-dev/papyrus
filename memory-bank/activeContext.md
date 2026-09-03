@@ -30,7 +30,23 @@ Verification for this fix passed: `dotnet build .\Papyrus.sln --nologo --no-incr
 
 ## Current task/state
 
-The audit-and-reconstruction effort is complete for the current scope. Phases 0–6 are complete; Phases 7–8 are not started. Papyrus is a .NET 10 modular monolith with 11 solution projects, a standalone React Admin SPA, PostgreSQL 17, Aspire, and Docker Compose. The Phase 4 test-backfill verification has a 0-warning/0-error build and 70 passing non-integration .NET tests; PostgreSQL-backed integration tests require the test database infrastructure.
+The audit-and-reconstruction effort is complete for the current scope. Phases 0–6 are complete; Phase 7 (release readiness and showcase) is in progress with the release tag (item 4) and the operational gates (O8, W7, O4) still open; Phase 8 is not started. Papyrus is a .NET 10 modular monolith with 11 solution projects, a standalone React Admin SPA, PostgreSQL 17, Aspire, and Docker Compose. The Phase 7 verification baseline (commit `2b54b25`) has a 0-warning/0-error build, a passing Admin UI production build, and 70 passing non-integration .NET tests; the 16 PostgreSQL-backed integration tests are CI-only and require `postgres:17-alpine`.
+
+## Phase 7 release readiness and showcase — in progress (release tag pending)
+
+Phase 7.1 (public documentation) and 7.2 (showcase assets) were completed earlier. This session finalized the remaining Phase 7 work: reconciled the stale Phase 7 status in `docs/project/roadmap.md` from "Not started" to "In progress" (items 1–3 complete, item 4 tag-a-release open); added a Phase 7 section to `docs/project/changelog.md` under `[Unreleased]`; verified `docs/guides/contributing.md`, `SECURITY.md`, `LICENSE`, the README Support section, and `docs/architecture/feature-matrix.md` are complete/truthful (no changes needed); and fixed `docs/architecture/release-gates.md` (corrected stale test counts 84→86 unique / 14→16 integration and added the previously-missing O9 gate section, status partial, CI secret-scan pending). All Phase 7 work was committed in `2b54b25` (20 files, +147/−40); the working tree is clean.
+
+A follow-up change closed the remaining secret-scan wiring gap: `security-events: write` was added to the workflow-level `permissions` block in `.github/workflows/release.yml` (line 8). The gitleaks `gitleaks/gitleaks-action@v2` step already existed in both `ci.yml` (line 53, `verify` job) and `release.yml` (line 51, `dependency-scan` job), but the release workflow lacked the permission needed to upload the redacted SARIF secret-scan artifact. Adding it closes gate W8 (CI secret-scan artifact) and gate O9 (release artifacts / sanitized publication evidence) at the code level, pending a CI run to actually produce the artifact.
+
+### Active focus and next steps
+
+- Active focus: close the remaining open release gates before tagging a release.
+- Next steps:
+  - W8/O9 (secret-scan artifact) — run CI to produce the redacted SARIF secret-scan artifact and confirm the release workflow can upload it; then move W8 and O9 from partial to closed.
+  - O8 (re-measurement) — re-measure and close.
+  - W7, O4 (production verification) — complete production verification to move from partial to closed.
+  - CI integration-test confirmation — confirm the 16 PostgreSQL-backed integration tests pass in CI against `postgres:17-alpine`.
+  - Release tag — create the release tag only after the open/partial gates pass (item 4 remains intentionally open).
 
 ## Task Outcomes
 
@@ -76,6 +92,10 @@ Visual inspection found no API keys, connection strings, private URLs, email
 addresses, or other personal data in the committed assets.
 
 ## Self-Healing Log
+
+During Phase 7 verification, `dotnet test` reported 70 pass / 16 fail locally. The 16 failures are the PostgreSQL-backed integration tests, which require a local `postgres:17-alpine` listener that is not present in this environment. These are expected and CI-only, not a defect; the non-integration suite is green and the solution build is 0 warnings/0 errors. No code change was required.
+
+During the Phase 7 release-gate closure, a gap was identified rather than an error: the gitleaks `gitleaks/gitleaks-action@v2` step existed in both `ci.yml` and `release.yml`, but the release workflow's `permissions` block lacked `security-events: write`, so it could not upload the redacted SARIF secret-scan artifact. The permission was added to `.github/workflows/release.yml` (line 8), closing gates W8 and O9 at the code level. A CI run is still required to produce the artifact and confirm the upload.
 
 During this task, an initial asset-edit command was sent through the default cmd wrapper and returned `The system cannot find the file specified`; the retry also exposed cmd quote parsing and created an unintended `')` file. The stray file was removed, and the SVG edits were completed with targeted filesystem edits. No unintended file remains.
 

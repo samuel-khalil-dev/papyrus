@@ -9,14 +9,15 @@
 | 4 | REST contracts, projections, and frontend synchronization | Complete |
 | 5 | Containers, Aspire, Compose, and CI/CD | Complete |
 | 6 | Observability, test depth, and performance budgets | Complete |
-| 7 | Release readiness and showcase | Phase 7.2 sanitized visual assets complete |
+| 7 | Release readiness and showcase | In progress — release tag and operational gates (O8, W7, O4) open |
 | 8 | Measured future scale decision gate | Not started |
 
 ## Verification baseline
 
-- 70 non-integration .NET tests pass locally after the Phase 4 test backfill. CI adds 14 PostgreSQL-backed integration tests for 84 unique .NET tests; those integration tests were excluded locally because no database listener is available. The separate Playwright browser suite currently contains 5 tests.
+- 70 non-integration .NET tests pass locally. CI adds 16 PostgreSQL-backed integration tests for 86 unique .NET tests; those integration tests are excluded locally because no local PostgreSQL listener is available (they require `postgres:17-alpine`). The separate Playwright browser suite currently contains 5 tests.
 - Solution build passes with 0 warnings and 0 errors; restore also passes.
 - Five EF Core migrations are applied.
+- Phase 7 verification baseline (commit `2b54b25`): `dotnet restore` + `dotnet build .\Papyrus.sln --nologo --no-incremental` = 0 warnings/0 errors; Admin UI `npm ci` + `npm run build` = success; `dotnet test` = 70 pass / 16 fail locally (the 16 are CI-only PostgreSQL integration tests, not a defect).
 
 ## UI bug-fix milestone
 
@@ -43,6 +44,18 @@
   the sanitized captures; no GIF was needed for the static showcase surfaces.
 - Audit fixes G1–G4 and G10 are complete: roadmap status, empty Admin directories, frontend schema/port synchronization, and CI Trivy pinning.
 - This relative `memory-bank/` directory is the current context source; no `.memory-bank/` directory is used.
+
+## Phase 7 release readiness and showcase
+
+- Phase 7.1 (public documentation) and 7.2 (showcase assets) were completed earlier.
+- This session finalized the remaining Phase 7 work:
+  1. Reconciliated the stale Phase 7 status in `docs/project/roadmap.md` from "Not started" to "In progress", recording items 1–3 complete and item 4 (tag a release) open.
+  2. Added a Phase 7 section to `docs/project/changelog.md` under the `[Unreleased]` heading.
+  3. Verified `docs/guides/contributing.md`, `SECURITY.md`, `LICENSE`, the README Support section, and `docs/architecture/feature-matrix.md` are complete/truthful — no changes needed.
+  4. Fixed `docs/architecture/release-gates.md`: corrected the stale test-count claim (84→86 unique tests, 14→16 integration) and added the previously-missing O9 gate section (Release artifacts and sanitized publication evidence, status: partial, CI secret-scan pending).
+- Committed all Phase 7 work in commit `2b54b25` ("docs: finalize Phase 7 release-readiness documentation and assets", 20 files, +147/−40). Working tree is clean.
+- The gitleaks CI/release secret-scan wiring is now complete: `security-events: write` was added to the workflow-level `permissions` block in `.github/workflows/release.yml` (line 8). The gitleaks `gitleaks/gitleaks-action@v2` step already existed in both `ci.yml` (line 53, `verify` job) and `release.yml` (line 51, `dependency-scan` job); the release workflow now has the permission needed to upload the redacted SARIF secret-scan artifact. This closes gates W8 (CI secret-scan artifact) and O9 (release artifacts / sanitized publication evidence) at the code level, pending a CI run to produce the artifact.
+- Release gate status: W6, O7, O10 closed; W8, O9 code in place (artifact pending a CI run); W7, O4 partial (production verification pending); O8 open (re-measurement pending). No release tag was created — item 4 remains intentionally open.
 
 # Current documentation milestone
 
