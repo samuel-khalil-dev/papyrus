@@ -84,6 +84,7 @@ Use reloadable `AdminApi:ApiKeys` configuration with constant-time comparison ac
   tests, 16 PostgreSQL-backed integration tests) rather than the stale 84/14
   figures, so the release-gate documentation matches the actual verification
   baseline.
+<<<<<<< HEAD
 
 ## CI verification and OpenAPI contract decisions (2026-09-03)
 
@@ -124,3 +125,5 @@ Use reloadable `AdminApi:ApiKeys` configuration with constant-time comparison ac
   (no content drift). Pinning to an exact version (e.g. `7.13.0`) would make
   regeneration byte-stable and eliminate spurious diffs. This is a recorded
   observation only — no dependency change was made.
+=======
+>>>>>>> cb312eb902fcb0b7e9726452203cdd344b17cd9f

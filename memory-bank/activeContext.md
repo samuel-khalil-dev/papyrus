@@ -1,5 +1,21 @@
 # Active Context
 
+## GitHub Actions CI fixes — completed 2026-09-03
+
+A CI investigation identified several failing/likely-failing GitHub Actions steps. Three fixes were applied and verified across the workflow files:
+
+1. **Admin API startup failure (highest impact):** The Admin API throws at startup in non-Development environments without an API key. Fixed by adding `ASPNETCORE_ENVIRONMENT=Development` to the "Start admin API for OpenAPI generation" step in `.github/workflows/ci.yml` (verify job) and `.github/workflows/openapi-schema.yml` (openapi job).
+2. **`python` vs `python3`:** Changed `python - <<'PY'` to `python3 - <<'PY'` in `.github/workflows/ci.yml` and `.github/workflows/release.yml`.
+3. **Deprecated gitleaks action:** Replaced `gitleaks/gitleaks-action@v2` with `gitleaks/gitleaks-action@v2.3.6` in `.github/workflows/ci.yml` and `.github/workflows/release.yml`.
+
+All three workflow files (`ci.yml`, `openapi-schema.yml`, `release.yml`) were verified as well-formed YAML with no unintended changes.
+
+### Remaining known risks (NOT fixed — pending user approval)
+
+- **Trivy hard gates:** `exit-code: '1'` and `severity: HIGH,CRITICAL` in `ci.yml` and `release.yml` will fail on any HIGH/CRITICAL CVE in base images.
+- **Strict k6 latency thresholds:** `p(95)<1000ms` in `tests/load/k6/*.js` is flaky on shared CI runners.
+- **Release workflow prerequisites:** requires configured secrets/vars (`PRODUCTION_CONNECTION_STRING`, `POSTGRES_PASSWORD`, `ADMIN_API_KEY`, `BLOG_PUBLIC_BASE_URL`, `PORTFOLIO_PUBLIC_BASE_URL`) and a registered self-hosted runner.
+
 ## Current CI verification and OpenAPI contract fix — completed 2026-09-03
 
 After pushing to GitHub (`https://github.com/samuel-khalil-dev/Papyrus.git`, private), the CI run on commit `cb312eb` failed in two workflows. The GitHub CLI (`gh`) was installed via winget and authenticated as `samuel-khalil-dev`. Investigation found two distinct failures:
@@ -121,6 +137,14 @@ Visual inspection found no API keys, connection strings, private URLs, email
 addresses, or other personal data in the committed assets.
 
 ## Self-Healing Log
+
+During the GitHub Actions CI investigation, three error patterns were found and fixed:
+
+1. **Admin API startup failure (highest impact):** The Admin API throws at startup in non-Development environments without an API key, which broke the "Start admin API for OpenAPI generation" step. Root cause: the API key is required outside Development, but the CI step did not set the environment. Resolution: added `ASPNETCORE_ENVIRONMENT=Development` to that step in `.github/workflows/ci.yml` (verify job) and `.github/workflows/openapi-schema.yml` (openapi job).
+2. **`python` vs `python3`:** The inline Python heredocs used `python - <<'PY'`, which is not reliably available on GitHub-hosted runners. Resolution: changed to `python3 - <<'PY'` in `.github/workflows/ci.yml` and `.github/workflows/release.yml`.
+3. **Deprecated gitleaks action:** `gitleaks/gitleaks-action@v2` is deprecated. Resolution: replaced with the pinned `gitleaks/gitleaks-action@v2.3.6` in `.github/workflows/ci.yml` and `.github/workflows/release.yml`.
+
+All three workflow files were verified as well-formed YAML with no unintended changes. Remaining known risks (Trivy hard gates, strict k6 latency thresholds, and release workflow secrets/self-hosted runner) are intentionally NOT fixed and remain open pending user approval.
 
 During Phase 7 verification, `dotnet test` reported 70 pass / 16 fail locally. The 16 failures are the PostgreSQL-backed integration tests, which require a local `postgres:17-alpine` listener that is not present in this environment. These are expected and CI-only, not a defect; the non-integration suite is green and the solution build is 0 warnings/0 errors. No code change was required.
 
