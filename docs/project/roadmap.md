@@ -124,7 +124,7 @@ admin run HTTP p95 21.660 ms, payload p95 9,256 bytes, 0% failed, 100% checks,
 0 5xx). S30.12 is complete: ADR 0007 created, decision DECLINE Postgres RLS;
 application-level tenant filtering remains the sole enforcement layer.
 
-### Phase 7 — Release readiness and GitHub showcase (P2) — Not started
+### Phase 7 — Release readiness and GitHub showcase (P2) — In progress
 
 **Objective:** publish a credible, reproducible project. **Paths:** [`README.md`](../../README.md), [`contributing.md`](../guides/contributing.md), [`policy.md`](../security/policy.md), [`changelog.md`](changelog.md), [`architecture`](../architecture), ``runbooks``, ``screenshots``, and ``demo``.
 
@@ -134,6 +134,18 @@ application-level tenant filtering remains the sole enforcement layer.
 4. Tag a release only after all gates and rollback drills pass.
 
 **Dependencies:** P0/P1 gates. **Gate:** fresh contributor setup succeeds and showcase claims have evidence. **Rollback/risk:** replace misleading assets or claims; never advertise deferred multi-tenancy as complete.
+
+**Status:** Phase 7 is in progress. Roadmap items 1, 2, and 3 are complete: the
+public documentation set (architecture, threat-model summary, local setup and
+seed/demo flow, API and deployment docs, and limitations) is published; the
+five sanitized showcase assets (blog, portfolio, admin, health, and Aspire) are
+committed under `docs/assets` with no credentials, private URLs, or personal
+data; and the contribution, disclosure, license, changelog, support, and
+truthful feature-matrix documentation is in place. Roadmap item 4 (tagging a
+release) remains open and is intentionally not done: it is authorized only after
+all release gates and rollback drills pass, and the release-verification items
+in the [feature matrix](feature-matrix.md) still require operational evidence.
+Deferred multi-tenancy (RLS and full SaaS) is not advertised as complete.
 
 ### Optional Phase 8 — Measured future scale (P3) — Not started; decision gate
 

@@ -110,6 +110,9 @@ body {
   color: var(--color-text);
   background: var(--color-bg);
   min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
   overflow-x: hidden;
   transition: background var(--transition-slow), color var(--transition-slow);
 }
@@ -154,8 +157,9 @@ img, svg { display: block; max-width: 100%; }
   position: absolute;
   inset: 0;
   background-image: url('../images/Papyrus_Background.svg');
-  background-repeat: repeat;
-  background-size: 720px auto;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
   opacity: 0.05;
   mix-blend-mode: screen;
 }
@@ -231,6 +235,7 @@ img, svg { display: block; max-width: 100%; }
 
 .site-nav__brand {
   display: flex;
+  min-width: 0;
   align-items: center;
   gap: 0.5rem;
   font-weight: 700;
@@ -241,13 +246,22 @@ img, svg { display: block; max-width: 100%; }
 
 .site-nav__brand:hover { color: var(--color-accent-light); }
 
-.site-nav__dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--color-accent);
-  box-shadow: 0 0 8px var(--color-accent-glow);
+.site-nav__logo {
+  display: block;
+  flex: 0 0 auto;
+  width: clamp(2rem, 5vw, 2.5rem);
+  height: auto;
+  color: var(--color-accent);
+  transition: transform var(--transition-fast);
+}
+
+.site-nav__brand:hover .site-nav__logo { transform: rotate(-4deg); }
+
+.site-nav__brand-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .site-nav__actions {
@@ -296,8 +310,8 @@ img, svg { display: block; max-width: 100%; }
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border: 1px solid var(--color-glass-border);
   border-radius: var(--radius-sm);
   background: var(--color-bg-surface);
@@ -313,8 +327,9 @@ img, svg { display: block; max-width: 100%; }
 }
 
 .site-nav__menu {
-  width: 36px;
-  height: 36px;
+  display: none;
+  width: 44px;
+  height: 44px;
   padding: 0 8px;
   border: 1px solid var(--color-glass-border);
   border-radius: var(--radius-sm);
@@ -347,6 +362,7 @@ img, svg { display: block; max-width: 100%; }
 .site-content {
   position: relative;
   z-index: 1;
+  flex: 1 0 auto;
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem 1.5rem 4rem;
@@ -1189,6 +1205,7 @@ img, svg { display: block; max-width: 100%; }
    ========================================================================== */
 
 @media (max-width: 767px) {
+  .site-nav { padding-inline: 1rem; }
   .site-nav__actions { gap: 0.75rem; }
   .site-nav__links { display: none; }
   .site-nav__menu { display: flex; align-items: center; justify-content: center; }
@@ -1207,7 +1224,12 @@ img, svg { display: block; max-width: 100%; }
     padding: 0.75rem 0 0.25rem;
     border-color: var(--color-glass-border);
   }
-  .site-nav__mobile-panel .site-nav__link { padding: 0.5rem 0; }
+  .site-nav__mobile-panel .site-nav__link {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    padding: 0.5rem 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

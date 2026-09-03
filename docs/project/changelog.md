@@ -7,6 +7,27 @@ have passed.
 
 ## [Unreleased]
 
+### Phase 7 — Release readiness and GitHub showcase — 2026-09-03
+
+- **Public documentation (roadmap item 1):** published the architecture
+  overview and public overview, threat-model summary, local setup and seed/demo
+  flow, API and deployment guides, and known limitations.
+- **Showcase assets (roadmap item 2):** added five sanitized screenshots under
+  `docs/assets` (blog, portfolio, admin, health, and Aspire) that use the local
+  seeded demo content and contain no credentials, private URLs, or personal
+  data.
+- **Contribution, disclosure, license, and support (roadmap item 3):** verified
+  and completed `docs/guides/contributing.md`, `SECURITY.md`, `LICENSE`, and the
+  README Support section; confirmed the feature matrix truthfully separates
+  implemented, deferred, and release-pending work.
+- **Roadmap status reconciliation:** updated the Phase 7 header in
+  `docs/project/roadmap.md` from "Not started" to "In progress", recording that
+  items 1 and 2 are complete and that item 4 (tagging a release) remains open
+  until all release gates and rollback drills pass.
+- **Release gate:** a release tag is intentionally not created. Canonical
+  production URLs, backup/restore/media-recovery/observability/ingress gates,
+  and the fresh-contributor setup gate still require release-time evidence.
+
 ### Phase 6 — Observability, test depth, and performance budgets — 2026-08-29
 
 - **S30.0 architecture tests:** added NetArchTest coverage for modular-monolith

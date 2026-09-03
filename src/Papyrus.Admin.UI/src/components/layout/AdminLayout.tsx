@@ -21,6 +21,13 @@ export function AdminLayout({
           open={open}
           onClose={() => setOpen(false)}
         />
+        {open && (
+          <button
+            className="fixed inset-0 z-30 bg-background/60 lg:hidden"
+            onClick={() => setOpen(false)}
+            aria-label="Close navigation"
+          />
+        )}
         <div className="min-w-0 flex-1">
           <Topbar onMenu={() => setOpen(true)} onNavigate={onNavigate} />
           <main className="mx-auto max-w-7xl p-5 sm:p-8">

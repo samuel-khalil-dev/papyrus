@@ -14,13 +14,13 @@ push to `main` and every pull request:
 1. **Restore** — `dotnet restore Papyrus.sln`.
 2. **Build with warnings treated as errors** —
    `dotnet build Papyrus.sln --configuration Release --no-restore /p:TreatWarningsAsErrors=true`.
-3. **Tests** — `dotnet test Papyrus.sln` exercises 84 unique .NET tests in CI:
-   70 provider-independent/non-integration tests plus 14 PostgreSQL integration
+3. **Tests** — `dotnet test Papyrus.sln` exercises 86 unique .NET tests in CI:
+   70 provider-independent/non-integration tests plus 16 PostgreSQL integration
    tests.
 4. **PostgreSQL integration tests** — the `Papyrus.Tests.Integration` filter
-   runs the 14 integration tests against a `postgres:17-alpine` service. The
+   runs the 16 integration tests against a `postgres:17-alpine` service. The
    workflow runs the full suite first and then repeats this integration subset
-   explicitly; the unique CI test count remains 84, not 98.
+   explicitly; the unique CI test count remains 86, not 102.
 5. **Secret scan** — `gitleaks/gitleaks-action@v2`.
 6. **NuGet vulnerability scan** — `dotnet list ... package --vulnerable
    --include-transitive`; fails on any vulnerable package.
@@ -189,6 +189,30 @@ a later sub-task, it is marked **Pending** rather than fabricated.
   repeat the documented workload with production-like data, capture p95,
   errors, payloads, upload cost, allocations, and GC, and attach the sanitized
   artifact before using O8 for release approval.
+
+### O9 — Release artifacts and sanitized publication evidence
+
+**Status: Partial evidence attached; CI secret-scan artifact pending.**
+
+O9 is a defined release gate (see
+[`audit-register.md`](../security/audit-register.md) and
+[`roadmap.md`](../project/roadmap.md)): release artifacts are documented and
+sanitized publication evidence is a release gate. Its evidence overlaps with
+W8 (release documentation and CI) and is recorded there:
+
+- [`deployment.md`](../guides/deployment.md) and the CI/release workflows
+  ([`ci.yml`](../../.github/workflows/ci.yml),
+  [`release.yml`](../../.github/workflows/release.yml)) document the release
+  path, image scanning, SBOM generation, and the dedicated `migrate` job.
+- **2026-09-02 sanitized artifact review — PASS:** the committed showcase asset
+  set contains only `admin.png`, `aspire.png`, `blog.png`, `health.png`, and
+  `portfolio.png`; the tracked-file name check found no committed `.env`,
+  private-key, or certificate files. No secrets, private URLs, or personal data
+  are recorded.
+- **Pending CI verification:** the local `gitleaks` executable is unavailable,
+  so sanitized gitleaks output could not be attached. Run the repository's
+  `gitleaks/gitleaks-action@v2` in CI (or an approved controlled runner) and
+  attach its redacted result to release approval before tagging.
 
 ### O10 — Architecture evidence
 
