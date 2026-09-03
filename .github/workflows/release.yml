@@ -19,11 +19,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Set up .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
       - name: Restore dependencies
@@ -69,7 +69,7 @@ jobs:
             dockerfile: Dockerfile.portfolio
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -95,7 +95,7 @@ jobs:
           format: spdx-json
           output-file: sbom-${{ matrix.name }}.spdx.json
       - name: Upload SBOM artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: sbom-${{ matrix.name }}
           path: sbom-${{ matrix.name }}.spdx.json
@@ -109,9 +109,9 @@ jobs:
     environment: production-migrations
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Set up .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
       - name: Install EF Core CLI
@@ -132,7 +132,7 @@ jobs:
     environment: production
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
