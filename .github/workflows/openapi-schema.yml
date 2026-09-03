@@ -28,6 +28,7 @@ jobs:
 
       - name: Start admin API for OpenAPI generation
         run: |
+          ASPNETCORE_ENVIRONMENT=Development \
           ASPNETCORE_URLS=http://127.0.0.1:5205 \
           Papyrus__SkipDatabaseInitialization=true \
           dotnet run --project src/Papyrus.Api.Admin/Papyrus.Api.Admin.csproj --configuration Release --no-build > "$RUNNER_TEMP/papyrus-api.log" 2>&1 &

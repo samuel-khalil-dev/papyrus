@@ -53,12 +53,12 @@ jobs:
         run: dotnet test src/Papyrus.Tests/Papyrus.Tests.csproj --configuration Release --no-build --no-restore --filter FullyQualifiedName~Papyrus.Tests.Integration --logger trx --results-directory TestResults
 
       - name: Scan repository for leaked secrets
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v2.3.6
 
       - name: Check vulnerable NuGet packages
         run: |
           dotnet list Papyrus.sln package --vulnerable --include-transitive --format json > /tmp/vulnerabilities.json
-          python - <<'PY'
+          python3 - <<'PY'
           import json
           from pathlib import Path
 
@@ -80,6 +80,7 @@ jobs:
 
       - name: Start admin API for OpenAPI generation
         run: |
+          ASPNETCORE_ENVIRONMENT=Development \
           ASPNETCORE_URLS=http://127.0.0.1:5205 \
           Papyrus__SkipDatabaseInitialization=true \
           dotnet run --project src/Papyrus.Api.Admin/Papyrus.Api.Admin.csproj --configuration Release --no-build > "$RUNNER_TEMP/papyrus-api.log" 2>&1 &
