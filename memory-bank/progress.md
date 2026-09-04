@@ -9,11 +9,7 @@
 | 4 | REST contracts, projections, and frontend synchronization | Complete |
 | 5 | Containers, Aspire, Compose, and CI/CD | Complete |
 | 6 | Observability, test depth, and performance budgets | Complete |
-<<<<<<< HEAD
 | 7 | Release readiness and showcase | In progress — release tag and operational gates (W8, O9, O8, W7, O4) open; CI/OpenAPI verification complete |
-=======
-| 7 | Release readiness and showcase | In progress — release tag and operational gates (O8, W7, O4) open |
->>>>>>> cb312eb902fcb0b7e9726452203cdd344b17cd9f
 | 8 | Measured future scale decision gate | Not started |
 
 ## Verification baseline
@@ -22,9 +18,6 @@
 - Solution build passes with 0 warnings and 0 errors; restore also passes.
 - Five EF Core migrations are applied.
 - Phase 7 verification baseline (commit `2b54b25`): `dotnet restore` + `dotnet build .\Papyrus.sln --nologo --no-incremental` = 0 warnings/0 errors; Admin UI `npm ci` + `npm run build` = success; `dotnet test` = 70 pass / 16 fail locally (the 16 are CI-only PostgreSQL integration tests, not a defect).
-<<<<<<<<< Temporary merge branch 1
-=========
-
 ## CI verification and OpenAPI contract milestone — COMPLETE
 
 - Verification of the `cb312eb` CI/OpenAPI fixes is complete and requires no further code changes:
@@ -42,8 +35,6 @@
 - Fixed the OpenAPI contract drift by correcting the runtime code: excluded the `/admin` Admin SPA routes from the OpenAPI, fixed the `AdminApiKey` security serialization (two-arg `OpenApiSecuritySchemeReference` + top-level `document.Security`), and restored the `X-Tenant-Id` parameter component with path-level refs.
 - Regenerated `docs/api/openapi.json` (now exactly matches the runtime document) and `src/Papyrus.Admin.UI/src/api/schema.d.ts`.
 - Verified with `dotnet build` (0 warnings/0 errors, warnings-as-errors), Admin UI production build, 70 passing non-integration tests, and `git --no-pager diff --check`.
-=======
->>>>>>> cb312eb902fcb0b7e9726452203cdd344b17cd9f
 
 ## UI bug-fix milestone
 
