@@ -43,7 +43,7 @@ jobs:
             sleep 1
           done
           test -s /tmp/openapi.json
-          python -c "import json; d=json.load(open('/tmp/openapi.json', encoding='utf-8')); json.dump(d, open('/tmp/openapi.sorted.json','w',encoding='utf-8'), indent=2, sort_keys=True); open('/tmp/openapi.sorted.json','a',encoding='utf-8').write('\\n')"
+          python3 -c "import json; d=json.load(open('/tmp/openapi.json', encoding='utf-8')); json.dump(d, open('/tmp/openapi.sorted.json','w',encoding='utf-8'), indent=2, sort_keys=True); open('/tmp/openapi.sorted.json','a',encoding='utf-8').write('\\n')"
 
       - name: Compare committed OpenAPI artifact
         run: diff --unified=3 docs/api/openapi.json /tmp/openapi.sorted.json
