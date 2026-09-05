@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  packages: write
   security-events: write
 
 jobs:
@@ -31,12 +32,12 @@ jobs:
           --health-start-period 10s
     steps:
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6.0.0
         with:
           dotnet-version: 10.0.x
 
@@ -53,7 +54,7 @@ jobs:
         run: dotnet test src/Papyrus.Tests/Papyrus.Tests.csproj --configuration Release --no-build --no-restore --filter FullyQualifiedName~Papyrus.Tests.Integration --logger trx --results-directory TestResults
 
       - name: Scan repository for leaked secrets
-        uses: gitleaks/gitleaks-action@v3.0.0
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
 
       - name: Check vulnerable NuGet packages
         run: |
@@ -133,17 +134,17 @@ jobs:
           --health-start-period 10s
     steps:
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7.0.1
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6.0.0
         with:
           dotnet-version: 10.0.x
 
       - name: Set up Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v7.0.0
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Restore .NET dependencies
         run: dotnet restore Papyrus.sln
@@ -193,7 +194,7 @@ jobs:
 
       - name: Upload browser artifacts
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: papyrus-browser-smoke-report
           path: tests/e2e/playwright-report
@@ -227,10 +228,10 @@ jobs:
           --health-start-period 10s
     steps:
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7.0.1
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6.0.0
         with:
           dotnet-version: 10.0.x
 
@@ -266,7 +267,7 @@ jobs:
           done
 
       - name: Set up K6
-        uses: grafana/setup-k6-action@v1
+        uses: grafana/setup-k6-action@db07bd9765aac508ef18982e52ab937fe633a065  # v1.2.1
 
       - name: Run public K6 load smoke
         run: k6 run tests/load/k6/public-listing.js
@@ -296,13 +297,13 @@ jobs:
             dockerfile: Dockerfile.portfolio
     steps:
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7.0.1
 
       - name: Build container image
         run: docker build --pull --file "${{ matrix.dockerfile }}" --tag "papyrus-${{ matrix.name }}:ci" .
 
       - name: Scan container image for high or critical vulnerabilities
-        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: papyrus-${{ matrix.name }}:ci
           format: table
