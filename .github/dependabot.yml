@@ -1,31 +1,123 @@
-# Dependabot configuration
-# See https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+# Dependabot version updates
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 version: 2
 updates:
-  # .NET / NuGet packages (solution-wide, manifests live at the repo root)
-  - package-ecosystem: "nuget"
-    directory: "/"
+  # .NET / NuGet (PackageReference in csproj under the repo root)
+  - package-ecosystem: nuget
+    directory: /
     schedule:
-      interval: "weekly"
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: "Europe/Bucharest"
     open-pull-requests-limit: 10
+    labels:
+      - dependencies
+    versioning-strategy: auto
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      dotnet-microsoft:
+        patterns:
+          - "Microsoft.*"
+        update-types:
+          - minor
+          - patch
+      aspire:
+        patterns:
+          - "Aspire.*"
+        update-types:
+          - minor
+          - patch
+      otel:
+        patterns:
+          - "OpenTelemetry*"
+        update-types:
+          - minor
+          - patch
 
   # Admin UI (Vite / React / TypeScript)
-  - package-ecosystem: "npm"
-    directory: "/src/Papyrus.Admin.UI"
+  - package-ecosystem: npm
+    directory: /src/Papyrus.Admin.UI
     schedule:
-      interval: "weekly"
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: "Europe/Bucharest"
     open-pull-requests-limit: 10
+    labels:
+      - dependencies
+    versioning-strategy: auto
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      admin-ui-non-major:
+        update-types:
+          - minor
+          - patch
+    ignore:
+      - dependency-name: vite
+        update-types: ["version-update:semver-major"]
+      - dependency-name: eslint
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@vitejs/plugin-react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: eslint-plugin-react-hooks
+        update-types: ["version-update:semver-major"]
+      - dependency-name: framer-motion
+        update-types: ["version-update:semver-major"]
+      - dependency-name: openapi-fetch
+        update-types: ["version-update:semver-major"]
+      - dependency-name: openapi-typescript
+        update-types: ["version-update:semver-major"]
 
-  # End-to-end tests (Playwright)
-  - package-ecosystem: "npm"
-    directory: "/tests/e2e"
+  # Playwright e2e
+  - package-ecosystem: npm
+    directory: /tests/e2e
     schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 10
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: "Europe/Bucharest"
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    versioning-strategy: auto
+    commit-message:
+      prefix: "chore(deps)"
+    ignore:
+      # CI runs Node 24; do not take Node 26 types
+      - dependency-name: "@types/node"
+        versions: [">=25"]
 
-  # GitHub Actions workflows
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  # GitHub Actions (SHA pins with "# vX.Y.Z" comments still get updates)
+  - package-ecosystem: github-actions
+    directory: /
     schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 10
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: "Europe/Bucharest"
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    commit-message:
+      prefix: "chore(ci)"
+    groups:
+      github-actions:
+        patterns: ["*"]
+
+  # Dockerfiles at repo root (Dockerfile.admin / blog / portfolio)
+  # Note: Dependabot's docker ecosystem scans Dockerfiles only; docker-compose.yml is not scanned.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: "Europe/Bucharest"
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    commit-message:
+      prefix: "chore(deps)"
