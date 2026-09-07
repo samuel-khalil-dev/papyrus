@@ -84,6 +84,7 @@ Use reloadable `AdminApi:ApiKeys` configuration with constant-time comparison ac
   tests, 16 PostgreSQL-backed integration tests) rather than the stale 84/14
   figures, so the release-gate documentation matches the actual verification
   baseline.
+
 ## CI verification and OpenAPI contract decisions (2026-09-03)
 
 - **Gitleaks shallow-clone fix:** Add `fetch-depth: 0` to the `actions/checkout@v4`
@@ -112,6 +113,25 @@ Use reloadable `AdminApi:ApiKeys` configuration with constant-time comparison ac
   parameter component (`X-Tenant-Id`) in the transformer and add a path-level
   `$ref` to it on every documented path, matching the committed contract and the
   tenant-enforcement architecture.
+
+## CI workflow hardening decisions (2026-09-05)
+
+- **Pin GitHub Actions to immutable commits:** Pin third-party actions to immutable commit SHAs (with a trailing `# vX.Y.Z` comment) rather than mutable major-version tags, for supply-chain integrity. Applied to `gitleaks/gitleaks-action` (v3.0.0), `aquasecurity/trivy-action` (v0.36.0), `docker/login-action` (v4.6.0), `docker/setup-buildx-action` (v4.3.0), `anchore/sbom-action` (v0.24.2), and `grafana/setup-k6-action` (v1.2.1).
+- **Bump official actions to current majors:** Upgrade `actions/checkout` to v7.0.1, `actions/setup-dotnet` to v6.0.0, `actions/setup-node` to v7.0.0 (Node 24), and `actions/upload-artifact` to v7.0.1 across `ci.yml`, `openapi-schema.yml`, `perf-baseline.yml`, and `release.yml`.
+- **Grant `packages: write` in CI:** Add `packages: write` to the workflow-level `permissions` block in `ci.yml` so the CI workflow can publish container images to GHCR.
+- **Normalize OpenAPI comparison:** Use `python3` (not `python`) for OpenAPI normalization and ignore CRLF/LF line-ending differences when comparing the committed `docs/api/openapi.json` against the runtime-generated contract, preventing false drift failures on Windows-checked-out files.
+- **Pin k6 version in perf baseline:** Pin `grafana/setup-k6-action` to v1.2.1 and set `k6-version: 0.45.0` in `perf-baseline.yml` for reproducible load-test baselines.
+
+## Dependabot integration decision (2026-09-07)
+
+- **Enable Dependabot for dependency updates:** Add `.github/dependabot.yml` (version 2) with a weekly schedule and `open-pull-requests-limit: 10` for three ecosystems: `nuget` (directory `/`), `npm` (directories `/src/Papyrus.Admin.UI` and `/tests/e2e`), and `github-actions` (directory `/`). This automates dependency and action update PRs so the pinned/current dependency posture is maintained without manual tracking.
+
+## Ignore-file hardening decision (2026-09-07)
+
+- **Harden `.gitignore`:** Add compiled binaries (`*.dll`, `*.exe`, `*.pdb`), TS/Node caches (`*.tsbuildinfo`, `.vite/`, `.eslintcache`), secret key/cert files (`*.snk`, `*.pfx`, `*.p12`, `*.key`), package-manager logs, and transient/editor files (`*.orig`, `*.rej`, `*.bak`, `*.tmp`, `*.temp`, `*.swp`) so build artifacts, caches, and secrets are never committed.
+- **Harden `.dockerignore`:** Add `**/node_modules/`, `**/dist/`, `coverage/`, `artifacts/`, `.idea/`, `*.tsbuildinfo`, `.vite/`, `.eslintcache`, `*.nupkg`/`*.snupkg`, `packages/`, `*.log`/`logs/`, local DB files, OS files, and non-build dirs `plans/` and `ops/` to keep build contexts lean and avoid leaking local artifacts into images.
+- **Normalize `.gitattributes`:** Keep `* text=auto` and add explicit LF/CRLF handling for config/ignore files and source extensions, plus additional binary types, for consistent line endings across platforms.
+- **Tracked-file safety:** Run `git ls-files` before adding ignore rules to confirm no tracked files are affected by the new patterns.
 
 ## OpenAPI regeneration observation (2026-09-03)
 
