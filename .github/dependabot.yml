@@ -1,0 +1,31 @@
+# Dependabot configuration
+# See https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+version: 2
+updates:
+  # .NET / NuGet packages (solution-wide, manifests live at the repo root)
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+
+  # Admin UI (Vite / React / TypeScript)
+  - package-ecosystem: "npm"
+    directory: "/src/Papyrus.Admin.UI"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+
+  # End-to-end tests (Playwright)
+  - package-ecosystem: "npm"
+    directory: "/tests/e2e"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+
+  # GitHub Actions workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
