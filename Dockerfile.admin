@@ -1,4 +1,4 @@
-FROM node:22 AS admin-ui-build
+FROM node:26 AS admin-ui-build
 WORKDIR /ui
 COPY src/Papyrus.Admin.UI/package.json src/Papyrus.Admin.UI/package-lock.json ./
 RUN npm ci
