@@ -1,5 +1,49 @@
 # Active Context
 
+## Dependabot integration and ignore-file hardening — completed 2026-09-07
+
+Added Dependabot to the project and hardened the repository ignore files. All changes are repository-hygiene/CI-tooling only; no application source, dependencies, secrets, or migrations were modified.
+
+1. **Dependabot (`.github/dependabot.yml`):** Enabled Dependabot version 2 with a weekly schedule and `open-pull-requests-limit: 10` across three ecosystems:
+   - `nuget` — directory `/`.
+   - `npm` — directories `/src/Papyrus.Admin.UI` and `/tests/e2e`.
+   - `github-actions` — directory `/`.
+2. **`.gitignore` hardening:** Added compiled binaries (`*.dll`, `*.exe`, `*.pdb`), TS/Node caches (`*.tsbuildinfo`, `.vite/`, `.eslintcache`), secret key/cert files (`*.snk`, `*.pfx`, `*.p12`, `*.key`), package-manager logs, and transient/editor files (`*.orig`, `*.rej`, `*.bak`, `*.tmp`, `*.temp`, `*.swp`).
+3. **`.dockerignore` hardening:** Added `**/node_modules/`, `**/dist/`, `coverage/`, `artifacts/`, `.idea/`, `*.tsbuildinfo`, `.vite/`, `.eslintcache`, `*.nupkg`/`*.snupkg`, `packages/`, `*.log`/`logs/`, local DB files, OS files, and non-build dirs `plans/` and `ops/`.
+4. **`.gitattributes`:** Kept `* text=auto` and added explicit LF/CRLF handling for config/ignore files and source extensions, plus additional binary types.
+5. **Tracked-file safety check:** `git ls-files` was run before adding ignore rules; no tracked files were affected by the new ignore patterns.
+
+### Active focus and next steps
+
+- Active focus: keep the repository's dependency and ignore hygiene current while the remaining release gates (W8/O9 artifact, O8 re-measurement, W7/O4 production verification) are closed by an actual CI run and production verification.
+- Next steps: commit and push the Dependabot config and ignore-file changes; verify Dependabot opens the expected weekly PRs for nuget, npm, and github-actions; then close the open/partial release gates before tagging a release (roadmap item 4 remains intentionally open).
+
+## GitHub Actions CI workflow hardening — completed 2026-09-05
+
+A follow-up CI hardening pass bumped GitHub Actions dependencies and fixed OpenAPI contract comparison across the workflow files. All changes are CI-only; no application source, dependencies, secrets, or migrations were modified.
+
+1. **Dependency/action version bumps (`cb09a7f`, `5b74190`):** Updated actions across `ci.yml`, `openapi-schema.yml`, `perf-baseline.yml`, and `release.yml`:
+   - `actions/checkout@v5` → `actions/checkout@v7.0.1`
+   - `actions/setup-dotnet@v5` → `actions/setup-dotnet@v6.0.0`
+   - `actions/setup-node@v5` → `actions/setup-node@v7.0.0` with `node-version: 24` (was 22)
+   - `actions/upload-artifact@v5` → `actions/upload-artifact@v7.0.1`
+   - `gitleaks/gitleaks-action@v3.0.0` → pinned to commit `e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e` (# v3.0.0)
+   - `aquasecurity/trivy-action` → pinned to commit `ed142fd0673e97e23eac54620cfb913e5ce36c25` (# v0.36.0)
+   - `docker/login-action@v4`/`@v3` → pinned to commit `dbcb813823bdd20940b903addbd779551569679f` (# v4.6.0)
+   - `docker/setup-buildx-action@v4` → pinned to commit `37fe631027851001ddb9b187196cc803df7f5f0e` (# v4.3.0)
+   - `anchore/sbom-action` → pinned to commit `3ad7283483fc7af8ff2b4ea19663c2d5ca935e26` (# v0.24.2)
+   - `grafana/setup-k6-action@v1` → pinned to commit `db07bd9765aac508ef18982e52ab937fe633a065` (# v1.2.1), with `k6-version: 0.45.0` added in `perf-baseline.yml`
+   - Added `packages: write` to the workflow-level `permissions` block in `ci.yml` (for GHCR image publishing).
+2. **Docker login/setup-buildx actions to v4 (`76fff8a`):** Updated `docker/login-action` and `docker/setup-buildx-action` to v4 in `release.yml`.
+3. **`python3` for OpenAPI normalization (`4cc3ad9`):** Changed `python` to `python3` in the OpenAPI normalization steps of `ci.yml` and `openapi-schema.yml`.
+4. **CRLF/LF mismatch fix (`4e5a48f`):** The OpenAPI contract comparison now ignores CRLF/LF line-ending differences in `ci.yml` and `openapi-schema.yml`, preventing false drift failures on Windows-checked-out files.
+5. **Memory-bank conflict resolution (`f4cf021`):** Resolved leftover merge-conflict markers in `memory-bank/decisionLog.md` and `memory-bank/progress.md`, keeping the newer CI/OpenAPI verification content.
+
+### Active focus and next steps
+
+- Active focus: keep the CI workflow dependencies current and pinned to immutable commits while the remaining release gates (W8/O9 artifact, O8 re-measurement, W7/O4 production verification) are closed by an actual CI run and production verification.
+- Next steps: run CI to confirm the bumped actions and OpenAPI comparison pass; then close the open/partial release gates before tagging a release (roadmap item 4 remains intentionally open).
+
 ## GitHub Actions CI fixes — completed 2026-09-03
 
 A CI investigation identified several failing/likely-failing GitHub Actions steps. Three fixes were applied and verified across the workflow files:
@@ -137,6 +181,8 @@ Visual inspection found no API keys, connection strings, private URLs, email
 addresses, or other personal data in the committed assets.
 
 ## Self-Healing Log
+
+During the CI workflow hardening pass, leftover merge-conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`) were found in `memory-bank/decisionLog.md` and `memory-bank/progress.md`, introduced by a prior merge. They were resolved in commit `f4cf021` by keeping the newer CI/OpenAPI verification content and removing the conflict markers. No source code was affected.
 
 During the GitHub Actions CI investigation, three error patterns were found and fixed:
 

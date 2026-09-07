@@ -18,6 +18,24 @@
 - Solution build passes with 0 warnings and 0 errors; restore also passes.
 - Five EF Core migrations are applied.
 - Phase 7 verification baseline (commit `2b54b25`): `dotnet restore` + `dotnet build .\Papyrus.sln --nologo --no-incremental` = 0 warnings/0 errors; Admin UI `npm ci` + `npm run build` = success; `dotnet test` = 70 pass / 16 fail locally (the 16 are CI-only PostgreSQL integration tests, not a defect).
+
+## Dependabot integration and ignore-file hardening milestone — COMPLETE (2026-09-07)
+
+- Added `.github/dependabot.yml` with Dependabot version 2, a weekly schedule, and `open-pull-requests-limit: 10` for three ecosystems: `nuget` (directory `/`), `npm` (directories `/src/Papyrus.Admin.UI` and `/tests/e2e`), and `github-actions` (directory `/`).
+- Hardened `.gitignore`: added compiled binaries (`*.dll`, `*.exe`, `*.pdb`), TS/Node caches (`*.tsbuildinfo`, `.vite/`, `.eslintcache`), secret key/cert files (`*.snk`, `*.pfx`, `*.p12`, `*.key`), package-manager logs, and transient/editor files (`*.orig`, `*.rej`, `*.bak`, `*.tmp`, `*.temp`, `*.swp`).
+- Hardened `.dockerignore`: added `**/node_modules/`, `**/dist/`, `coverage/`, `artifacts/`, `.idea/`, `*.tsbuildinfo`, `.vite/`, `.eslintcache`, `*.nupkg`/`*.snupkg`, `packages/`, `*.log`/`logs/`, local DB files, OS files, and non-build dirs `plans/` and `ops/`.
+- Updated `.gitattributes`: kept `* text=auto` and added explicit LF/CRLF handling for config/ignore files and source extensions, plus additional binary types.
+- A tracked-file safety check (`git ls-files`) confirmed no tracked files were affected by the new ignore rules.
+- All changes are repository-hygiene/CI-tooling only; no application source, dependencies, secrets, or migrations were modified.
+
+## CI workflow hardening milestone — COMPLETE (2026-09-05)
+
+- Bumped GitHub Actions dependencies across `ci.yml`, `openapi-schema.yml`, `perf-baseline.yml`, and `release.yml`: `actions/checkout@v7.0.1`, `actions/setup-dotnet@v6.0.0`, `actions/setup-node@v7.0.0` (Node 24), `actions/upload-artifact@v7.0.1`, pinned `gitleaks` (v3.0.0), `trivy-action` (v0.36.0), `docker/login-action` (v4.6.0), `docker/setup-buildx-action` (v4.3.0), `anchore/sbom-action` (v0.24.2), and `grafana/setup-k6-action` (v1.2.1, k6 0.45.0). Added `packages: write` permission to `ci.yml`.
+- Updated Docker login/setup-buildx actions to v4 in `release.yml`.
+- Switched OpenAPI normalization to `python3` and made the OpenAPI contract comparison ignore CRLF/LF line-ending differences in `ci.yml` and `openapi-schema.yml`.
+- Resolved leftover merge-conflict markers in `memory-bank/decisionLog.md` and `memory-bank/progress.md` (commit `f4cf021`).
+- All changes are CI-only; no application source, dependencies, secrets, or migrations were modified.
+
 ## CI verification and OpenAPI contract milestone — COMPLETE
 
 - Verification of the `cb312eb` CI/OpenAPI fixes is complete and requires no further code changes:

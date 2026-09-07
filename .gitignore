@@ -4,6 +4,14 @@
 artifacts/
 **/node_modules/
 **/dist/
+*.dll
+*.exe
+*.pdb
+
+# TypeScript / Node tooling caches
+*.tsbuildinfo
+.vite/
+.eslintcache
 
 # Visual Studio and VS Code local state
 .vs/
@@ -40,6 +48,12 @@ coverage/
 packages/
 .nuget/
 
+# Strong-name keys and certificates (secrets)
+*.snk
+*.pfx
+*.p12
+*.key
+
 # Local environment and secrets
 .env
 .env.*
@@ -71,3 +85,14 @@ Desktop.ini
 # Logs
 *.log
 logs/
+npm-debug.log*
+yarn-error.log
+pnpm-debug.log*
+
+# Transient / editor backup files
+*.orig
+*.rej
+*.bak
+*.tmp
+*.temp
+*.swp

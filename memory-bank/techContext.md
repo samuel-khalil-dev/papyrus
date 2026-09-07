@@ -23,7 +23,7 @@ The 11 solution projects are `Papyrus.AppHost`, `Papyrus.Api.Admin`, `Papyrus.In
 
 Required Compose inputs: `POSTGRES_PASSWORD`, `ADMIN_API_KEY`, `BLOG_PUBLIC_BASE_URL`, `PORTFOLIO_PUBLIC_BASE_URL`. Relevant settings are `AdminApi:ApiKeys` plus legacy `AdminApi:ApiKey`, `Site:PublicBaseUrl`, `Site:MediaBaseUrl`, and `OTEL_EXPORTER_OTLP_ENDPOINT`.
 
-Compose services are `test-db` (test profile), `db`, `admin-api`, `blog`, and `portfolio`. PostgreSQL has a durable volume and healthcheck; Admin has a media volume and owns initialization. CI runs restore, warnings-as-errors build, tests, PostgreSQL integration, gitleaks, NuGet vulnerability scan, OpenAPI drift check, and container/Trivy checks. Release builds images, runs a dotnet-ef 10.0.11 migration job, and deploys.
+Compose services are `test-db` (test profile), `db`, `admin-api`, `blog`, and `portfolio`. PostgreSQL has a durable volume and healthcheck; Admin has a media volume and owns initialization. CI runs restore, warnings-as-errors build, tests, PostgreSQL integration, gitleaks, NuGet vulnerability scan, OpenAPI drift check, and container/Trivy checks. Release builds images, runs a dotnet-ef 10.0.11 migration job, and deploys. Dependabot is configured (`.github/dependabot.yml`, version 2, weekly schedule, `open-pull-requests-limit: 10`) for `nuget` (directory `/`), `npm` (directories `/src/Papyrus.Admin.UI` and `/tests/e2e`), and `github-actions` (directory `/`).
 
 ## Data and telemetry
 
