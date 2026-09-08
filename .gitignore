@@ -96,3 +96,10 @@ pnpm-debug.log*
 *.tmp
 *.temp
 *.swp
+
+# Internal / local-only
+memory-bank/
+ops/
+plans/
+docs/security/
+docs/architecture/
