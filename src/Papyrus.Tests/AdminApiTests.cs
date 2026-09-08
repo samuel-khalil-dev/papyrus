@@ -8,10 +8,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Papyrus.Api.Admin;
+using Papyrus.Application;
+using Papyrus.Application.Content;
 using Papyrus.Contracts.Content;
 using Papyrus.Api.Admin.Media;
-using Papyrus.Application;
 using Papyrus.Infrastructure;
+using Papyrus.Infrastructure.Content;
+using Papyrus.Infrastructure.Interceptors;
 using Papyrus.Infrastructure.MultiTenancy;
 
 namespace Papyrus.Tests;
@@ -27,8 +30,15 @@ public sealed class AdminApiTests : IAsyncLifetime
         _databaseName = Guid.NewGuid().ToString();
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
-        builder.Services.AddDbContext<PapyrusDbContext>(options => options.UseInMemoryDatabase(_databaseName));
+        builder.Services.AddDbContext<PapyrusDbContext>(options =>
+            options.UseInMemoryDatabase(_databaseName)
+                .AddInterceptors(new PapyrusSaveChangesInterceptor(new DefaultAuditActor(), TimeProvider.System)));
         builder.Services.AddPapyrusApplication();
+        builder.Services.AddScoped<IPublicContentStore, EfPublicContentStore>();
+        builder.Services.AddScoped<IContentCommandStore, EfContentCommandStore>();
+        builder.Services.AddScoped<IContentQueryStore, EfContentQueryStore>();
+        builder.Services.AddScoped<ITaxonomyCommandStore, EfTaxonomyCommandStore>();
+        builder.Services.AddScoped<IContentLifecycleStore, EfContentLifecycleStore>();
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddScoped<ITenantContext, TenantContext>();
         builder.Services.AddAuthentication("Test")

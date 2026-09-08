@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.Options;
 using Papyrus.Core.Content;
 using Papyrus.Application.Content;
+using Papyrus.Infrastructure.Content;
 using BlogIndexModel = Papyrus.Web.Blog.Pages.IndexModel;
 using PortfolioIndexModel = Papyrus.Web.Portfolio.Pages.IndexModel;
 using Papyrus.Web.Shared;
@@ -19,7 +20,7 @@ public sealed class PublicFilteringTests
         await using var db = TestDb.Create();
         db.BlogPosts.AddRange(Post("live", true, DateTimeOffset.UtcNow.AddMinutes(-1)), Post("draft", false, null), Post("future", true, DateTimeOffset.UtcNow.AddDays(1)));
         await db.SaveChangesAsync();
-        var model = new BlogIndexModel(new PublicContentQueryHandlers(db), Options.Create(new SiteOptions())) { PageContext = PageContext() };
+        var model = new BlogIndexModel(new PublicContentQueryHandlers(new EfPublicContentStore(db)), Options.Create(new SiteOptions())) { PageContext = PageContext() };
 
         await model.OnGetAsync(null, null);
 
@@ -34,7 +35,7 @@ public sealed class PublicFilteringTests
         await using var db = TestDb.Create();
         db.Projects.AddRange(Project("live", true, DateTimeOffset.UtcNow.AddMinutes(-1)), Project("draft", false, null), Project("future", true, DateTimeOffset.UtcNow.AddDays(1)));
         await db.SaveChangesAsync();
-        var model = new PortfolioIndexModel(new PublicContentQueryHandlers(db), Options.Create(new SiteOptions())) { PageContext = PageContext() };
+        var model = new PortfolioIndexModel(new PublicContentQueryHandlers(new EfPublicContentStore(db)), Options.Create(new SiteOptions())) { PageContext = PageContext() };
 
         await model.OnGetAsync(null, null);
 
@@ -60,7 +61,7 @@ public sealed class PublicFilteringTests
         db.Projects.AddRange(Enumerable.Range(0, 5).Select(index => Project($"project-{index}", true, DateTimeOffset.UtcNow.AddMinutes(-index))));
         await db.SaveChangesAsync();
 
-        var result = await new PublicContentQueryHandlers(db).GetPortfolioIndexAsync(null, null, DateTimeOffset.UtcNow, 1, 2, CancellationToken.None);
+        var result = await new PublicContentQueryHandlers(new EfPublicContentStore(db)).GetPortfolioIndexAsync(null, null, DateTimeOffset.UtcNow, 1, 2, CancellationToken.None);
 
         Assert.Equal(2, result.Projects.Count);
         Assert.Equal(3, result.TotalPages);
@@ -75,7 +76,7 @@ public sealed class PublicFilteringTests
         db.BlogPosts.AddRange(securityPost, Post("other", true, DateTimeOffset.UtcNow.AddMinutes(-2)));
         await db.SaveChangesAsync();
 
-        var result = await new PublicContentQueryHandlers(db).GetBlogIndexAsync("SECURITY", null, DateTimeOffset.UtcNow, 1, 1, CancellationToken.None);
+        var result = await new PublicContentQueryHandlers(new EfPublicContentStore(db)).GetBlogIndexAsync("SECURITY", null, DateTimeOffset.UtcNow, 1, 1, CancellationToken.None);
 
         Assert.Single(result.Posts);
         Assert.Equal("security", result.Posts[0].Slug);

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Papyrus.Application.Content;
 using Papyrus.Infrastructure;
+using Papyrus.Infrastructure.Content;
 using Papyrus.Infrastructure.MultiTenancy;
 
 namespace Papyrus.Tests.Integration;
@@ -15,7 +16,7 @@ public sealed class PerformanceBudgetTests(PostgresFixture fixture)
     {
         var counter = new CountingCommandInterceptor();
         await using var db = fixture.CreateDbContext(null, counter);
-        var handler = new PublicContentQueryHandlers(db);
+        var handler = new PublicContentQueryHandlers(new EfPublicContentStore(db));
 
         var result = await handler.GetBlogIndexAsync(null, null, DateTimeOffset.UtcNow, 1, 20, CancellationToken.None);
 
