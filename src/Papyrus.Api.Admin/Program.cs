@@ -71,8 +71,11 @@ if (!app.Configuration.GetValue<bool>("Papyrus:SkipDatabaseInitialization"))
 }
 
 app.UsePapyrusSecurityHeaders();
-app.UseHttpsRedirection();
-app.UseHsts();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+    app.UseHsts();
+}
 app.UsePapyrusTelemetry();
 var mediaOptions = app.Services.GetRequiredService<IOptions<MediaOptions>>().Value;
 var mediaRoot = Path.IsPathRooted(mediaOptions.RootPath)
@@ -117,20 +120,20 @@ app.MapAdminApi();
 var adminSpaRoot = new[]
 {
     Path.Combine(app.Environment.ContentRootPath, "wwwroot", "admin"),
+    Path.Combine(app.Environment.ContentRootPath, "wwwroot"),
     Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "Papyrus.Admin.UI", "dist"))
 }.FirstOrDefault(path => File.Exists(Path.Combine(path, "index.html")));
 if (adminSpaRoot is not null)
 {
     app.UseStaticFiles(new StaticFileOptions
     {
-        FileProvider = new PhysicalFileProvider(adminSpaRoot),
-        RequestPath = "/admin"
+        FileProvider = new PhysicalFileProvider(adminSpaRoot)
     });
 
-    app.MapGet("/admin", () => Results.File(
+    app.MapGet("/", () => Results.File(
         File.OpenRead(Path.Combine(adminSpaRoot, "index.html")),
         "text/html; charset=utf-8")).ExcludeFromDescription();
-    app.MapGet("/admin/{**path:nonfile}", () => Results.File(
+    app.MapGet("/{**path:nonfile}", () => Results.File(
         File.OpenRead(Path.Combine(adminSpaRoot, "index.html")),
         "text/html; charset=utf-8")).ExcludeFromDescription();
 }

@@ -63,7 +63,7 @@ have passed.
   Postgres RLS, with application-level tenant filtering remaining the sole
   enforcement layer.
 - Expanded the verification baseline to 70 passing non-integration .NET tests
-  locally. CI adds 14 PostgreSQL-backed integration tests for 84 unique .NET
+  locally. CI adds 16 PostgreSQL-backed integration tests for 86 unique .NET
   tests; the separate Playwright browser suite contains 5 tests. The build has
   zero warnings and zero errors.
 
@@ -74,7 +74,7 @@ have passed.
 - Added the `20260825220000_SecuritySearchTrigramIndexes` EF migration for the
   bounded PostgreSQL search path.
 - Added security-focused coverage and expanded the local non-integration suite
-  to 70 .NET tests. CI runs 14 additional PostgreSQL integration tests (84
+  to 70 .NET tests. CI runs 16 additional PostgreSQL integration tests (86
   unique .NET tests total), alongside the separate 5-test Playwright suite,
   with a zero-warning, zero-error build.
 - Hardened URL generation, compatibility-route pagination, feed/sitemap/media

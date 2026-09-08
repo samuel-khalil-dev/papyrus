@@ -33,7 +33,7 @@ The `db` service is PostgreSQL 17 with the durable `papyrus-postgres-data`
 volume. `admin-api` waits for the database health check and mounts the durable
 `papyrus-media` volume at `/data/media`. `blog` and `portfolio` are read-only
 public hosts and do not apply migrations. The three images are multi-stage;
-the Admin image builds the React SPA with Node 22 and the Blog/Portfolio images
+the Admin image builds the React SPA with Node 24.20.0 and the Blog/Portfolio images
 build with the .NET 10 SDK. All runtime images run as the base image's
 non-root `APP_UID`.
 
@@ -55,7 +55,7 @@ Invoke-WebRequest http://localhost:5205/health
 
 The hosts expose anonymous `/health` and `/alive` probes. Restrict those paths
 at the ingress to orchestrator and monitoring networks; do not expose them on a
-general public edge. The Admin SPA is served at `/admin`, while Blog and
+general public edge. The Admin SPA is served at the root, while Blog and
 Portfolio serve their public sites on ports `5075` and `5024`.
 
 ## 4. Apply migrations through the sole migrator

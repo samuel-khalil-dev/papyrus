@@ -8,7 +8,7 @@ const apiTarget = process.env['services__admin-api__http__0']
   ?? 'http://localhost:5000';
 
 export default defineConfig({
-  base: '/admin/',
+  base: '/',
   plugins: [react({ babel: { plugins: [['babel-plugin-react-compiler', { target: '19' }] ] } }), tailwindcss()],
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   server: {

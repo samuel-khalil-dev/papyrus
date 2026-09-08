@@ -10,7 +10,8 @@ store (`dev-admin-key` / `main` defaults).
 
 To serve the production bundle from `Papyrus.Api.Admin`, run `npm run build`.
 The backend discovers the local `dist/` directory automatically; the admin
-Dockerfile builds and publishes the same bundle under `/admin`.
+Dockerfile builds and publishes the same bundle to `wwwroot`, served at the
+root path.
 
 The `generate-api` script targets the local OpenAPI document. It intentionally
 has not been run during scaffolding because the backend may not be running; the

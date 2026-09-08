@@ -55,8 +55,8 @@ npm run build --prefix src/Papyrus.Admin.UI
 npm run lint --prefix src/Papyrus.Admin.UI
 ```
 
-The production SPA is built into `wwwroot/admin` and served by the Admin API at
-`/admin`. Protected API requests use `X-Admin-Api-Key` and `X-Tenant-Id`; there
+The production SPA is built into `wwwroot` and served by the Admin API at the
+root. Protected API requests use `X-Admin-Api-Key` and `X-Tenant-Id`; there
 is no browser session-cookie flow.
 
 ## 4. Run tests and build gates
@@ -98,8 +98,10 @@ workflow applies migrations with `dotnet-ef` `10.0.11` in its dedicated
 ## 6. Follow project conventions
 
 - Keep the modular-monolith boundaries intact: Core owns domain behavior,
-  Application owns workflows, Contracts owns API shapes, Infrastructure owns
-  persistence, and the Admin API owns migration and seed execution.
+  Application owns workflows and persistence **ports**, Contracts owns API
+  shapes, Infrastructure owns persistence **adapters** (implementing the
+  Application ports), and the Admin API owns migration and seed execution.
+  Application must not depend on Infrastructure or `PapyrusDbContext`.
 - Follow the repository's [`.editorconfig`](../../.editorconfig), existing
   formatting, nullable/reference-safety settings, and established test style.
 - Keep public claims and documentation aligned with the

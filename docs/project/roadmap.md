@@ -10,7 +10,7 @@ Papyrus is a .NET 10 modular monolith with an authenticated admin API/UI, public
 
 - Explicit EF configurations in [`Papyrus.Infrastructure/Configurations`](../../src/Papyrus.Infrastructure/Configurations), PostgreSQL/Npgsql, retry policy, and one admin migration owner.
 - Published/live filtering, slug constraints, safe markdown rendering, media reference protection, RSS, sitemaps, accessibility work, and deployment documentation in [`deployment.md`](../guides/deployment.md).
-- Aspire dependency ordering, persistent database volume, anonymous health/liveness endpoints, OpenTelemetry defaults, 70 local non-integration .NET tests, and the separate 5-test Playwright browser suite. CI adds 14 PostgreSQL integration tests for 84 unique .NET tests in [`Papyrus.Tests`](../../src/Papyrus.Tests).
+- Aspire dependency ordering, persistent database volume, anonymous health/liveness endpoints, OpenTelemetry defaults, 70 local non-integration .NET tests, and the separate 5-test Playwright browser suite. CI adds 16 PostgreSQL integration tests for 86 unique .NET tests in [`Papyrus.Tests`](../../src/Papyrus.Tests).
 - Clear read/write product seams, nullable C#, strict project separation, and zero-warning build history.
 
 ### Audit assessment and production blockers

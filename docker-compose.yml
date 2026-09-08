@@ -1,6 +1,6 @@
 services:
   test-db:
-    image: postgres:17-alpine
+    image: postgres:17-alpine@sha256:7456ef82e5f5bc43d997f4781bbd7c0d6389bff397564649a356e206ba473aee
     profiles: [test]
     environment:
       POSTGRES_DB: papyrus_test
@@ -16,7 +16,7 @@ services:
       start_period: 10s
 
   db:
-    image: postgres:17-alpine
+    image: postgres:17-alpine@sha256:7456ef82e5f5bc43d997f4781bbd7c0d6389bff397564649a356e206ba473aee
     environment:
       POSTGRES_DB: papyrus
       POSTGRES_USER: ${POSTGRES_USER:-papyrus}

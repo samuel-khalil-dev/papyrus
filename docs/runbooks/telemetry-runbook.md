@@ -30,7 +30,7 @@ request's `traceparent`/`tracestate` context can be followed across hosts.
 The source name is [`TelemetryActivitySource.Name`](../../src/Papyrus.ServiceDefaults/Telemetry/TelemetryActivitySource.cs:7),
 `Papyrus`. Request activities are emitted by the request middleware after the
 request completes so the status and endpoint tags are available. Audit
-emissions occur on API-key authentication and Admin `/admin` or `/api`
+emissions occur on API-key authentication and Admin root or `/api`
 mutation/error paths. Blog and Portfolio use the request seam but are read-only.
 
 An audit record contains `TenantId`, `Actor`, `Action`, `Target`,

@@ -18,7 +18,7 @@ jobs:
       PAPYRUS_TEST_CONNECTION_STRING: Host=localhost;Port=5432;Database=papyrus_test;Username=postgres;Password=postgres
     services:
       postgres:
-        image: postgres:17-alpine
+        image: postgres:17-alpine@sha256:7456ef82e5f5bc43d997f4781bbd7c0d6389bff397564649a356e206ba473aee
         env:
           POSTGRES_DB: papyrus_test
           POSTGRES_USER: postgres
@@ -33,12 +33,12 @@ jobs:
           --health-start-period 10s
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@v6.0.0
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: 10.0.x
 
@@ -48,8 +48,8 @@ jobs:
       - name: Build with warnings treated as errors
         run: dotnet build Papyrus.sln --configuration Release --no-restore /p:TreatWarningsAsErrors=true
 
-      - name: Run tests
-        run: dotnet test Papyrus.sln --configuration Release --no-build --no-restore --logger trx --results-directory TestResults
+      - name: Run non-integration tests
+        run: dotnet test Papyrus.sln --configuration Release --no-build --no-restore --filter "FullyQualifiedName!~Papyrus.Tests.Integration" --logger trx --results-directory TestResults
 
       - name: Run PostgreSQL integration tests
         run: dotnet test src/Papyrus.Tests/Papyrus.Tests.csproj --configuration Release --no-build --no-restore --filter FullyQualifiedName~Papyrus.Tests.Integration --logger trx --results-directory TestResults
@@ -112,7 +112,6 @@ jobs:
   browser-smoke:
     needs: verify
     runs-on: ubuntu-latest
-    continue-on-error: true
     env:
       ConnectionStrings__papyrus: Host=localhost;Port=5432;Database=papyrus_test;Username=postgres;Password=postgres
       AdminApi__ApiKey: dev-admin-key
@@ -122,7 +121,7 @@ jobs:
       PAPYRUS_E2E_PORTFOLIO_URL: http://127.0.0.1:5024
     services:
       postgres:
-        image: postgres:17-alpine
+        image: postgres:17-alpine@sha256:7456ef82e5f5bc43d997f4781bbd7c0d6389bff397564649a356e206ba473aee
         env:
           POSTGRES_DB: papyrus_test
           POSTGRES_USER: postgres
@@ -137,17 +136,17 @@ jobs:
           --health-start-period 10s
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@v6.0.0
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: 10.0.x
 
       - name: Set up Node.js
-        uses: actions/setup-node@v7.0.0
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 24
+          node-version: 24.20.0
 
       - name: Restore .NET dependencies
         run: dotnet restore Papyrus.sln
@@ -197,7 +196,7 @@ jobs:
 
       - name: Upload browser artifacts
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: papyrus-browser-smoke-report
           path: tests/e2e/playwright-report
@@ -216,7 +215,7 @@ jobs:
       PAPYRUS_LOAD_TENANT_ID: main
     services:
       postgres:
-        image: postgres:17-alpine
+        image: postgres:17-alpine@sha256:7456ef82e5f5bc43d997f4781bbd7c0d6389bff397564649a356e206ba473aee
         env:
           POSTGRES_DB: papyrus_test
           POSTGRES_USER: postgres
@@ -231,10 +230,10 @@ jobs:
           --health-start-period 10s
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@v6.0.0
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: 10.0.x
 
@@ -300,7 +299,7 @@ jobs:
             dockerfile: Dockerfile.portfolio
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Build container image
         run: docker build --pull --file "${{ matrix.dockerfile }}" --tag "papyrus-${{ matrix.name }}:ci" .

@@ -41,7 +41,7 @@ published application ports are Admin API `5205`, Blog `5075`, and Portfolio
 
 Open:
 
-1. `http://localhost:5205/admin` for the Admin SPA.
+1. `http://localhost:5205/` for the Admin SPA.
 2. `http://localhost:5075` for the public Blog.
 3. `http://localhost:5024` for the public Portfolio.
 
@@ -50,7 +50,7 @@ the sibling UI project with Vite and proxies `/api/v1` to the API.
 
 ## 3. Create a blog post
 
-1. Open the Admin SPA at `/admin`.
+1. Open the Admin SPA at the root (`/`).
 2. Provide the local development credential when the UI requests it.
 3. Keep the tenant as `main`, the seeded local tenant.
 4. Open the posts/content area and choose the create action.

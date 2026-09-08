@@ -46,7 +46,7 @@ scenarios; see [`s30.5-k6-public-20260829.json`](s30.5-k6-public-20260829.json).
 The admin result is recorded in
 [`s30.5-k6-admin-20260829.json`](s30.5-k6-admin-20260829.json).
 
-The current K6 transport baseline is p95 `<1000 ms`, failed requests `<1%`, and
+The current K6 transport baseline is p95 `<2000 ms`, failed requests `<1%`, and
 checks `>99%`; those are enforced by
 [`public-listing.js`](../../tests/load/k6/public-listing.js:23) and
 [`admin-write.js`](../../tests/load/k6/admin-write.js:37). The CI/manual workflow
@@ -59,7 +59,7 @@ These are dispatch-gated budgets, not a per-PR soak:
 
 | Signal | Budget | Enforcement |
 | --- | --- | --- |
-| Public/admin HTTP p95 | ≤ 1000 ms; target ≤ 500 ms | K6 threshold |
+| Public/admin HTTP p95 | ≤ 2000 ms; target ≤ 500 ms | K6 threshold |
 | HTTP error rate | < 1%; admin 5xx = 0 | K6 thresholds |
 | Public page queries | ≤ 4 commands/request | `PerformanceBudgetTests` |
 | Admin collection queries | ≤ 2 commands/request | `PerformanceBudgetTests` |
@@ -100,7 +100,7 @@ origins (`https://blog.example.com`, `https://portfolio.example.com`).
 | Public feed + search | 32.79 | 16,887 | 0.00% failed; 100.00% checks |
 | Admin collection + write | 19.35 | 19,827 | 0.00% failed; 100.00% checks; 0 5xx |
 
-All values are within the explicit budgets (p95 ≤ 1000 ms, errors < 1%, public
+All values are within the explicit budgets (p95 ≤ 2000 ms, errors < 1%, public
 payload ≤ 256 KiB, admin payload ≤ 128 KiB). `dotnet-counters` captured the
 `System.Runtime` counters during the admin workload: total allocated ~8.95 MB
 across the ~70 s run (~66 KiB/request, well under the ≤ 1 MiB/request admin

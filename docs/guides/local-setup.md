@@ -34,7 +34,7 @@ Open the URLs shown in the Aspire dashboard. The standard local ports are:
 
 | Surface | Address |
 | --- | --- |
-| Admin SPA | `http://localhost:5205/admin` |
+| Admin SPA | `http://localhost:5205/` |
 | Blog | `http://localhost:5075` |
 | Portfolio | `http://localhost:5024` |
 | Vite development UI | `http://localhost:5173` |

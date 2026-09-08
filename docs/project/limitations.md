@@ -25,7 +25,7 @@ Papyrus does not currently provide.
   run in CI in the supported verification flow; they are not guaranteed to run
   on a fresh workstation without the test profile and configuration.
 - The local .NET verification baseline is 70 passing non-integration tests. CI
-  covers those plus 14 PostgreSQL integration tests, for 84 unique .NET tests;
+  covers those plus 16 PostgreSQL integration tests, for 86 unique .NET tests;
   the separate Playwright browser smoke suite contains 5 tests. These counts
   are distinct from one another, and the browser suite is not part of the
   .NET count.

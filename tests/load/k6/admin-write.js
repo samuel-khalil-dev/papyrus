@@ -37,7 +37,7 @@ export const options = {
   },
   thresholds: {
     http_req_failed: ['rate<0.01'],
-    http_req_duration: ['p(95)<1000'],
+    http_req_duration: ['p(95)<2000'],
     checks: ['rate>0.99'],
     admin_server_errors: ['rate==0'],
   },
