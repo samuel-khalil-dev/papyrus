@@ -103,3 +103,5 @@ ops/
 plans/
 docs/security/
 docs/architecture/
+docs/review/
+AGENTS.md

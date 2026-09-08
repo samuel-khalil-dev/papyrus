@@ -77,7 +77,7 @@ private URLs, or personal data.
 
 For setup and usage questions, start with the [documentation index](docs/README.md)
 and [local setup guide](docs/guides/local-setup.md). Search existing
-[GitHub Issues](https://github.com/samue/Papyrus/issues) before opening a new
+[GitHub Issues](https://github.com/samuel-khalil-dev/Papyrus/issues) before opening a new
 issue. Use issues for reproducible bugs, documentation corrections, and
 actionable feature proposals; include the Papyrus version or commit, expected
 behavior, actual behavior, and safe reproduction steps. Do not post secrets or

@@ -15,7 +15,7 @@ shared telemetry seam.
 
 | Component | Role | Operational fact |
 | --- | --- | --- |
-| `admin-api` | API, auth, media, migration, seed | Sole migrator; serves `/admin`; container port `8080`, published `5205` by default |
+| `admin-api` | API, auth, media, migration, seed | Sole migrator; serves the SPA at the root; container port `8080`, published `5205` by default |
 | `blog` | Public read-only site | Published `5075`; never migrates |
 | `portfolio` | Public read-only site | Published `5024`; never migrates |
 | `db` | PostgreSQL 17 | Database `papyrus`; durable `papyrus-postgres-data` volume |
@@ -97,7 +97,7 @@ redaction, sampling, and collector-derived metrics.
 
 3. If the issue followed a release, remove Admin write traffic and redeploy the
    previous immutable image tag after checking database compatibility.
-4. Confirm `/admin` and an authenticated, non-destructive API read. Public
+4. Confirm the root SPA and an authenticated, non-destructive API read. Public
    hosts remain read-only, but their database dependency may still require the
    database and Admin startup ordering to be healthy.
 

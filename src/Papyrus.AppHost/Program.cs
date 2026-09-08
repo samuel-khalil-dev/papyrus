@@ -1,3 +1,5 @@
+using Aspire.Hosting.JavaScript;
+
 var builder = DistributedApplication.CreateBuilder(args);
 
 var pgUser = builder.AddParameter("pg-user");
@@ -16,7 +18,7 @@ var adminApi = builder.AddProject<Projects.Papyrus_Api_Admin>("admin-api")
     .WaitFor(postgres)
     .WaitFor(papyrusDb);
 
-var adminUi = builder.AddNpmApp("admin-ui", "../Papyrus.Admin.UI", "dev")
+var adminUi = builder.AddJavaScriptApp("admin-ui", "../Papyrus.Admin.UI", "dev")
     .WithReference(adminApi)
     .WithHttpEndpoint(targetPort: 5173, name: "http")
     .WithEnvironment("VITE_API_BASE_URL", adminApi.GetEndpoint("http"));

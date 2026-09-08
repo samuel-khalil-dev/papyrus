@@ -52,7 +52,7 @@ internal static class AdminApiEndpoints
         {
             var result = await handlers.SaveCategoryAsync(new(null, request.Slug, request.Name, request.Description, request.IsPublished), cancellationToken);
             return result.IsSuccess
-                ? Results.Created($"/api/categories/{result.Value!.Id}", result.Value.ToResponse())
+                ? Results.Created(ResourcePath("categories", result.Value!.Id, versioned), result.Value.ToResponse())
                 : ValidationProblem(result.Errors);
         }).Produces<ContentCategoryResponse>(StatusCodes.Status201Created).Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest);
 
@@ -91,7 +91,7 @@ internal static class AdminApiEndpoints
         {
             var result = await handlers.SaveTagAsync(new(null, request.Slug, request.Name), cancellationToken);
             return result.IsSuccess
-                ? Results.Created($"/api/tags/{result.Value!.Id}", result.Value.ToResponse())
+                ? Results.Created(ResourcePath("tags", result.Value!.Id, versioned), result.Value.ToResponse())
                 : ValidationProblem(result.Errors);
         }).Produces<ContentTagResponse>(StatusCodes.Status201Created).Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest);
 

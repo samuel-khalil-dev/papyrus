@@ -8,10 +8,10 @@ test('versioned admin API rejects missing credentials', async ({ request }) => {
 });
 
 test('admin SPA renders and completes the post write path', async ({ page }) => {
-  await page.goto('/admin/');
+  await page.goto('/');
   await page.evaluate((key: string) => localStorage.setItem('papyrus.admin.api-key', key), apiKey);
   await page.reload();
-  await page.goto('/admin/#posts');
+  await page.goto('/#posts');
   await expect(page.getByText('papyrus.', { exact: false })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Blog posts', exact: true })).toBeVisible();
 
@@ -26,7 +26,7 @@ test('admin SPA renders and completes the post write path', async ({ page }) => 
 });
 
 test('authorized API access is available to the browser session', async ({ page }) => {
-  await page.goto('/admin/');
+  await page.goto('/');
   await page.evaluate((key: string) => localStorage.setItem('papyrus.admin.api-key', key), apiKey);
   const response = await page.request.get('/api/v1/blog-posts', {
     headers: { 'X-Admin-Api-Key': apiKey, 'X-Tenant-Id': 'main' }
