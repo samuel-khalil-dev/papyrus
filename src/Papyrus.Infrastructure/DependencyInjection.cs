@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Papyrus.Application.Content;
 using Papyrus.Core.Content;
+using Papyrus.Infrastructure.Content;
 using Papyrus.Infrastructure.MultiTenancy;
 using Papyrus.Infrastructure.Interceptors;
 
@@ -27,6 +29,11 @@ public static class DependencyInjection
         builder.Services.AddScoped<IAuditActor, DefaultAuditActor>();
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddScoped<PapyrusSaveChangesInterceptor>();
+        builder.Services.AddScoped<IPublicContentStore, EfPublicContentStore>();
+        builder.Services.AddScoped<IContentCommandStore, EfContentCommandStore>();
+        builder.Services.AddScoped<IContentQueryStore, EfContentQueryStore>();
+        builder.Services.AddScoped<ITaxonomyCommandStore, EfTaxonomyCommandStore>();
+        builder.Services.AddScoped<IContentLifecycleStore, EfContentLifecycleStore>();
         builder.Services.AddDbContext<PapyrusDbContext>((serviceProvider, options) =>
         {
             var connectionString = builder.Configuration[$"ConnectionStrings:{ConnectionStringName}"];

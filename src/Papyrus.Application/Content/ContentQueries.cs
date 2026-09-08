@@ -1,17 +1,15 @@
-using Microsoft.EntityFrameworkCore;
-using Papyrus.Infrastructure;
-
 namespace Papyrus.Application.Content;
 
 public sealed record ContentListItem(Guid Id, string Slug, string Title, DateTimeOffset? PublishedAt, DateTimeOffset CreatedAt);
 
-public sealed class ContentQueryHandlers(PapyrusDbContext db)
+/// <summary>
+/// Application-facing facade over <see cref="IContentQueryStore"/>.
+/// </summary>
+public sealed class ContentQueryHandlers(IContentQueryStore store)
 {
     public Task<List<ContentListItem>> GetProjectsAsync(CancellationToken cancellationToken) =>
-        db.Projects.AsNoTracking().OrderByDescending(x => x.PublishedAt ?? x.CreatedAt)
-            .Select(x => new ContentListItem(x.Id, x.Slug, x.Title, x.PublishedAt, x.CreatedAt)).ToListAsync(cancellationToken);
+        store.GetProjectsAsync(cancellationToken);
 
     public Task<List<ContentListItem>> GetBlogPostsAsync(CancellationToken cancellationToken) =>
-        db.BlogPosts.AsNoTracking().OrderByDescending(x => x.PublishedAt ?? x.CreatedAt)
-            .Select(x => new ContentListItem(x.Id, x.Slug, x.Title, x.PublishedAt, x.CreatedAt)).ToListAsync(cancellationToken);
+        store.GetBlogPostsAsync(cancellationToken);
 }

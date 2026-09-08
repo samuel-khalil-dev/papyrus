@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Papyrus.Application.Content;
 using Papyrus.Core.Content;
 using Papyrus.Infrastructure;
+using Papyrus.Infrastructure.Content;
 using Papyrus.Infrastructure.MultiTenancy;
 
 namespace Papyrus.Tests.Application;
@@ -18,7 +19,7 @@ public sealed class ContentCommandHandlerTests
         var command = new SaveProjectCommand(null, "papyrus", "Papyrus", "A platform", "Details", null, null, null,
             null, true, true, DateTimeOffset.UtcNow, [tag.Id]);
 
-        var result = await new ContentCommandHandlers(db).SaveProjectAsync(command, CancellationToken.None);
+        var result = await new ContentCommandHandlers(new EfContentCommandStore(db)).SaveProjectAsync(command, CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Value);
@@ -41,7 +42,7 @@ public sealed class ContentCommandHandlerTests
         var command = new SaveProjectCommand(project.Id, "new", "New", "New summary", null, null, null, null, null,
             false, false, null, [second.Id]);
 
-        var result = await new ContentCommandHandlers(db).SaveProjectAsync(command, CancellationToken.None);
+        var result = await new ContentCommandHandlers(new EfContentCommandStore(db)).SaveProjectAsync(command, CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.Equal("New", result.Value!.Title);
@@ -53,7 +54,7 @@ public sealed class ContentCommandHandlerTests
     {
         await using var db = TestDb.Create();
 
-        var result = await new ContentCommandHandlers(db).SaveProjectAsync(
+        var result = await new ContentCommandHandlers(new EfContentCommandStore(db)).SaveProjectAsync(
             new SaveProjectCommand(null, "", "", "", null, null, null, null, null, false, false, null, []),
             CancellationToken.None);
 
@@ -66,7 +67,7 @@ public sealed class ContentCommandHandlerTests
     public async Task Create_update_and_missing_blog_post_paths_are_handled()
     {
         await using var db = TestDb.Create();
-        var handler = new ContentCommandHandlers(db);
+        var handler = new ContentCommandHandlers(new EfContentCommandStore(db));
         var create = await handler.SaveBlogPostAsync(PostCommand(null, "first", "First"), CancellationToken.None);
         var update = await handler.SaveBlogPostAsync(PostCommand(create.Value!.Id, "updated", "Updated"), CancellationToken.None);
         var missing = await handler.SaveBlogPostAsync(PostCommand(Guid.NewGuid(), "missing", "Missing"), CancellationToken.None);
@@ -94,7 +95,7 @@ public sealed class ContentQueryHandlerTests
         db.BlogPosts.Add(new BlogPost { Id = Guid.NewGuid(), Slug = "post", Title = "Post", Summary = "Summary", ContentMarkdown = "Content" });
         await db.SaveChangesAsync();
 
-        var handler = new ContentQueryHandlers(db);
+        var handler = new ContentQueryHandlers(new EfContentQueryStore(db));
         var projects = await handler.GetProjectsAsync(CancellationToken.None);
         var posts = await handler.GetBlogPostsAsync(CancellationToken.None);
 
@@ -117,7 +118,7 @@ public sealed class PublicContentQueryHandlerTests
             new BlogPost { Id = Guid.NewGuid(), Slug = "future", Title = "Security", Summary = "Search", ContentMarkdown = "Content", IsPublished = true, PublishedAt = now.AddDays(1) });
         await db.SaveChangesAsync();
 
-        var result = await new PublicContentQueryHandlers(db).GetBlogIndexAsync("security", null, now, 1, 1, CancellationToken.None);
+        var result = await new PublicContentQueryHandlers(new EfPublicContentStore(db)).GetBlogIndexAsync("security", null, now, 1, 1, CancellationToken.None);
 
         Assert.Single(result.Posts);
         Assert.Equal("live", result.Posts[0].Slug);
@@ -131,7 +132,7 @@ public sealed class PublicContentQueryHandlerTests
         db.Projects.Add(new Project { Id = Guid.NewGuid(), Slug = "live", Title = "Live", Summary = "Summary", IsPublished = true, PublishedAt = DateTimeOffset.UtcNow });
         db.Projects.Add(new Project { Id = Guid.NewGuid(), Slug = "draft", Title = "Draft", Summary = "Summary" });
         await db.SaveChangesAsync();
-        var handler = new PublicContentQueryHandlers(db);
+        var handler = new PublicContentQueryHandlers(new EfPublicContentStore(db));
 
         var live = await handler.GetProjectPageAsync("live", DateTimeOffset.UtcNow, CancellationToken.None);
         var draft = await handler.GetProjectPageAsync("draft", DateTimeOffset.UtcNow, CancellationToken.None);
@@ -148,7 +149,7 @@ public sealed class TaxonomyAndLifecycleHandlerTests
     public async Task Taxonomy_handlers_create_and_validate_category_and_tag()
     {
         await using var db = TestDb.Create();
-        var handlers = new TaxonomyCommandHandlers(db);
+        var handlers = new TaxonomyCommandHandlers(new EfTaxonomyCommandStore(db));
 
         var category = await handlers.SaveCategoryAsync(new SaveCategoryCommand(null, "engineering", "Engineering", null, true), CancellationToken.None);
         var tag = await handlers.SaveTagAsync(new SaveTagCommand(null, "dotnet", ".NET"), CancellationToken.None);
@@ -169,7 +170,7 @@ public sealed class TaxonomyAndLifecycleHandlerTests
         var tag = new ContentTag { Id = Guid.NewGuid(), Slug = "old-tag", Name = "Old tag" };
         db.AddRange(category, tag);
         await db.SaveChangesAsync();
-        var handlers = new TaxonomyCommandHandlers(db);
+        var handlers = new TaxonomyCommandHandlers(new EfTaxonomyCommandStore(db));
 
         var updatedCategory = await handlers.SaveCategoryAsync(
             new SaveCategoryCommand(category.Id, "new-category", "New category", "Description", true), CancellationToken.None);
@@ -190,7 +191,7 @@ public sealed class TaxonomyAndLifecycleHandlerTests
     public async Task Taxonomy_handlers_reject_invalid_category_values(string slug, string name)
     {
         await using var db = TestDb.Create();
-        var result = await new TaxonomyCommandHandlers(db).SaveCategoryAsync(
+        var result = await new TaxonomyCommandHandlers(new EfTaxonomyCommandStore(db)).SaveCategoryAsync(
             new SaveCategoryCommand(null, slug, name, null, false), CancellationToken.None);
 
         Assert.False(result.IsSuccess);
@@ -206,7 +207,7 @@ public sealed class TaxonomyAndLifecycleHandlerTests
         var post = new BlogPost { Id = Guid.NewGuid(), Slug = "post", Title = "Post", Summary = "Summary", ContentMarkdown = "Content" };
         db.AddRange(project, post);
         await db.SaveChangesAsync();
-        var handlers = new ContentLifecycleHandlers(db);
+        var handlers = new ContentLifecycleHandlers(new EfContentLifecycleStore(db, TimeProvider.System));
 
         Assert.True(await handlers.SoftDeleteProjectAsync(project.Id, "retired", CancellationToken.None));
         Assert.True(await handlers.SoftDeleteBlogPostAsync(post.Id, "retired", CancellationToken.None));
@@ -233,7 +234,7 @@ public sealed class TaxonomyAndLifecycleHandlerTests
         }
 
         await using var mainDb = new PapyrusDbContext(options, new TenantContext("main"));
-        var deleted = await new ContentLifecycleHandlers(mainDb).SoftDeleteProjectAsync(projectId, "attack", CancellationToken.None);
+        var deleted = await new ContentLifecycleHandlers(new EfContentLifecycleStore(mainDb, TimeProvider.System)).SoftDeleteProjectAsync(projectId, "attack", CancellationToken.None);
 
         Assert.False(deleted);
         Assert.Empty(mainDb.ChangeTracker.Entries<Project>());

@@ -3,7 +3,7 @@ using Papyrus.Core.Persistence;
 
 namespace Papyrus.Core.Content;
 
-public sealed class ContentTag : ITenantEntity, IAuditedEntity, ISoftDeletable
+public sealed class ContentTag : IEntity, ITenantEntity, IAuditedEntity, ISoftDeletable
 {
     public Guid Id { get; set; }
 

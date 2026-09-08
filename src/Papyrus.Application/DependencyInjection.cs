@@ -7,6 +7,7 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddPapyrusApplication(this IServiceCollection services)
     {
+        services.AddSingleton(TimeProvider.System);
         services.AddScoped<ContentCommandHandlers>();
         services.AddScoped<ContentQueryHandlers>();
         services.AddScoped<TaxonomyCommandHandlers>();
