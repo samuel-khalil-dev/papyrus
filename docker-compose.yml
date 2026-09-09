@@ -64,7 +64,7 @@ services:
       ASPNETCORE_HTTP_PORTS: 8080
       ConnectionStrings__papyrus: Host=db;Port=5432;Database=papyrus;Username=${POSTGRES_USER:-papyrus};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
       Site__PublicBaseUrl: ${BLOG_PUBLIC_BASE_URL:?BLOG_PUBLIC_BASE_URL must be set}
-      Site__MediaBaseUrl: ${MEDIA_BASE_URL:-https://admin.papyrus.quest}
+      Site__MediaBaseUrl: ${MEDIA_BASE_URL:?MEDIA_BASE_URL must be set}
       Site__BlogBaseUrl: ${BLOG_PUBLIC_BASE_URL:-http://localhost:5075}
       Site__PortfolioBaseUrl: ${PORTFOLIO_PUBLIC_BASE_URL:-http://localhost:5024}
     ports:
@@ -86,7 +86,7 @@ services:
       ASPNETCORE_HTTP_PORTS: 8080
       ConnectionStrings__papyrus: Host=db;Port=5432;Database=papyrus;Username=${POSTGRES_USER:-papyrus};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
       Site__PublicBaseUrl: ${PORTFOLIO_PUBLIC_BASE_URL:?PORTFOLIO_PUBLIC_BASE_URL must be set}
-      Site__MediaBaseUrl: ${MEDIA_BASE_URL:-https://admin.papyrus.quest}
+      Site__MediaBaseUrl: ${MEDIA_BASE_URL:?MEDIA_BASE_URL must be set}
       Site__BlogBaseUrl: ${BLOG_PUBLIC_BASE_URL:-http://localhost:5075}
       Site__PortfolioBaseUrl: ${PORTFOLIO_PUBLIC_BASE_URL:-http://localhost:5024}
     ports:
