@@ -83,6 +83,11 @@ For a normal release, prefer the repository's dedicated migration job rather
 than running a migration concurrently with multiple web containers. The Admin
 API remains the only application owner of initialization and seed behavior.
 
+After `docker compose up`, the release workflow's `deploy` job polls the
+published health endpoints (`/health` on the Admin API, `/` on Blog and
+Portfolio) and fails the job if any host does not become reachable, so an
+unhealthy deployment is surfaced immediately rather than silently accepted.
+
 ## Compose service reference
 
 | Service | Role | Published port / storage |
