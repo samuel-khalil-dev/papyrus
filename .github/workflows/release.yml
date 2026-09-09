@@ -4,6 +4,11 @@ on:
   push:
     tags: ["v*.*.*"]
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Validate the pipeline without publishing images, migrating, or deploying"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -108,6 +113,7 @@ jobs:
           path: sbom-${{ matrix.name }}.spdx.json
           if-no-files-found: error
       - name: Publish scanned image
+        if: ${{ !inputs.dry_run }}
         run: docker push "${{ env.IMAGE_PREFIX }}/${{ matrix.name }}:${{ github.ref_name }}"
 
   migrate:
@@ -126,12 +132,18 @@ jobs:
       - name: Install EF Core CLI
         run: dotnet tool install --global dotnet-ef --version 10.0.11
       - name: Apply database migrations as the dedicated migration job
+        if: ${{ !inputs.dry_run }}
         run: |
           test -n "$CONNECTION_STRING"
           dotnet ef database update \
             --project src/Papyrus.Infrastructure/Papyrus.Infrastructure.csproj \
             --startup-project src/Papyrus.Api.Admin/Papyrus.Api.Admin.csproj \
             --connection "$CONNECTION_STRING"
+      - name: Validate migration connection string (dry run)
+        if: ${{ inputs.dry_run }}
+        run: |
+          test -n "$CONNECTION_STRING"
+          echo "Dry run: migration connection string is configured; no migrations applied."
 
   deploy:
     needs: [images, migrate]
@@ -161,8 +173,16 @@ jobs:
           username: ${{ secrets.GHCR_READ_USER }}
           password: ${{ secrets.GHCR_READ_TOKEN }}
       - name: Deploy only after migration and approval checks
+        if: ${{ !inputs.dry_run }}
         env:
           PAPYRUS_ADMIN_IMAGE: ${{ env.IMAGE_PREFIX }}/admin:${{ github.ref_name }}
           PAPYRUS_BLOG_IMAGE: ${{ env.IMAGE_PREFIX }}/blog:${{ github.ref_name }}
           PAPYRUS_PORTFOLIO_IMAGE: ${{ env.IMAGE_PREFIX }}/portfolio:${{ github.ref_name }}
         run: docker compose --file docker-compose.yml up --detach --remove-orphans
+      - name: Validate deployment configuration (dry run)
+        if: ${{ inputs.dry_run }}
+        run: |
+          echo "Dry run: deployment configuration validated; no containers started."
+          echo "Admin image:   ${{ env.IMAGE_PREFIX }}/admin:${{ github.ref_name }}"
+          echo "Blog image:    ${{ env.IMAGE_PREFIX }}/blog:${{ github.ref_name }}"
+          echo "Portfolio image: ${{ env.IMAGE_PREFIX }}/portfolio:${{ github.ref_name }}"
