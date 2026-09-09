@@ -83,6 +83,11 @@ For a normal release, prefer the repository's dedicated migration job rather
 than running a migration concurrently with multiple web containers. The Admin
 API remains the only application owner of initialization and seed behavior.
 
+After `docker compose up`, the release workflow's `deploy` job polls the
+published health endpoints (`/health` on the Admin API, `/` on Blog and
+Portfolio) and fails the job if any host does not become reachable, so an
+unhealthy deployment is surfaced immediately rather than silently accepted.
+
 ## Compose service reference
 
 | Service | Role | Published port / storage |
@@ -94,4 +99,6 @@ API remains the only application owner of initialization and seed behavior.
 | `portfolio` | Public read-only site | `5024:8080` |
 
 The release workflow builds, scans, generates SBOMs, and pushes immutable image
-tags before the migration job and self-hosted deployment job.
+tags before the migration job and self-hosted deployment job. The CI workflow
+builds the .NET solution once in the `verify` job and reuses that build artifact
+in the `browser-smoke` and `load-smoke` jobs rather than rebuilding it.

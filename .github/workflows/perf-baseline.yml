@@ -8,12 +8,17 @@ on:
         required: false
         default: '20s'
 
+concurrency:
+  group: perf-baseline
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
 jobs:
   baseline:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     env:
       ConnectionStrings__papyrus: Host=localhost;Port=5432;Database=papyrus_test;Username=postgres;Password=postgres
       AdminApi__ApiKey: dev-admin-key
@@ -49,6 +54,8 @@ jobs:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: 10.0.x
+          cache: dotnet
+          cache-dependency-path: '**/*.lock.json'
       - uses: grafana/setup-k6-action@db07bd9765aac508ef18982e52ab937fe633a065  # v1.2.1
         with:
           k6-version: 0.45.0
