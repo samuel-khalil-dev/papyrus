@@ -8,12 +8,17 @@ on:
         required: false
         default: '20s'
 
+concurrency:
+  group: perf-baseline
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
 jobs:
   baseline:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     env:
       ConnectionStrings__papyrus: Host=localhost;Port=5432;Database=papyrus_test;Username=postgres;Password=postgres
       AdminApi__ApiKey: dev-admin-key
