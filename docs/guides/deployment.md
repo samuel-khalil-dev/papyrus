@@ -99,6 +99,4 @@ unhealthy deployment is surfaced immediately rather than silently accepted.
 | `portfolio` | Public read-only site | `5024:8080` |
 
 The release workflow builds, scans, generates SBOMs, and pushes immutable image
-tags before the migration job and self-hosted deployment job. The CI workflow
-builds the .NET solution once in the `verify` job and reuses that build artifact
-in the `browser-smoke` and `load-smoke` jobs rather than rebuilding it.
+tags before the migration job and self-hosted deployment job.
