@@ -54,7 +54,7 @@ jobs:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: 10.0.x
-          cache: dotnet
+          cache: true
           cache-dependency-path: '**/*.lock.json'
       - uses: grafana/setup-k6-action@db07bd9765aac508ef18982e52ab937fe633a065  # v1.2.1
         with:
