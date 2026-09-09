@@ -168,3 +168,7 @@ updates:
     groups:
       docker-base-images:
         patterns: ["*"]
+    ignore:
+      # CI, .nvmrc and Dockerfile.admin all pin Node 24; do not take a Node major bump
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
