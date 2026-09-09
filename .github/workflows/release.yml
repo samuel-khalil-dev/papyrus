@@ -108,7 +108,10 @@ jobs:
 
   migrate:
     needs: dependency-scan
-    runs-on: ubuntu-latest
+    # Runs on the VPS via the self-hosted runner so the database stays fully
+    # private (no public port 5432). The connection string's Host must resolve
+    # on the VPS itself (e.g. `db` over the compose network or 127.0.0.1).
+    runs-on: self-hosted
     environment:
       name: production-migrations
     env:
@@ -148,8 +151,10 @@ jobs:
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          # Self-hosted runners receive a per-job GITHUB_TOKEN that cannot pull
+          # from GHCR. Use a long-lived credential scoped to read:packages.
+          username: ${{ secrets.GHCR_READ_USER }}
+          password: ${{ secrets.GHCR_READ_TOKEN }}
       - name: Deploy only after migration and approval checks
         env:
           PAPYRUS_ADMIN_IMAGE: ${{ env.IMAGE_PREFIX }}/admin:${{ github.ref_name }}
