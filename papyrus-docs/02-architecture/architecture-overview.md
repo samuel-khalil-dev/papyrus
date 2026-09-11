@@ -1,0 +1,42 @@
+# Architecture Overview
+
+## Architectural style
+Papyrus is a .NET modular monolith built on Clean Architecture with a Ports & Adapters boundary between Application and Infrastructure.
+
+## Layers
+
+```
+Presentation      Api.Admin - Web.Blog - Web.Portfolio - Admin.UI
+      |
+Application       Use cases, application-owned ports (command/query stores per aggregate)
+      |
+Core              Entities, invariants, multi-tenancy contracts
+      ^
+Infrastructure    EF Core adapters, migrations, interceptors, DbContext
+```
+
+### Core
+Entities, value objects, and invariants only. Every entity implements `IEntity`; isolated entities implement `ITenantEntity`.
+
+### Application
+Use cases and the ports they require, one per aggregate, split into command and query interfaces. Never references Infrastructure or EF Core types directly.
+
+### Infrastructure
+Implements Application's ports as EF Core adapters; owns the DbContext, entity configurations, migrations, and `SaveChanges` interceptors.
+
+### Presentation
+- `Papyrus.Api.Admin` - authenticated via a static API key (`X-Admin-Api-Key`); two-factor protected once M3 ships; write API and media handling.
+- `Papyrus.Admin.UI` - React SPA.
+- `Papyrus.Web.Blog`, `Papyrus.Web.Portfolio` - server-rendered Razor Pages calling Application in-process.
+
+A Presentation project may reference Infrastructure only inside its composition root.
+
+## Edge and network layer
+
+**Planned (M2, M13):** a reverse proxy (Caddy) will terminate TLS and route each configured host (Portfolio, Blog, Admin) to its container. Cloudflare will sit in front of the reverse proxy for CDN caching, DDoS mitigation, and bot protection (Turnstile), reducing load on the underlying VPS. Today services run directly via Docker Compose with no reverse proxy or CDN in front. See `decisions/adr-0009-reverse-proxy-and-edge-layer-caddy-behind-cloudflare.md`.
+
+## Resolver pattern (applied consistently)
+Any admin-editable, safety-critical configuration - theme, AI provider, feature flags - is resolved through a dedicated `I<X>Resolver` that always returns a valid, safe configuration, falling back gracefully rather than failing the request. This pattern is applied uniformly to `IThemeResolver`, `IAiProviderResolver`, and any future resolver, rather than reinvented per feature.
+
+## Dependency rule
+Enforced by architecture fitness tests (NetArchTest) in CI, not convention alone.
