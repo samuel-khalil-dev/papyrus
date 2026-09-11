@@ -56,7 +56,7 @@ application labels or a second naming scheme for the same signal.
 ## Response mapping
 
 - Request latency, errors, and 429s: inspect `Papyrus.Request` by service and
-  endpoint, then follow the [incident triage](incident-runbook.md#3-triage).
+  endpoint, then follow the [incident triage](incident-runbook.md#3-containment-and-recovery-rules).
 - Audit volume, redaction, cardinality, and sampling: follow the
   [telemetry investigation](telemetry-runbook.md#5-investigate-an-audit-volume-drop).
 - Application or PostgreSQL health: follow the corresponding Compose incident
