@@ -3,6 +3,9 @@
 ## Architectural style
 Papyrus is a .NET modular monolith built on Clean Architecture with a Ports & Adapters boundary between Application and Infrastructure.
 
+## C4 architecture diagrams
+**Current:** the C4 model views of the implemented system — Level 1 System Context, Level 2 Containers, and Level 3 Components (Admin API), including Mermaid sources — live in [c4-diagrams.md](c4-diagrams.md). They are not duplicated inline here.
+
 ## Layers
 
 ```
