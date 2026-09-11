@@ -98,6 +98,7 @@ pnpm-debug.log*
 *.swp
 
 # Internal / local-only
+.kilo/
 memory-bank/
 ops/
 plans/
