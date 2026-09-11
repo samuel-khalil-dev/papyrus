@@ -20,8 +20,16 @@
 
 **Planned (M25, M30):** the AI provider API key will be encrypted at rest via the ASP.NET Core Data Protection API, masked in the UI, and explicitly excluded from audit logs and content export.
 
+## Media Upload Security
+
+**Current:** the Admin media policy rejects SVG by default unless a reviewed sanitizer is introduced; validates decoded content; and serves uploads as non-executable media. Uploads are raster-only, magic-byte validated (structure, dimension, and size checked), capped at 5 MB, written atomically with generated tenant-scoped names, and served traversal-safe. Uploaded files are **not** scanned by antivirus or re-encoded — this limitation is an accepted risk (T-04a) for the personal-site scope and must be revisited if the deployment serves untrusted third-party uploads. See the [threat register](threat-register.md) (T-04, T-04a) and the [C4 component view](../02-architecture/c4-diagrams.md) for the operational detail. The related decision record is `docs/architecture/decisions/0003-admin-session-and-media-policy.md` (auth portion superseded; media portion active).
+
 ## Compliance
 Any feature collecting visitor data ships its consent/compliance update in the same milestone. Visitor data subject to a deletion request (newsletter subscribers, stored contact messages if any) supports hard deletion on an admin-triggered erasure action.
 
 ## Backups
 Automated, scheduled, off-site PostgreSQL backups (M4) with a tested restore procedure, not just a backup job assumed to work.
+
+## Security policy and disclosure
+
+**Current:** the repository-level [security policy](../../SECURITY.md) is the authoritative public disclosure policy for Papyrus. Do not disclose vulnerabilities in public issues or pull requests, and do not include credentials, personal data, or other secrets in reports.
