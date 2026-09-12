@@ -14,7 +14,7 @@
 | `db` | PostgreSQL 17 | Database `papyrus`; durable `papyrus-postgres-data` volume |
 | `papyrus-media` | Admin media storage | Mounted at `/data/media`; must survive Admin restarts |
 
-All hosts expose anonymous `/health` and `/alive` probes. Restrict those probes to orchestrator and monitoring networks. Request activities are `Papyrus.Request`; audit records are logger-backed `Papyrus.AuditEvent` events and EventId `1001`. See the [telemetry runbook](../../docs/runbooks/telemetry-runbook.md) for redaction, sampling, and collector-derived metrics.
+All hosts expose anonymous `/health` and `/alive` probes. Restrict those probes to orchestrator and monitoring networks. Request activities are `Papyrus.Request`; audit records are logger-backed `Papyrus.AuditEvent` events and EventId `1001`. See the [telemetry runbook](observability-and-monitoring.md) for redaction, sampling, and collector-derived metrics.
 
 ### Detection and first response
 
@@ -113,7 +113,7 @@ All hosts expose anonymous `/health` and `/alive` probes. Restrict those probes 
 
 1. Query `Papyrus.Request` by service, endpoint, status, and `trace_id`.
 2. Query `Papyrus.AuditEvent` or structured EventId `1001` by tenant, action, target, outcome, and status.
-3. If audit volume drops, follow the ordered checks in the [audit-volume-drop investigation](../../docs/runbooks/telemetry-runbook.md). Diagnostic sampling at `0` does not explain missing audit events.
+3. If audit volume drops, follow the ordered checks in the [audit-volume-drop investigation](observability-and-monitoring.md). Diagnostic sampling at `0` does not explain missing audit events.
 4. Treat `[redacted]` and `[other]` as safety-control outputs, not as permission to bypass redaction or cardinality limits.
 
 ### Close-out

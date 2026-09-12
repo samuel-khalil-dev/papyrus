@@ -19,7 +19,7 @@ Zero warning/error is a hard gate. If a gate cannot run (e.g. integration tests 
 
 ## Security review priorities (maps to OWASP Top 10 2025)
 
-Consult [docs/security/threat-model.md](../../docs/security/threat-model.md), [policy](../../docs/security/policy.md), and [risk-acceptance](../../docs/security/risk-acceptance.md).
+Consult [docs/security/threat-model.md](../security/threat-model.md), [policy](../security/policy.md), and [risk-acceptance](../security/risk-acceptance.md).
 
 - **A01 Broken access control / IDOR:** every Admin endpoint must authenticate via `X-Admin-Api-Key` and resolve tenant ownership. Verify the `AdminOpenApiDocumentTransformer` still guards every documented path (regression: a one-arg security-scheme constructor previously serialized empty `[{}]` auth).
 - **A05 Injection:** parameterized EF/LINQ everywhere (no SQL string building), Markdown rendered only through the **safe renderer**, uploads validated as raster media (magic-byte checked, 5 MB cap); no `innerHTML`/`v-html`/XSS-by-sanitization-bypass in the React admin SPA.
@@ -30,7 +30,7 @@ Consult [docs/security/threat-model.md](../../docs/security/threat-model.md), [p
 
 ## Architecture review priorities
 
-- Respect accepted ADRs in [docs/architecture/decisions/README.md](../../docs/architecture/decisions/README.md); proposing to violate one requires an ADR change, not a silent code change.
+- Respect accepted ADRs in [docs/architecture/decisions/README.md](../architecture/decisions/README.md); proposing to violate one requires an ADR change, not a silent code change.
 - Modular monolith boundaries: Core/Application/Contracts/Infrastructure/Admin responsibilities must not blur. Public hosts (Blog/Portfolio) must stay read-only and must not call migration APIs.
 - CQRS discipline in `Papyrus.Application`: commands/query separation, bounded no-tracking projections; flag any new N+1 or missing `AsNoTracking()`.
 
@@ -67,7 +67,7 @@ Consult [docs/security/threat-model.md](../../docs/security/threat-model.md), [p
 
 ### Docs
 
-- [ ] Code ↔ [feature matrix](../../docs/project/feature-matrix.md) / [limitations](../../docs/project/limitations.md) in sync
+- [ ] Code ↔ [feature matrix](../00-overview/feature-matrix.md) / [limitations](../00-overview/limitations.md) in sync
 - [ ] Changelog and release-gate status updated when behavior changes
 
 ## Report format

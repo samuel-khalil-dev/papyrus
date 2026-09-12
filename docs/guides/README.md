@@ -29,7 +29,7 @@ How-to guides are concrete procedures for contributors and operators.
 Reference describes the exact configuration and service shape used by the
 procedures. Explanation documents the architecture and durable decisions.
 
-- [API reference](../api/README.md) — the versioned Admin API contract.
+- [API reference](../02-architecture/api-standards.md) — the versioned Admin API contract.
 - [Architecture overview](../architecture/overview.md) — modular-monolith
   boundaries and data flow.
 - [Release gates](../architecture/release-gates.md) — verification required

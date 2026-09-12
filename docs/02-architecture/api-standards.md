@@ -24,7 +24,7 @@ Blog and Portfolio render server-side via direct in-process Application calls. A
 
 ## Current Endpoint Inventory
 
-**Current:** the checked-in [OpenAPI 3.1.1 document](../../docs/api/openapi.json) is the canonical reference for the 23 documented operations in the versioned admin REST API under `/api/v1`. It is kept aligned with the runtime document served at `/openapi/v1.json` and is used by CI for OpenAPI drift checks.
+**Current:** the checked-in [OpenAPI 3.1.1 document](../api/openapi.json) is the canonical reference for the 23 documented operations in the versioned admin REST API under `/api/v1`. It is kept aligned with the runtime document served at `/openapi/v1.json` and is used by CI for OpenAPI drift checks.
 
 **Current:** every `/api/v1` operation requires the `AdminApiKey` security scheme (`X-Admin-Api-Key` header), as described under [Authentication and authorization](#authentication-and-authorization) above. Every documented path accepts the optional `X-Tenant-Id` header. It selects the tenant scope and defaults to `main`; valid values match `^[a-z0-9][a-z0-9-]{0,62}$`. The API applies the same per-IP `admin-api` rate limit as the runtime endpoints (120 requests per minute).
 

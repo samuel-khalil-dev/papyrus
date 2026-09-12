@@ -20,4 +20,4 @@
 | Legacy `/api` routes | **Compatibility behavior** | Legacy behavior remains for compatibility and is not the published contract; new integrations should use `/api/v1`. |
 | Independent service extraction | **Planned** | Papyrus remains a modular monolith until measured scale, deployment, or ownership needs justify extraction. |
 
-See [known limitations](limitations.md), the [roadmap](../Papyrus_Roadmap.md), and the [release gates](../../docs/architecture/release-gates.md) for detail and evidence requirements.
+See [known limitations](limitations.md), the [roadmap](../Papyrus_Roadmap.md), and the [release gates](../architecture/release-gates.md) for detail and evidence requirements.
