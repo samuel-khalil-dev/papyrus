@@ -1,6 +1,6 @@
 # Feature Matrix
 
-**Current:** this matrix is a release-facing summary of the current Papyrus baseline, ported from `docs/project/feature-matrix.md`. A feature is marked **Implemented** only when the repository contains the relevant implementation and verification. Operational or product work that still needs release evidence is not presented as complete.
+**Current:** this matrix is a release-facing summary of the current Papyrus baseline (the legacy `docs/project/` feature matrix was retired during the documentation consolidation). A feature is marked **Implemented** only when the repository contains the relevant implementation and verification. Operational or product work that still needs release evidence is not presented as complete.
 
 | Area | Status | Current truth |
 | --- | --- | --- |
@@ -20,4 +20,4 @@
 | Legacy `/api` routes | **Compatibility behavior** | Legacy behavior remains for compatibility and is not the published contract; new integrations should use `/api/v1`. |
 | Independent service extraction | **Planned** | Papyrus remains a modular monolith until measured scale, deployment, or ownership needs justify extraction. |
 
-See [known limitations](limitations.md), the [roadmap](../Papyrus_Roadmap.md), and the [release gates](../architecture/release-gates.md) for detail and evidence requirements.
+See [known limitations](limitations.md), the [roadmap](../Papyrus_Roadmap.md), and the [release gates](../04-engineering-standards/release-gates.md) for detail and evidence requirements.

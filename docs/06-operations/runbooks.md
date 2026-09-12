@@ -2,7 +2,7 @@
 
 ## Incident Response Runbook (Current)
 
-**Owner:** on-call operator / project owner. Ported from `docs/runbooks/incident-runbook.md`. Grounded in the Compose topology: one PostgreSQL 17 database, `admin-api`, read-only `blog` and `portfolio`, and the shared telemetry seam.
+**Owner:** on-call operator / project owner. Consolidated from the previous incident, alert, and telemetry runbooks. Grounded in the Compose topology: one PostgreSQL 17 database, `admin-api`, read-only `blog` and `portfolio`, and the shared telemetry seam.
 
 ### Topology reference
 

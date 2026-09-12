@@ -1,6 +1,6 @@
 # Getting started with Papyrus
 
-**Current:** this tutorial gets a fresh contributor from a clone to a working local Papyrus stack and a visible demo post, ported from `docs/guides/tutorials/getting-started.md`. You will start the complete local stack with Aspire, open each Papyrus surface, and create your first blog post through the React Admin UI.
+**Current:** this tutorial gets a fresh contributor from a clone to a working local Papyrus stack and a visible demo post (consolidated from the legacy `docs/guides/` tutorial, which was retired during the documentation consolidation). You will start the complete local stack with Aspire, open each Papyrus surface, and create your first blog post through the React Admin UI.
 
 ## Before you begin
 

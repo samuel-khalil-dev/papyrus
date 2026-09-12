@@ -1,6 +1,6 @@
 # Known Limitations
 
-**Current:** this page records boundaries that are deliberate or still require operational work, ported from `docs/project/limitations.md`. It prevents the showcase documentation from implying capabilities that Papyrus does not currently provide.
+**Current:** this page records boundaries that are deliberate or still require operational work (the legacy `docs/project/` limitations page was retired during the documentation consolidation). It prevents the showcase documentation from implying capabilities that Papyrus does not currently provide.
 
 ## Product and architecture limitations
 

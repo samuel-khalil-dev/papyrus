@@ -1,6 +1,6 @@
 # C4 Architecture Diagrams
 
-**Current:** the following C4 model views describe the implemented system. They are ported from the source-of-truth `docs/architecture/c4/` set (`context.md`, `container.md`, `component.md`).
+**Current:** the following C4 model views describe the implemented system. They are the consolidated source of truth for the C4 model (`context`, `container`, and `component` views).
 
 ## Level 1 — System Context
 

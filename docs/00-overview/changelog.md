@@ -1,6 +1,6 @@
 # Changelog
 
-**Current:** this file records the release and phase history of the implemented system, ported verbatim from `docs/project/changelog.md`.
+**Current:** this file records the release and phase history of the implemented system (the legacy `docs/project/` changelog was retired during the documentation consolidation).
 
 All notable changes to Papyrus will be documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); entries describe repository changes and do not imply that deferred operational gates have passed.
 
@@ -10,8 +10,8 @@ All notable changes to Papyrus will be documented in this file. The format is ba
 
 - **Public documentation (roadmap item 1):** published the architecture overview and public overview, threat-model summary, local setup and seed/demo flow, API and deployment guides, and known limitations.
 - **Showcase assets (roadmap item 2):** added five sanitized screenshots under `docs/assets` (blog, portfolio, admin, health, and Aspire) that use the local seeded demo content and contain no credentials, private URLs, or personal data.
-- **Contribution, disclosure, license, and support (roadmap item 3):** verified and completed `docs/guides/contributing.md`, `SECURITY.md`, `LICENSE`, and the README Support section; confirmed the feature matrix truthfully separates implemented, deferred, and release-pending work.
-- **Roadmap status reconciliation:** updated the Phase 7 header in `docs/project/roadmap.md` from "Not started" to "In progress", recording that items 1 and 2 are complete and that item 4 (tagging a release) remains open until all release gates and rollback drills pass.
+- **Contribution, disclosure, license, and support (roadmap item 3):** verified and completed `docs/07-governance/contribution-workflow.md`, `SECURITY.md`, `LICENSE`, and the README Support section; confirmed the feature matrix truthfully separates implemented, deferred, and release-pending work.
+- **Roadmap status reconciliation:** updated the Phase 7 header in `docs/Papyrus_Roadmap.md` from "Not started" to "In progress", recording that items 1 and 2 are complete and that item 4 (tagging a release) remains open until all release gates and rollback drills pass.
 - **Release gate:** a release tag is intentionally not created. Canonical production URLs, backup/restore/media-recovery/observability/ingress gates, and the fresh-contributor setup gate still require release-time evidence.
 
 ### Phase 6 — Observability, test depth, and performance budgets — 2026-08-29
@@ -22,11 +22,11 @@ All notable changes to Papyrus will be documented in this file. The format is ba
 - **S30.4 PostgreSQL/integration tests:** added provider-behavior, index, transaction, concurrency, and filter coverage.
 - **S30.6 telemetry core:** added the shared `Papyrus` W3C ActivitySource, request middleware, structured `IAuditEventSink`, and telemetry options.
 - **S30.7 tenant-safe telemetry:** added fail-closed `Redactor`, bounded `CardinalityGuard`, and `TelemetrySamplingPolicy`; audit events survive 0% diagnostic sampling.
-- **S30.8 dashboard:** added the portable Grafana dashboard (`ops/dashboards/papyrus-dashboard.json`) covering request rate/latency/error, rate-limit responses, audit events, redaction, sampling, cardinality, and app/PostgreSQL health.
+- **S30.8 dashboard:** added the portable Grafana dashboard (maintained locally, outside the repository) covering request rate/latency/error, rate-limit responses, audit events, redaction, sampling, cardinality, and app/PostgreSQL health.
 - **S30.9/S30.10 performance budgets:** recorded the measured baseline and enforced public/admin query-count budgets; the S30.10 optimization itself was intentionally not applied.
-- **S30.11 runbooks:** added the alert, incident, and telemetry runbooks (`docs/runbooks/alerts.md`, `docs/runbooks/incident-runbook.md`, `docs/runbooks/telemetry-runbook.md`).
-- **S30.5 load evidence:** captured and committed K6 load evidence (`docs/performance/s30.5-k6-public-20260829.json`, `docs/performance/s30.5-k6-admin-20260829.json`). Public run HTTP p95 23.574 ms, payload p95 9,030 bytes, 0% failed, 100% checks; admin run HTTP p95 21.660 ms, payload p95 9,256 bytes, 0% failed, 100% checks, 0 5xx.
-- **S30.12 RLS decision ADR:** added `docs/architecture/decisions/0007-postgres-rls-decision.md`; decision DECLINE Postgres RLS, with application-level tenant filtering remaining the sole enforcement layer.
+- **S30.11 runbooks:** added the alert, incident, and telemetry runbooks (now consolidated under `docs/06-operations/runbooks.md`).
+- **S30.5 load evidence:** captured and committed K6 load evidence (`docs/history/s30.5-k6-public-20260829.json`, `docs/history/s30.5-k6-admin-20260829.json`). Public run HTTP p95 23.574 ms, payload p95 9,030 bytes, 0% failed, 100% checks; admin run HTTP p95 21.660 ms, payload p95 9,256 bytes, 0% failed, 100% checks, 0 5xx.
+- **S30.12 RLS decision ADR:** decision DECLINE Postgres RLS, with application-level tenant filtering remaining the sole enforcement layer. Recorded in `docs/02-architecture/decisions/adr-0004-retain-multitenant-entities.md`.
 - Expanded the verification baseline to 70 passing non-integration .NET tests locally. CI adds 16 PostgreSQL-backed integration tests for 86 unique .NET tests; the separate Playwright browser suite contains 5 tests. The build has zero warnings and zero errors.
 
 ### Security and verification — 2026-08-25
