@@ -110,7 +110,9 @@ a later sub-task, it is marked **Pending** rather than fabricated.
 - **2026-09-02 local outcome — PASS for code/config checks:** the telemetry test
   filter passed 6/6 tests, including fail-closed redaction, W3C activity IDs,
   audit logging without an exporter, and audit survival at 0% diagnostic
-  sampling. The dashboard JSON parsed successfully, its panels use the
+  sampling. The dashboard JSON
+  ([`observability/dashboards/papyrus-dashboard.json`](../observability/dashboards/papyrus-dashboard.json))
+  parsed successfully, its panels use the
   documented Prometheus datasource placeholder, and a synthetic W3C
   `traceparent` health request returned HTTP 200. The runbook and alert-family
   mapping were reviewed against the dashboard contract.
