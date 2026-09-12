@@ -51,7 +51,7 @@ M25 introduces one new, specific credential type — the AI provider API key —
 
 ## Migration Ownership
 
-**Current:** only the Admin API applies and seeds migrations, via `InitializeDatabaseAsync()` at startup. Public hosts (Blog, Portfolio) never run migrations under any circumstance. The release pipeline additionally runs migrations explicitly in a dedicated `migrate` job using `dotnet-ef 10.0.11`, ahead of deploying the application containers. This ownership boundary is deliberate — see [docs/architecture/decisions/0005-migration-ownership.md](../../docs/architecture/decisions/0005-migration-ownership.md) — and must not be altered without a corresponding decision-record update.
+**Current:** only the Admin API applies and seeds migrations, via `InitializeDatabaseAsync()` at startup. Public hosts (Blog, Portfolio) never run migrations under any circumstance. The release pipeline additionally runs migrations explicitly in a dedicated `migrate` job using `dotnet-ef 10.0.11`, ahead of deploying the application containers. This ownership boundary is deliberate — see [docs/architecture/decisions/0005-migration-ownership.md](../architecture/decisions/0005-migration-ownership.md) — and must not be altered without a corresponding decision-record update.
 
 For a controlled manual migration, use the Admin startup project:
 

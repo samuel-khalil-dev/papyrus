@@ -17,13 +17,13 @@ A separate, already-made decision (`docs/architecture/decisions/0007-postgres-rl
 
 ### Enforcement mechanics
 
-The application-level enforcement mechanics established by [ADR 0002](../../../docs/architecture/decisions/0002-tenant-enforcement.md) and implemented in [`PapyrusDbContext`](../../../src/Papyrus.Infrastructure/PapyrusDbContext.cs:32) are:
+The application-level enforcement mechanics established by [ADR 0002](../../architecture/decisions/0002-tenant-enforcement.md) and implemented in [`PapyrusDbContext`](../../../src/Papyrus.Infrastructure/PapyrusDbContext.cs:32) are:
 
 - A scoped [`TenantContext`](../../../src/Papyrus.Infrastructure/MultiTenancy/TenantContext.cs:7) resolves the tenant from the `X-Tenant-Id` header (or the configured default, `main`), validates it against a strict `^[a-z0-9][a-z0-9-]{0,62}$` pattern, and normalizes it.
 - EF Core global query filters scope every tenant-owned entity (`Project`, `BlogPost`, `ContentCategory`, `ContentTag`, `ProjectTag`, `BlogPostTag`) to the current tenant and exclude soft-deleted rows.
 - [`EnforceTenantBoundary()`](../../../src/Papyrus.Infrastructure/PapyrusDbContext.cs:52) stamps `TenantId` on added entities and throws on any attempt to save an entity whose tenant differs from the current context, so the filter is not the sole control.
 
-The threat model records cross-tenant read or mutation as **T-01, Closed; Phase 1**, with the required control being "scoped tenant context, EF global filters, save-boundary enforcement, tenant-partitioned media, and adversarial A/B tests" ([`threat-model.md`](../../../docs/security/threat-model.md:13)).
+The threat model records cross-tenant read or mutation as **T-01, Closed; Phase 1**, with the required control being "scoped tenant context, EF global filters, save-boundary enforcement, tenant-partitioned media, and adversarial A/B tests" ([`threat-model.md`](../../security/threat-model.md:13)).
 
 ### RLS evaluation history
 
@@ -32,7 +32,7 @@ Tenant isolation is a Phase 1 (P0) requirement; the RLS decision was evaluated u
 **Option A — Adopt Postgres RLS as a second enforcement layer** would add a database-enforced policy so that even a query that bypassed the application filter could not read or mutate another tenant's rows:
 
 - **Operational cost:** Every tenant-owned table would need a policy, a `SET app.current_tenant` (or equivalent) per connection/session, and a migration to enable RLS and backfill policies. The single shared `PapyrusDbContext` connection would need per-request tenant context propagated to the database, and the migration/seed identity would need a bypass role.
-- **Migration complexity:** RLS interacts with the existing five applied migrations, the single controlled migration owner ([ADR 0005](../../../docs/architecture/decisions/0005-migration-ownership.md)), and the Npgsql retry execution strategy. It would add a new migration and a new class of failure (policy misconfiguration) to the release gate.
+- **Migration complexity:** RLS interacts with the existing five applied migrations, the single controlled migration owner ([ADR 0005](../../architecture/decisions/0005-migration-ownership.md)), and the Npgsql retry execution strategy. It would add a new migration and a new class of failure (policy misconfiguration) to the release gate.
 - **Test coverage:** The existing suite already proves isolation at the application layer. RLS would require a new policy-boundary integration test to prove the database layer independently, adding to the current 86-test CI .NET baseline and the separate 5-test Playwright browser baseline.
 - **Benefit:** Defense in depth against a future query path that omits the EF filter (for example, raw SQL or a new read model). This is a real but currently hypothetical risk: no such path exists in the codebase today.
 
@@ -52,7 +52,7 @@ Tenant isolation is a Phase 1 (P0) requirement; the RLS decision was evaluated u
 - **Compensating controls (documented):**
   1. **Adversarial isolation tests** — [`TenantIsolationTests.cs`](../../../src/Papyrus.Tests/TenantIsolationTests.cs:1) proves cross-tenant read, enumeration, and mutation are rejected, including the attach-by-id mutation case.
   2. **PostgreSQL integration tests** — [`FilterAndProjectionTests.cs`](../../../src/Papyrus.Tests/Integration/FilterAndProjectionTests.cs:10) verifies the tenant/soft-delete filters against a real PostgreSQL provider.
-  3. **Review gates** — the threat model (T-01) and the release gates ([`release-gates.md`](../../../docs/architecture/release-gates.md:12)) require the ADRs and threat model to be reviewed and linked from the change record at every release.
+  3. **Review gates** — the threat model (T-01) and the release gates ([`release-gates.md`](../../architecture/release-gates.md:12)) require the ADRs and threat model to be reviewed and linked from the change record at every release.
   4. **Roadmap standard** — the EF/PostgreSQL standard keeps "filters are defense in depth, not the sole control" as a standing requirement, so any future query path that bypasses the filter is a review gate.
 - **Revisit condition:** Re-evaluate RLS if a raw-SQL or non-EF read/write path is introduced, if a second database consumer (background worker, outbox consumer, or service extraction) is added, or if a measured bottleneck or ownership change justifies database-enforced isolation.
 

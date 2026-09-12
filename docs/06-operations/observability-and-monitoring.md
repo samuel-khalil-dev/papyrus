@@ -2,7 +2,7 @@
 
 ## Application-Level Observability (Current)
 
-Papyrus runs a real OTLP-based telemetry pipeline today: an OTLP collector feeding Prometheus and Grafana, with a dedicated `Papyrus` `ActivitySource`, controlled sampling (`Telemetry:SamplingRate`), a cardinality limit (`Telemetry:CardinalityLimit`), and nine live alert families defined in `docs/runbooks/alerts.md`. `EventId 1001` is intentionally never sampled. The Grafana dashboard definition lives at `ops/dashboards/papyrus-dashboard.json`.
+Papyrus runs a real OTLP-based telemetry pipeline today: an OTLP collector feeding Prometheus and Grafana, with a dedicated `Papyrus` `ActivitySource`, controlled sampling (`Telemetry:SamplingRate`), a cardinality limit (`Telemetry:CardinalityLimit`), and nine live alert families defined below. `EventId 1001` is intentionally never sampled. The Grafana dashboard definition lives at `ops/dashboards/papyrus-dashboard.json`.
 
 Do not describe this stack as absent, and do not propose replacing it — Prometheus and Grafana are not "too heavy" for this platform; they are already running successfully on it.
 
@@ -52,7 +52,7 @@ Use the deployment platform's configuration mechanism to provide these values. T
 
 ## Live alert families (Current)
 
-The dashboard is [ops/dashboards/papyrus-dashboard.json](../../ops/dashboards/papyrus-dashboard.json). Telemetry behavior and investigation steps are in [docs/runbooks/telemetry-runbook.md](../../docs/runbooks/telemetry-runbook.md); response procedures are in [docs/runbooks/incident-runbook.md](../../docs/runbooks/incident-runbook.md).
+The dashboard is [ops/dashboards/papyrus-dashboard.json](../../ops/dashboards/papyrus-dashboard.json). Telemetry behavior and investigation steps are in [observability-and-monitoring.md](observability-and-monitoring.md); response procedures are in [runbooks.md](runbooks.md).
 
 | Alert | Signal / expression shape | Threshold / `for` | Severity |
 | --- | --- | --- | --- |
@@ -95,7 +95,7 @@ This checklist documents the production observability platform required to close
 
 ### Verification checklist (close W7 and O4)
 
-Execute each item against the **production** deployment and record the result (evidence artifact, date, and outcome) under release gate W7/O4 in [docs/architecture/release-gates.md](../../docs/architecture/release-gates.md). Do not mark an item complete from local or staging evidence alone.
+Execute each item against the **production** deployment and record the result (evidence artifact, date, and outcome) under release gate W7/O4 in [docs/architecture/release-gates.md](../architecture/release-gates.md). Do not mark an item complete from local or staging evidence alone.
 
 #### Redaction-output inspection (W7)
 
@@ -116,7 +116,7 @@ Execute each item against the **production** deployment and record the result (e
 
 #### Audit-volume-drop runbook exercise (W7)
 
-- [ ] Execute the [docs/runbooks/telemetry-runbook.md](../../docs/runbooks/telemetry-runbook.md) audit-volume-drop investigation steps against a simulated or real audit-volume drop.
+- [ ] Execute the [observability-and-monitoring.md](observability-and-monitoring.md) audit-volume-drop investigation steps against a simulated or real audit-volume drop.
 - [ ] Confirm the `PapyrusAuditVolumeDrop` alert fires and the runbook steps identify the root cause.
 - [ ] Record the drill outcome.
 
@@ -137,7 +137,7 @@ Execute each item against the **production** deployment and record the result (e
 
 ### Recording the result
 
-After all checklist items pass, update the W7 and O4 sections in [docs/architecture/release-gates.md](../../docs/architecture/release-gates.md) from **Partial** to **Evidence attached**, referencing the sanitized production artifacts produced by this checklist. Do not close the gates on local or staging evidence alone.
+After all checklist items pass, update the W7 and O4 sections in [docs/architecture/release-gates.md](../architecture/release-gates.md) from **Partial** to **Evidence attached**, referencing the sanitized production artifacts produced by this checklist. Do not close the gates on local or staging evidence alone.
 
 ### Out of scope
 
