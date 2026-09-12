@@ -1,6 +1,6 @@
 # Agent Review Playbook
 
-**Current:** this is the concrete review checklist an agent (or a human) runs against a diff before approval, ported verbatim from `docs/review/copilot-review-instructions.md`.
+**Current:** this is the concrete review checklist an agent (or a human) runs against a diff before approval.
 
 Focused guidance for AI coding agents performing a **review** in the Papyrus repository. Use together with [AGENTS.md](../../AGENTS.md) for architecture boundaries, build/test commands, and conventions. Review language: **English**. Prioritize findings as 🔴 CRITICAL (block merge), 🟡 IMPORTANT (discuss), 🟢 SUGGESTION (non-blocking).
 
@@ -19,18 +19,18 @@ Zero warning/error is a hard gate. If a gate cannot run (e.g. integration tests 
 
 ## Security review priorities (maps to OWASP Top 10 2025)
 
-Consult [docs/security/threat-model.md](../security/threat-model.md), [policy](../security/policy.md), and [risk-acceptance](../security/risk-acceptance.md).
+Consult the [threat register](../04-engineering-standards/threat-register.md) (including its risk-acceptance section) and the [security baseline](../04-engineering-standards/security-baseline.md).
 
 - **A01 Broken access control / IDOR:** every Admin endpoint must authenticate via `X-Admin-Api-Key` and resolve tenant ownership. Verify the `AdminOpenApiDocumentTransformer` still guards every documented path (regression: a one-arg security-scheme constructor previously serialized empty `[{}]` auth).
 - **A05 Injection:** parameterized EF/LINQ everywhere (no SQL string building), Markdown rendered only through the **safe renderer**, uploads validated as raster media (magic-byte checked, 5 MB cap); no `innerHTML`/`v-html`/XSS-by-sanitization-bypass in the React admin SPA.
 - **A04 Cryptographic / secrets:** no keys, connection strings, cookies, or raw PII in code, logs, or commit. Admin auth must stay constant-time (`AdminApiKey.MatchesAny`, no early-exit comparison).
 - **A09 Logging:** audit events logger-backed, never sampled; redaction at the sink seam; confirm sensitive values still excluded.
 - **A07 Auth/sec session:** multi-key rotation semantics preserved (`AdminApi:ApiKeys` add/overlap/remove); production still fails fast on missing or `change-me` key.
-- **Tenant isolation (ADR 0007): no RLS.** Application-level filtering + `EnforceTenantBoundary()` is the only enforcement layer. Flag any change that weakens that boundary (e.g. un-filtered query, cross-tenant association, missing soft-delete predicate).
+- **Tenant isolation ([ADR 0004](../02-architecture/decisions/adr-0004-retain-multitenant-entities.md)): no RLS.** Application-level filtering + `EnforceTenantBoundary()` is the only enforcement layer. Flag any change that weakens that boundary (e.g. un-filtered query, cross-tenant association, missing soft-delete predicate).
 
 ## Architecture review priorities
 
-- Respect accepted ADRs in [docs/architecture/decisions/README.md](../architecture/decisions/README.md); proposing to violate one requires an ADR change, not a silent code change.
+- Respect accepted ADRs under `02-architecture/decisions/` (start with [adr-0001](../02-architecture/decisions/adr-0001-adopt-a-modular-monolith-over-microservices.md)); proposing to violate one requires an ADR change, not a silent code change.
 - Modular monolith boundaries: Core/Application/Contracts/Infrastructure/Admin responsibilities must not blur. Public hosts (Blog/Portfolio) must stay read-only and must not call migration APIs.
 - CQRS discipline in `Papyrus.Application`: commands/query separation, bounded no-tracking projections; flag any new N+1 or missing `AsNoTracking()`.
 

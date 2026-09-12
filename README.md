@@ -100,7 +100,6 @@ security vulnerabilities publicly—follow [`SECURITY.md`](SECURITY.md) instead.
 │   ├── Papyrus.ServiceDefaults/  # Shared service defaults
 │   └── Papyrus.Tests/             # Automated tests
 ├── docs/                          # Consolidated documentation home
-├── memory-bank/                   # Persistent project context
 ├── Papyrus.sln                    # Solution entry point
 ├── Dockerfile.admin               # Admin container image
 ├── Dockerfile.blog                # Blog container image

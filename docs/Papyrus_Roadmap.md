@@ -73,3 +73,79 @@ M0 -> M1 -> M2 -> M3 -> M4 -> M5 -> M6 -> M7 -> M8 -> M9 -> M10 -> M11 -> M12 ->
 ## 5. Governance
 
 Each milestone is tracked as a GitHub Milestone; each deliverable within it as an Issue. Every new aggregate ships as one complete vertical slice per pull request. Every new external dependency is recorded in `06-operations/vendor-dependency-map.md`.
+
+---
+
+## Actual Progress (as of last verified state)
+
+This section records what has genuinely been shipped, separated from the M0–M32
+forward plan above so a reader can compare "what the roadmap says" with "what's
+actually built". Phases 0–6 are **complete**; Phase 7 (release readiness and
+GitHub showcase) is **in progress** with only roadmap item 4 (tagging a release)
+still open; Phase 8 is a decision gate and not started.
+
+### Phases and subtasks shipped
+
+- **Phase 0–5:** audit closure and guardrails, tenant isolation and admin
+  hardening, request/media/HTTP security, domain/application layering,
+  REST contracts and projections, and containers/Aspire/Compose/CI-CD are all
+  complete.
+- **Phase 6 (S30.0–S30.12):** architecture/layer tests, PostgreSQL integration
+  harness and depth, handler/migration-drift tests, Playwright browser smoke,
+  K6 load evidence, telemetry core (shared `Papyrus` W3C ActivitySource,
+  structured audit events), tenant-safe redaction/cardinality/sampling,
+  dashboards and alert families, performance budgets, runbooks, and the
+  Postgres RLS decision ADR are all done.
+- **Phase 7:** items 1–3 complete — the public documentation set, five
+  sanitized showcase assets under `docs/assets` (blog, portfolio, admin,
+  health, Aspire), and the contribution/disclosure/license/changelog/
+  feature-matrix documentation are published. Item 4 (release tag) is
+  intentionally open: it is authorized only after all release gates and
+  rollback drills pass.
+
+### Key verified figures
+
+- **Tests:** 86 unique .NET tests in CI (70 provider-independent /
+  non-integration tests plus 16 PostgreSQL-backed integration tests), plus a
+  separate 5-test Playwright browser smoke suite. The warnings-as-errors build
+  is 0 warnings / 0 errors.
+- **Migrations:** five EF Core migrations applied; the Admin API is the sole
+  migration/seed owner and public hosts never migrate.
+- **S30.5 K6 load evidence (2026-08-29):** public run HTTP p95 23.574 ms,
+  payload p95 9,030 bytes, 0% failed, 100% checks; admin run HTTP p95
+  21.660 ms, payload p95 9,256 bytes, 0% failed, 100% checks, 0 5xx.
+- **S30.9 production-like re-measurement (2026-09-03):** public HTTP p95
+  32.79 ms, payload p95 16,887 bytes; admin HTTP p95 19.35 ms, payload p95
+  19,827 bytes; all within the explicit budgets.
+- **S30.12 RLS decision:** PostgreSQL Row-Level Security was evaluated and
+  **declined**; application-level tenant filtering (EF global filters plus
+  `EnforceTenantBoundary()`) remains the sole enforcement layer. Recorded in
+  `02-architecture/decisions/adr-0004-retain-multitenant-entities.md`.
+
+### Implementation alignment note (2026-09-08)
+
+The `Application → Infrastructure` dependency was inverted to align with
+ADR 0001: `Papyrus.Application` owns the persistence ports
+(`IPublicContentStore`, `IContentCommandStore`, `IContentQueryStore`,
+`ITaxonomyCommandStore`, `IContentLifecycleStore`) and thin facades;
+`Papyrus.Infrastructure` implements them with EF Core adapters (`Ef*Store`).
+The application layer no longer depends on `PapyrusDbContext`.
+
+### Release-gate status (as of last verified state)
+
+Tracked per-gate in `04-engineering-standards/release-gates.md`:
+
+- **W6 (deployment/operations):** evidence attached (2026-09-02 local release
+  drill — PASS).
+- **W7 (observability/alerting):** partial — code/config evidence attached;
+  production collector verification pending.
+- **W8 (release documentation/CI):** evidence attached (2026-09-03 gitleaks
+  scan — no leaks found).
+- **O4 (telemetry/audit evidence):** partial — local artifact/config evidence;
+  production telemetry verification pending.
+- **O7 (restore/load drills):** closed (2026-08-29).
+- **O8 (performance budgets):** evidence attached (2026-09-03 re-measurement).
+- **O9 (release artifacts/sanitized publication):** evidence attached
+  (2026-09-03 gitleaks scan).
+- **O10 (architecture evidence):** evidence attached (S30.0 architecture
+  tests).
