@@ -41,7 +41,7 @@ npm ci --prefix src/Papyrus.Admin.UI
 dotnet run --project src/Papyrus.AppHost
 ```
 
-Follow the [local setup and demo guide](docs/guides/local-setup.md) for
+Follow the [local setup and demo guide](docs/06-operations/environments.md) for
 prerequisites, URLs, seed behavior, and the first published post.
 
 ## Showcase
@@ -62,21 +62,21 @@ private URLs, or personal data.
 ## Repository documentation
 
 - [`docs/`](docs/) is the documentation home, with navigation in [`docs/README.md`](docs/README.md).
-- [`docs/guides/contributing.md`](docs/guides/contributing.md) explains local setup, verification, conventions, and pull requests.
+- [`docs/07-governance/contribution-workflow.md`](docs/07-governance/contribution-workflow.md) explains local setup, verification, conventions, and pull requests.
 - [`SECURITY.md`](SECURITY.md) explains private vulnerability disclosure.
 - [`LICENSE`](LICENSE) grants permission under the MIT License.
-- [`docs/project/changelog.md`](docs/project/changelog.md) records notable repository changes.
-- [`docs/project/feature-matrix.md`](docs/project/feature-matrix.md) separates implemented capabilities from deferred and release-pending work.
-- [`docs/project/roadmap.md`](docs/project/roadmap.md) contains the phased engineering roadmap and definition of done.
-- [`docs/guides/deployment.md`](docs/guides/deployment.md) documents container deployment, configuration, migration ownership, and durable media requirements.
-- [`docs/architecture/public-overview.md`](docs/architecture/public-overview.md) explains the public architecture and trade-offs.
-- [`docs/security/threat-model-summary.md`](docs/security/threat-model-summary.md) summarizes the security posture without operational secrets.
-- [`docs/project/limitations.md`](docs/project/limitations.md) records deferred capabilities and release limitations.
+- [`docs/00-overview/changelog.md`](docs/00-overview/changelog.md) records notable repository changes.
+- [`docs/00-overview/feature-matrix.md`](docs/00-overview/feature-matrix.md) separates implemented capabilities from deferred and release-pending work.
+- [`docs/Papyrus_Roadmap.md`](docs/Papyrus_Roadmap.md) contains the milestone roadmap and delivery sequence.
+- [`docs/06-operations/deployment-guide.md`](docs/06-operations/deployment-guide.md) documents container deployment, configuration, migration ownership, and durable media requirements.
+- [`docs/02-architecture/architecture-overview.md`](docs/02-architecture/architecture-overview.md) explains the architecture, modular-monolith boundaries, and trade-offs.
+- [`docs/04-engineering-standards/threat-register.md`](docs/04-engineering-standards/threat-register.md) records the security posture and known risks for the current implementation.
+- [`docs/00-overview/limitations.md`](docs/00-overview/limitations.md) records deferred capabilities and release limitations.
 
 ## Support
 
 For setup and usage questions, start with the [documentation index](docs/README.md)
-and [local setup guide](docs/guides/local-setup.md). Search existing
+and [local setup guide](docs/06-operations/environments.md). Search existing
 [GitHub Issues](https://github.com/samuel-khalil-dev/Papyrus/issues) before opening a new
 issue. Use issues for reproducible bugs, documentation corrections, and
 actionable feature proposals; include the Papyrus version or commit, expected
@@ -99,7 +99,7 @@ security vulnerabilities publicly—follow [`SECURITY.md`](SECURITY.md) instead.
 │   ├── Papyrus.AppHost/           # Aspire orchestration
 │   ├── Papyrus.ServiceDefaults/  # Shared service defaults
 │   └── Papyrus.Tests/             # Automated tests
-├── docs/                          # Architecture and security documentation
+├── docs/                          # Consolidated documentation home
 ├── memory-bank/                   # Persistent project context
 ├── Papyrus.sln                    # Solution entry point
 ├── Dockerfile.admin               # Admin container image

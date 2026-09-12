@@ -24,7 +24,7 @@ so canonical/RSS/sitemap URL behavior is excluded.
 ## Baseline measurements
 
 The query timings below are the 30-sample PostgreSQL execution measurements from
-[`projection-evidence.md`](projection-evidence.md:108). They exclude HTTP and Razor
+[`projection-evidence.md`](../history/projection-evidence.md:108). They exclude HTTP and Razor
 rendering. HTTP p95/error and payload measurements are the S30.5 K6 capture
 points; the committed smoke configuration is the reproducible baseline until a
 production-like environment is available. The public values are aggregate
@@ -42,9 +42,9 @@ script run.
 | Admin upload (5 MiB maximum) | not exercised in S30.5 | 0 DB commands | — | — | request budget 5 MiB; cost must be captured as upload duration and bytes; 0 5xx; validation 4xx allowed |
 
 \* Aggregate public K6 result across the `public_feed` and `public_search`
-scenarios; see [`s30.5-k6-public-20260829.json`](s30.5-k6-public-20260829.json).
+scenarios; see [`s30.5-k6-public-20260829.json`](../history/s30.5-k6-public-20260829.json).
 The admin result is recorded in
-[`s30.5-k6-admin-20260829.json`](s30.5-k6-admin-20260829.json).
+[`s30.5-k6-admin-20260829.json`](../history/s30.5-k6-admin-20260829.json).
 
 The current K6 transport baseline is p95 `<2000 ms`, failed requests `<1%`, and
 checks `>99%`; those are enforced by
@@ -107,9 +107,9 @@ across the ~70 s run (~66 KiB/request, well under the ≤ 1 MiB/request admin
 budget), Gen2 collections = 0 during the smoke, total GC pause time 0.117 s, and
 max heap size ~8.3 MiB.
 
-Raw artifacts: [`s30.9-k6-public-20260903.json`](s30.9-k6-public-20260903.json),
-[`s30.9-k6-admin-20260903.json`](s30.9-k6-admin-20260903.json), and
-[`s30.9-admin-counters-20260903.json`](s30.9-admin-counters-20260903.json). The
+Raw artifacts: [`s30.9-k6-public-20260903.json`](../history/s30.9-k6-public-20260903.json),
+[`s30.9-k6-admin-20260903.json`](../history/s30.9-k6-admin-20260903.json), and
+[`s30.9-admin-counters-20260903.json`](../history/s30.9-admin-counters-20260903.json). The
 reproducible workflow is [`perf-baseline.yml`](../../.github/workflows/perf-baseline.yml).
 
 ## Reproduction and evidence handling
