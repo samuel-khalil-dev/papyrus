@@ -2,7 +2,7 @@
 
 ## Application-Level Observability (Current)
 
-Papyrus runs a real OTLP-based telemetry pipeline today: an OTLP collector feeding Prometheus and Grafana, with a dedicated `Papyrus` `ActivitySource`, controlled sampling (`Telemetry:SamplingRate`), a cardinality limit (`Telemetry:CardinalityLimit`), and nine live alert families defined below. `EventId 1001` is intentionally never sampled. The Grafana dashboard definition is maintained locally and is not included in this repository.
+Papyrus runs a real OTLP-based telemetry pipeline today: an OTLP collector feeding Prometheus and Grafana, with a dedicated `Papyrus` `ActivitySource`, controlled sampling (`Telemetry:SamplingRate`), a cardinality limit (`Telemetry:CardinalityLimit`), and nine live alert families defined below. `EventId 1001` is intentionally never sampled. The Grafana dashboard definition is tracked at [`observability/dashboards/papyrus-dashboard.json`](../observability/dashboards/papyrus-dashboard.json).
 
 Do not describe this stack as absent, and do not propose replacing it — Prometheus and Grafana are not "too heavy" for this platform; they are already running successfully on it.
 
@@ -52,7 +52,7 @@ Use the deployment platform's configuration mechanism to provide these values. T
 
 ## Live alert families (Current)
 
-The dashboard definition is maintained locally (not included in this repository). Telemetry behavior and investigation steps are in [observability-and-monitoring.md](observability-and-monitoring.md); response procedures are in [runbooks.md](runbooks.md).
+The dashboard definition is tracked at [`observability/dashboards/papyrus-dashboard.json`](../observability/dashboards/papyrus-dashboard.json). Telemetry behavior and investigation steps are in [observability-and-monitoring.md](observability-and-monitoring.md); response procedures are in [runbooks.md](runbooks.md).
 
 | Alert | Signal / expression shape | Threshold / `for` | Severity |
 | --- | --- | --- | --- |
@@ -90,7 +90,7 @@ This checklist documents the production observability platform required to close
 | --- | --- | --- |
 | OTLP collector (e.g. OpenTelemetry Collector) | Receives `Papyrus.Request` and `Papyrus.AuditEvent` activities from Admin, Blog, and Portfolio via `OTEL_EXPORTER_OTLP_ENDPOINT`; normalizes to Prometheus recording views | W7, O4 |
 | Prometheus (or compatible) | Evaluates the alert expressions in the alert families above | W7 |
-| Grafana | Serves the locally maintained Papyrus dashboard (Grafana/Prometheus datasource; dashboard definition not included in this repository) | W7, O4 |
+| Grafana | Serves the Papyrus dashboard (Grafana/Prometheus datasource; dashboard definition tracked at [`observability/dashboards/papyrus-dashboard.json`](../observability/dashboards/papyrus-dashboard.json)) | W7, O4 |
 | Retention policy | Retains audit/telemetry signals per the deployment's compliance window | O4 |
 
 ### Verification checklist (close W7 and O4)
