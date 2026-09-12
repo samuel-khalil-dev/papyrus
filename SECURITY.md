@@ -32,6 +32,6 @@ Disclosure timing is coordinated case by case; there is no guaranteed response
 or remediation SLA.
 
 For the project's security posture and known risks, see the
-[security documentation](docs/security/README.md), the
-[threat-model summary](docs/security/threat-model-summary.md), and the
-[known limitations](docs/project/limitations.md).
+[security documentation](docs/04-engineering-standards/security-baseline.md), the
+[threat register](docs/04-engineering-standards/threat-register.md), and the
+[known limitations](docs/00-overview/limitations.md).

@@ -9,7 +9,7 @@ Papyrus is a .NET 10 modular monolith with an authenticated admin API/UI, public
 ### Strengths to preserve
 
 - Explicit EF configurations in [`Papyrus.Infrastructure/Configurations`](../../src/Papyrus.Infrastructure/Configurations), PostgreSQL/Npgsql, retry policy, and one admin migration owner.
-- Published/live filtering, slug constraints, safe markdown rendering, media reference protection, RSS, sitemaps, accessibility work, and deployment documentation in [`deployment.md`](../guides/deployment.md).
+- Published/live filtering, slug constraints, safe markdown rendering, media reference protection, RSS, sitemaps, accessibility work, and deployment documentation in [`deployment.md`](../06-operations/deployment-guide.md).
 - Aspire dependency ordering, persistent database volume, anonymous health/liveness endpoints, OpenTelemetry defaults, 70 local non-integration .NET tests, and the separate 5-test Playwright browser suite. CI adds 16 PostgreSQL integration tests for 86 unique .NET tests in [`Papyrus.Tests`](../../src/Papyrus.Tests).
 - Clear read/write product seams, nullable C#, strict project separation, and zero-warning build history.
 
@@ -93,7 +93,7 @@ Retain the modular monolith until measured scale or ownership requires extractio
 
 ### Phase 5 — Containers, Aspire, compose, and CI/CD (P1) — Complete
 
-**Objective:** make releases repeatable and recoverable. **Paths:** [`Papyrus.AppHost/Program.cs`](../../src/Papyrus.AppHost/Program.cs), [`Papyrus.ServiceDefaults/Extensions.cs`](../../src/Papyrus.ServiceDefaults/Extensions.cs), existing [`Dockerfile.admin`](../../Dockerfile.admin), create [`Dockerfile.blog`](../../Dockerfile.blog), [`Dockerfile.portfolio`](../../Dockerfile.portfolio), [`docker-compose.yml`](../../docker-compose.yml), ``compose``, [`.dockerignore`](../../.dockerignore), create [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) and [`.github/workflows/release.yml`](../../.github/workflows/release.yml), and [`deployment.md`](../guides/deployment.md).
+**Objective:** make releases repeatable and recoverable. **Paths:** [`Papyrus.AppHost/Program.cs`](../../src/Papyrus.AppHost/Program.cs), [`Papyrus.ServiceDefaults/Extensions.cs`](../../src/Papyrus.ServiceDefaults/Extensions.cs), existing [`Dockerfile.admin`](../../Dockerfile.admin), create [`Dockerfile.blog`](../../Dockerfile.blog), [`Dockerfile.portfolio`](../../Dockerfile.portfolio), [`docker-compose.yml`](../../docker-compose.yml), ``compose``, [`.dockerignore`](../../.dockerignore), create [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) and [`.github/workflows/release.yml`](../../.github/workflows/release.yml), and [`deployment.md`](../06-operations/deployment-guide.md).
 
 1. Define multi-stage non-root minimal images, pinned bases, read-only assumptions, and durable media volume ownership.
 2. Preserve Aspire local ordering; make compose parity and production secret injection explicit.
@@ -126,7 +126,7 @@ application-level tenant filtering remains the sole enforcement layer.
 
 ### Phase 7 — Release readiness and GitHub showcase (P2) — In progress
 
-**Objective:** publish a credible, reproducible project. **Paths:** [`README.md`](../../README.md), [`contributing.md`](../guides/contributing.md), [`policy.md`](../security/policy.md), [`changelog.md`](changelog.md), [`architecture`](../architecture), ``runbooks``, ``screenshots``, and ``demo``.
+**Objective:** publish a credible, reproducible project. **Paths:** [`README.md`](../../README.md), [`contributing.md`](../07-governance/contribution-workflow.md), [`policy.md`](../security/policy.md), [`changelog.md`](../00-overview/changelog.md), [`architecture`](../architecture), ``runbooks``, ``screenshots``, and ``demo``.
 
 1. Publish architecture, threat-model summary, local setup, seed/demo flow, API/deployment docs, and limitations.
 2. Add sanitized screenshots/GIFs for blog, portfolio, admin, health, and Aspire; exclude keys, private URLs, and personal data.
@@ -144,7 +144,7 @@ data; and the contribution, disclosure, license, changelog, support, and
 truthful feature-matrix documentation is in place. Roadmap item 4 (tagging a
 release) remains open and is intentionally not done: it is authorized only after
 all release gates and rollback drills pass, and the release-verification items
-in the [feature matrix](feature-matrix.md) still require operational evidence.
+in the [feature matrix](../00-overview/feature-matrix.md) still require operational evidence.
 Deferred multi-tenancy (RLS and full SaaS) is not advertised as complete.
 
 ### Optional Phase 8 — Measured future scale (P3) — Not started; decision gate

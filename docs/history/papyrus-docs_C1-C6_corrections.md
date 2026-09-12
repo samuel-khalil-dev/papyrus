@@ -1,9 +1,9 @@
-# Corrected Text for papyrus-docs/ — Conflicts C1–C6
+# Corrected Text for the docs/ tree — Conflicts C1–C6
 
 Implementation spec for the agent executing step 2 of the reconciliation report. Each
 section below gives the exact target wording for the affected file. Apply these verbatim
 (adjust only for surrounding markdown formatting), then verify no other file in
-`papyrus-docs/` still asserts the old, incorrect claim.
+`docs/` still asserts the old, incorrect claim.
 
 **Convention to apply everywhere below, and going forward:** every claim about system
 behavior must be labeled either **Current** (true today, verifiable in `src/` or `docs/`)
@@ -230,7 +230,7 @@ during the merge.
    - `adr-0008-include-right-to-left-layout-support-in-the-localization-fou….md` →
      `adr-0008-rtl-layout-from-inception.md`.
 2. Update every in-repo reference to the three filenames above (search the whole
-   `papyrus-docs/` tree for the old names, including truncated forms).
+   `docs/` tree for the old names, including truncated forms).
 3. Fix `02-architecture/architecture-overview.md`'s reference to
    `decisions/adr-0009-reverse-proxy-and-edge-layer.md` → the correct on-disk name
    `decisions/adr-0009-reverse-proxy-and-edge-layer-caddy-behind-cloudflare.md`.
@@ -239,11 +239,11 @@ during the merge.
 
 ## Verification After Applying
 
-- Grep `papyrus-docs/` for "2FA", "two-factor", "Netdata", "reverse proxy", "Cloudflare",
+- Grep `docs/` for "2FA", "two-factor", "Netdata", "reverse proxy", "Cloudflare",
   "Row-Level Security", "encrypted at rest" — confirm every remaining instance is
   correctly labeled Current or Planned per the convention above.
 - Grep for the three original truncated filenames — zero remaining references.
 - Confirm `adr-0009` reference resolves to an existing file.
 - Do not touch `docs/api/openapi.json`, `docs/architecture/release-gates.md`, or any file
   on the report's "never delete" list as part of this pass — this spec only covers
-  `papyrus-docs/` corrections plus the two named `docs/` anchor/link fixes.
+  `docs/` corrections plus the two named `docs/` anchor/link fixes.

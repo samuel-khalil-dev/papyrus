@@ -10,18 +10,18 @@ context without interrupting the task.
 
 Tutorials are learning-oriented and deliberately step-by-step.
 
-- [Getting started](tutorials/getting-started.md) — run the complete local
-  stack with Aspire and publish a first blog post.
+- [Getting started](../01-product/getting-started-tutorial.md) — run the complete
+  local stack with Aspire and publish a first blog post.
 
 ## How-to guides
 
 How-to guides are concrete procedures for contributors and operators.
 
-- [Contributing](contributing.md) — set up the toolchain, develop, test, and
+- [Contribute](../07-governance/contribution-workflow.md) — set up the toolchain, develop, test, and
   submit a change.
-- [Local setup](local-setup.md) — set up a fresh workstation and run the seeded
+- [Local setup](../06-operations/environments.md) — set up a fresh workstation and run the seeded
   demo flow.
-- [Deployment](deployment.md) — deploy the Compose topology, verify it, and
+- [Deployment](../06-operations/deployment-guide.md) — deploy the Compose topology, verify it, and
   apply the database migrations through the sole migrator.
 
 ## Reference and explanation
@@ -36,5 +36,5 @@ procedures. Explanation documents the architecture and durable decisions.
   before release.
 
 Incident procedures and operational signal descriptions live in the
-[runbooks](../runbooks/incident-runbook.md), rather than in this learning and
+[runbooks](../06-operations/runbooks.md), rather than in this learning and
 contribution section.

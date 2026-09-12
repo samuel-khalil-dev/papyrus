@@ -1,7 +1,7 @@
-# Porting Spec — Step 3: Critical Omissions into papyrus-docs/
+# Porting Spec — Step 3: Critical Omissions into docs/
 
 Implementation spec for the agent executing step 3 of the reconciliation report
-(`1789126488475-docs-vs-papyrus-docs-report.md`, Section 7 and the per-file
+(Section 7 and the per-file
 `merge` dispositions in Section 6).
 
 ## Critical Constraint — Read Before Starting
@@ -19,7 +19,7 @@ of the report's description of them.
    (e.g. `T-01`, `EventId 1001`) must match the source verbatim. Do not "clean up"
    or rephrase technical identifiers.
 3. Where the source file's content conflicts with something already corrected in
-   `papyrus-docs/` under the C1–C6 pass, the **already-corrected papyrus-docs/ text
+   `docs/` under the C1–C6 pass, the **already-corrected docs/ text
    wins** — do not reintroduce a stale claim by porting it uncritically. If such a
    conflict is found, flag it in the PR description rather than silently resolving it.
 4. Every ported section is written using the same Current/Planned labeling
@@ -29,7 +29,7 @@ of the report's description of them.
 5. Do not delete, move, or modify any source file in `docs/` as part of this task.
    This is a copy/port operation only. Retirement of old files is step 5, not this
    step.
-6. If a target file does not yet exist in `papyrus-docs/`, create it following the
+6. If a target file does not yet exist in `docs/`, create it following the
    existing numbering and naming convention of its section (e.g. a new file under
    `02-architecture/` continues that folder's existing style).
 
@@ -213,8 +213,8 @@ claims), `docs/guides/contributing.md`, `docs/guides/tutorials/getting-started.m
 **Source:** `docs/assets/blog.png`, `portfolio.png`, `admin.png`, `health.png`,
 `aspire.png`, `Papyrus_Logo.svg`, `Papyrus_Background.svg`
 
-**Action:** Copy (not move) into a new `papyrus-docs/assets/` folder. Reference the
-screenshots from wherever `papyrus-docs/` now describes the public-facing sites
+**Action:** Copy (not move) into the consolidated `docs/assets/` folder. Reference the
+screenshots from wherever `docs/` now describes the public-facing sites
 (e.g. `01-product/vision-and-positioning.md` or the new C4/getting-started files), and
 reference the two brand SVGs from `03-design-system/design-tokens.md` as the actual
 source-of-truth brand assets, replacing any purely descriptive color-only framing
@@ -242,8 +242,9 @@ there with a pointer to the real files.
   all read "86".
 - Grep for any topology or auth claim that contradicts the already-merged C1–C6
   corrections — zero conflicts introduced by this port.
-- Confirm `docs/` itself is completely unmodified (`git diff --stat docs/` shows no
-  changes) — this step only writes to `papyrus-docs/`.
+- The legacy `docs/` source files must remain unmodified by this step (`git diff --stat`
+  shows the port writes only to the consolidated `docs/` tree, never to the legacy
+  source files).
 - Open as a single PR per top-level subsection (3.1–3.11) if the diff is large, or as
   one PR with clearly separated commits per subsection if preferred — do not merge
   without review, consistent with prior practice.
