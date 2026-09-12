@@ -90,7 +90,7 @@ These identifiers are historical dispositions, not accepted risks or open findin
 
 - **W1-W5:** explicit modular boundaries and migration ownership; tenant/query/relationship/save/media isolation; green security controls; antiforgery, secure cookies, rate limiting, and validated media. Evidence: [`0001-modular-monolith-boundaries.md`](../architecture/decisions/0001-modular-monolith-boundaries.md:5), [`PapyrusDbContext`](../../src/Papyrus.Infrastructure/PapyrusDbContext.cs:32), [`InitializeDatabaseAsync()`](../../src/Papyrus.Infrastructure/DependencyInjection.cs:47), [`Program.cs`](../../src/Papyrus.Api.Admin/Program.cs:29), and the focused tenant/media/security tests.
 - **O1-O3:** versioned DTO contracts, no-tracking projections, tenant/live public filtering, and bounded feed/sitemap source queries are implemented in [`AdminApiEndpoints`](../../src/Papyrus.Api.Admin/AdminApiEndpoints.cs:14), [`PublicContentQueryHandlers`](../../src/Papyrus.Application/Content/PublicContentQueries.cs:8), and [`TenantIsolationTests`](../../src/Papyrus.Tests/TenantIsolationTests.cs:35).
-- **O5-O6:** projection SQL and PostgreSQL execution evidence show bounded, non-N+1 read paths, while all runtime images are multi-stage and non-root. Evidence: [`projection-evidence.md`](../performance/projection-evidence.md:66), [`Dockerfile.admin`](../../Dockerfile.admin:20), and the CI/release workflows.
+- **O5-O6:** projection SQL and PostgreSQL execution evidence show bounded, non-N+1 read paths, while all runtime images are multi-stage and non-root. Evidence: [`projection-evidence.md`](../history/projection-evidence.md:66), [`Dockerfile.admin`](../../Dockerfile.admin:20), and the CI/release workflows.
 
 ### Rationale and boundaries
 
