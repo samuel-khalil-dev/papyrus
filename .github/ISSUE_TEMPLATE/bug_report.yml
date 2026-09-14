@@ -1,0 +1,57 @@
+name: Bug report
+description: Report a reproducible problem with Papyrus
+labels: [bug]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Describe the bug
+      description: What happened, and what did you expect to happen?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Papyrus version, commit, or branch you reproduced the bug on.
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Affected surface
+      description: Which surface exhibits the bug?
+      multiple: true
+      options:
+        - Admin API
+        - Admin UI (React SPA)
+        - Blog
+        - Portfolio
+        - CI / workflows
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal, safe reproduction steps. Include exact commands or URLs.
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or screenshots
+      description: Log output or screenshots that help diagnose the issue. Redact any credentials, keys, or personal data.
+  - type: markdown
+    attributes:
+      value: |
+        Before submitting: search existing issues first, and never include
+        secrets, connection strings, or private URLs. For security
+        vulnerabilities, report privately via the repository's Security tab
+        instead of a public issue.

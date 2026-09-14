@@ -16,7 +16,7 @@ Local/verification environments use disposable, synthetic seed data. Production 
 
 ## Local development (Current)
 
-**Prerequisites:** the .NET 10 SDK, Node.js 22 with npm, and Docker Desktop. Run commands from the directory containing `Papyrus.sln`.
+**Prerequisites:** the .NET 10 SDK, Node.js 24.21.0 with npm, and Docker Desktop. Run commands from the directory containing `Papyrus.sln`.
 
 Restore the solution and the standalone Admin UI:
 

@@ -21,7 +21,7 @@ push to `main` and every pull request:
    runs the 16 integration tests against a `postgres:17-alpine` service. The
    workflow runs the full suite first and then repeats this integration subset
    explicitly; the unique CI test count remains 86, not 102.
-5. **Secret scan** — `gitleaks/gitleaks-action@v2`.
+5. **Secret scan** — `gitleaks/gitleaks-action@v3.0.0`.
 6. **NuGet vulnerability scan** — `dotnet list ... package --vulnerable
    --include-transitive`; fails on any vulnerable package.
 

@@ -1,0 +1,8 @@
+# Write a Conventional Commit subject and a short body explaining what changed
+# and why. Supported types: feat:, fix:, docs:, test:, refactor:, chore:.
+#
+#   docs: align Node version documentation with the pinned runtime
+#
+# <blank line>
+# Explain the motivation and, when relevant, the behavior change. Reference the
+# milestone or issue number. Keep unrelated changes out of the same commit.
