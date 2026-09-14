@@ -4,7 +4,7 @@
 
 ## Before you begin
 
-Install the .NET 10 SDK, Node.js 22 with npm, and Docker. From the repository root, restore the solution and install the Admin UI packages:
+Install the .NET 10 SDK, Node.js 24.21.0 with npm, and Docker. From the repository root, restore the solution and install the Admin UI packages:
 
 ```powershell
 dotnet restore Papyrus.sln

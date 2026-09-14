@@ -1,0 +1,34 @@
+name: Feature request
+description: Propose a new capability or milestone-scoped improvement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Explain the need this feature addresses and who it benefits.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the expected behavior or user-visible outcome.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What else was considered, and why is this approach preferred?
+  - type: textarea
+    id: scope
+    attributes:
+      label: Affected surfaces
+      description: Which parts of the system are likely involved (e.g. Admin UI, Blog, API, docs)?
+  - type: markdown
+    attributes:
+      value: |
+        Deliverable-sized work is tracked against the milestone roadmap in
+        docs/Papyrus_Roadmap.md. Search existing issues and milestones before
+        submitting to avoid duplicates.
