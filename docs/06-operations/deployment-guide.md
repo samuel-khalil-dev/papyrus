@@ -19,7 +19,7 @@ The Compose file also accepts optional image, port, and PostgreSQL-user override
 
 ## Volumes and runtime hardening (Current)
 
-The `db` service is PostgreSQL 17 with the durable `papyrus-postgres-data` volume. `admin-api` waits for the database health check and mounts the durable `papyrus-media` volume at `/data/media`; the volume must survive Admin restarts. The three images are multi-stage: the Admin image builds the React SPA with Node 24.20.0 and the Blog/Portfolio images build with the .NET 10 SDK. All runtime images run as the base image's non-root `APP_UID`.
+The `db` service is PostgreSQL 17 with the durable `papyrus-postgres-data` volume. `admin-api` waits for the database health check and mounts the durable `papyrus-media` volume at `/data/media`; the volume must survive Admin restarts. The three images are multi-stage: the Admin image builds the React SPA with Node 24.21.0 and the Blog/Portfolio images build with the .NET 10 SDK. All runtime images run as the base image's non-root `APP_UID`.
 
 | Service | Role | Published port / storage |
 | --- | --- | --- |

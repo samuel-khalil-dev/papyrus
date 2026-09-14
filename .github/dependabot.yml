@@ -65,7 +65,7 @@ updates:
       semver-minor-days: 3
       semver-patch-days: 0
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "chore"
       include: "scope"
     groups:
       admin-ui-non-major:
@@ -115,7 +115,7 @@ updates:
       semver-minor-days: 3
       semver-patch-days: 0
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "chore"
       include: "scope"
     ignore:
       # CI runs Node 24; do not take Node 26 types
