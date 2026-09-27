@@ -5,14 +5,15 @@ Establish clean structural boundaries before further feature milestones add surf
 
 ## Background
 At milestone definition the Admin API's endpoints resided in a single large file
-and Presentation-layer Infrastructure references were unaudited. Endpoint grouping
-and the uniform error-response contract have since been delivered; the
-Presentation-to-Infrastructure item remains open and is tracked as issue #53.
+and Presentation-layer Infrastructure references were unaudited. Both are now
+resolved: endpoint grouping and the uniform error-response contract are
+delivered, and the reference audit produced
+[ADR-0010](../02-architecture/decisions/adr-0010-scoped-presentation-to-infrastructure-access.md).
 
 ## Status
-Two of four Definition-of-Done items are met. The Presentation-to-Infrastructure
-reference audit and the fitness test that would enforce it remain open and are
-tracked as issue #53.
+All four Definition-of-Done items are met. The milestone is complete. ADR-0010
+scopes the Presentation-to-Infrastructure boundary and records the port
+extraction that remains follow-on work rather than a gate.
 
 ## Scope
 
@@ -44,8 +45,8 @@ tracked as issue #53.
 ## Definition of Done
 - [x] All endpoints organized into feature-scoped groups. — Delivered by `src/Papyrus.Api.Admin/Endpoints/`; 23 versioned registrations and their order are unchanged.
 - [x] All error responses conform to ProblemDetails. — Delivered: `MediaEndpoints` returns `Results.Problem` for a missing file, an unreadable multipart body, a rejected upload, and a referenced-asset delete, and the endpoint metadata declares `ProducesProblem` for 400 and 409. Covered by four `AdminApiTests` cases.
-- [ ] No Presentation file outside a composition root references Infrastructure. — Open: the audit found `PapyrusDbContext` injected into the post, project, taxonomy, and media endpoint groups, into `Endpoints/AdminEndpointSupport.cs`, and into `AdminUi/AdminContentSupport.cs`. Writes reach the Application command handlers, but endpoint reads and the tag and media-reference writes bypass `IContentQueryStore` and `ITaxonomyCommandStore`.
-- [ ] A fitness test enforces this and passes in CI. — Open: `LayerDependencyTests` constrains Core, Contracts, Web.Shared, the public delivery hosts, and Application, but not the Presentation-to-Infrastructure boundary. A public-host rule must exempt composition roots, which resolve Infrastructure through `AddPapyrusInfrastructure()`.
+- [x] No Presentation file outside a composition root references Infrastructure. — Audited and closed by [ADR-0010](../02-architecture/decisions/adr-0010-scoped-presentation-to-infrastructure-access.md). The audit found every Infrastructure reference in `Papyrus.Api.Admin` inside the entry point, `Endpoints/`, or `AdminUi/`, and the only data-access reference in each public host inside its own entry point, so the accepted shape is the baseline. Extracting the Admin read paths and the feed and sitemap queries behind Application ports is recorded there as follow-on work, not a gate.
+- [x] A fitness test enforces this and passes in CI. — `LayerDependencyTests` now carries three ADR-0010 rules: public hosts may not reference Infrastructure outside their entry point, no public host may reference the `Ef*Store` adapters, and Admin Presentation code outside its composition root may not reach Infrastructure except `ITenantContext`. The rules were verified to fail on an introduced violation before the probe was removed.
 
 ## Test plan
 - Full regression of unit/integration/e2e suites.

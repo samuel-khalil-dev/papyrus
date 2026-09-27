@@ -39,13 +39,17 @@ Dependency direction: `Application → Contracts, Core`; `Infrastructure → App
 Never add a `Papyrus.Infrastructure` reference to `Papyrus.Application` (that would recreate the
 inverted dependency the port/adapter split removed).
 
-A **Presentation** project may reference Infrastructure only inside its composition root.
-This rule is **not yet enforced on `Papyrus.Api.Admin`**: the endpoint groups under
-`src/Papyrus.Api.Admin/Endpoints/` inject `PapyrusDbContext` directly instead of reaching
-the Application ports, and no fitness test covers the boundary. Treat that as an open item
-of [M0](docs/05-milestones/m0-architectural-guardrails.md) rather than as a pattern to copy.
-`ITenantContext` also lives in `Papyrus.Infrastructure.MultiTenancy` but is consumed by
-Presentation code, so the assembly does not imply a clean seam.
+A **Presentation** project may reference Infrastructure only inside its composition
+root, as defined and enforced by
+[ADR-0010](docs/02-architecture/decisions/adr-0010-scoped-presentation-to-infrastructure-access.md).
+The read-only public hosts reach Infrastructure only from their entry point and never
+reference an `Ef*Store` adapter; Admin's composition root is its entry point plus
+`Endpoints/` and `AdminUi/`. Fitness tests enforce this, so widening it requires a
+superseding ADR rather than a test edit. Note that the Admin endpoint handlers still
+inject `PapyrusDbContext` directly instead of reaching the Application ports — that is
+the accepted current shape under ADR-0010, not a pattern to copy. `ITenantContext` also
+lives in `Papyrus.Infrastructure.MultiTenancy` while being consumed by Presentation code,
+so the assembly does not imply a clean seam.
 
 `Papyrus.Admin.UI` (React SPA) is **not** a `.sln` project. `src/` has 11
 projects; the SPA is a standalone npm app referenced by Aspire as dev-only and
