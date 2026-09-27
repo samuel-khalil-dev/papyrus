@@ -32,7 +32,15 @@ Implements Application's ports as EF Core adapters; owns the DbContext, entity c
 - `Papyrus.Admin.UI` - React SPA.
 - `Papyrus.Web.Blog`, `Papyrus.Web.Portfolio` - server-rendered Razor Pages calling Application in-process.
 
-A Presentation project may reference Infrastructure only inside its composition root.
+A Presentation project may reference Infrastructure only inside its composition
+root. This rule is **not yet satisfied or enforced** on the Admin API: the
+endpoint groups inject `PapyrusDbContext` directly and no fitness test covers
+the boundary, so the audit and its test are open items of
+[`05-milestones/m0-architectural-guardrails.md`](../05-milestones/m0-architectural-guardrails.md).
+The dependency direction itself is fixed by
+[ADR-0002](decisions/adr-0002-application-owned-ports-with-infrastructure-adapters.md),
+which the Admin endpoints are expected to reach through the Application ports
+rather than through `PapyrusDbContext`.
 
 ## Edge and network layer
 

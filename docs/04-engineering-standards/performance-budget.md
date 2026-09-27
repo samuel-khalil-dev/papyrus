@@ -3,6 +3,17 @@
 ## Load testing
 k6 defines p95 latency thresholds for key public routes, revisited as real traffic data becomes available.
 
+### Shared-runner caveat
+The `load-smoke` CI job runs on `ubuntu-latest`, so its latency figures are
+measured on shared, contended runners rather than on dedicated hardware, and the
+job has no retry. A `p(95)` threshold breach is therefore not by itself evidence
+of a code regression. Both scenarios assert `http_req_duration p(95)<2000` while
+the recorded baselines are 21–33 ms — roughly two orders of magnitude of
+headroom — so a breach far above that margin indicates runner or host contention
+and should be re-measured on a self-hosted runner before being treated as a
+regression. The query-count and allocation budgets are unaffected by this caveat:
+they are measured in-process, not on the runner's network path.
+
 ## Front-end performance
 Motion restricted to `transform`/`opacity`. **Planned (M13):** static assets served via the Cloudflare edge cache to reduce origin load on the VPS.
 

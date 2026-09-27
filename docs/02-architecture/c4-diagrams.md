@@ -46,7 +46,7 @@ flowchart TB
 
 #### The Papyrus system
 
-Papyrus is a **modular monolith** (.NET 10, EF Core 10.0.11, React 19 admin SPA, Aspire orchestration, PostgreSQL 17 via Docker Compose). It exposes three web hosts over one shared database:
+Papyrus is a **modular monolith** (.NET 10, EF Core 10.0.12, React 19 admin SPA, Aspire orchestration, PostgreSQL 17 via Docker Compose). It exposes three web hosts over one shared database:
 
 - an authenticated **Admin** host (Minimal API + React SPA) that owns writes, authentication, media, migrations, and seed;
 - a read-only **Blog** host;
@@ -128,7 +128,7 @@ flowchart TB
 
 #### Admin API (ASP.NET Core Minimal API)
 
-- **Technology:** .NET 10, ASP.NET Core Minimal API, EF Core 10.0.11, Npgsql.
+- **Technology:** .NET 10, ASP.NET Core Minimal API, EF Core 10.0.12, Npgsql.
 - **Responsibility:** Authenticated content, taxonomy, and relationship CRUD; media list/upload/delete; API-key authentication; tenant enforcement; and the **sole** migration/seed owner (`InitializeDatabaseAsync()`).
 - **API surface:** `/api/v1` group (versioned, documented) plus `/api` legacy (excluded from OpenAPI). Both require auth and a per-IP rate limit of 120 requests/minute. `/health` and `/alive` are anonymous. `/openapi/v1.json` is served via `MapOpenApi`. `/admin` serves the SPA shell.
 - **Ports:** 5205 (Compose), 5173 proxy target in dev.
