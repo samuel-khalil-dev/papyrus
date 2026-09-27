@@ -17,6 +17,9 @@ Authoritative reference for the Papyrus platform: a personal brand system compos
 
 ## Source of truth
 `Papyrus_Roadmap.md` defines *what* is being built and *when*. This set defines *how* and *why*.
+This set is also the only authoritative record of project facts: a fact lives in exactly one
+place, and no parallel, untracked documentation tree is kept. See
+[`07-governance/documentation-maintenance.md`](07-governance/documentation-maintenance.md).
 
 ## Start here
 
@@ -32,14 +35,26 @@ Authoritative reference for the Papyrus platform: a personal brand system compos
 
 ## Current status
 
-- Phases 0–6 are complete; Phase 7 is release readiness and showcase work.
-- The current local baseline is 70 passing non-integration .NET tests and a
-  zero-warning, zero-error warnings-as-errors build. PostgreSQL-backed
-  integration tests require the test database infrastructure and run in CI.
-- Five Playwright browser tests are tracked; they are not part of the local
-  non-integration baseline.
+- Phases 0–6 are complete. Phase 7 is release readiness and showcase work: items
+  1–3 are published and item 4 (the release tag) is intentionally open.
+- **No release has been tagged.** All release gates are closed except two that
+  require production evidence: W7 (production observability collector
+  verification) and O4 (production telemetry configuration). See
+  [`04-engineering-standards/release-gates.md`](04-engineering-standards/release-gates.md).
+- **Milestone M0 (Architectural Guardrails) is partially delivered.** Endpoint
+  grouping is done; uniform `ProblemDetails` error responses, the
+  Presentation-to-Infrastructure reference audit, and the fitness test that
+  enforces that boundary are open and tracked as issue #53. The M1–M32 sequence
+  has not started.
+- The local baseline is 70 passing non-integration .NET tests and a
+  zero-warning, zero-error warnings-as-errors build. CI runs 16 PostgreSQL-backed
+  integration tests, for 86 unique .NET tests; those tests require the test
+  database infrastructure.
+- Five Playwright browser tests are tracked; they are not part of the .NET count.
 - Five EF Core migrations are applied. The admin migration job is the sole
   migration owner.
+- The Admin API returns RFC 7807 `ProblemDetails` on every error path except the
+  media upload and delete responses, which are still plain text.
 
 ## Documentation conventions
 
@@ -49,7 +64,16 @@ Authoritative reference for the Papyrus platform: a personal brand system compos
 - Generated artifacts, such as [`api/openapi.json`](api/openapi.json) and captured SQL,
   are retained when they provide reviewable evidence for the current state.
 - Update links when moving a document and keep claims aligned with the verified
-  implementation state.
+  implementation state. A figure that has not been re-verified is not restated
+  as current.
+- `AGENTS.md` at the repository root is tracked and reviewed like any other
+  document; it holds only what is hard to discover and easy to get wrong, and
+  links here for detail.
 
-## Note on this revision
-This is the finalized, complete edition of the documentation, incorporating security, infrastructure, AI-platform, localization-direction, and compliance scope agreed after the initial architecture pass. It supersedes every prior roadmap or documentation artifact produced earlier in this project's history.
+## Currency
+
+This is a living set, not a frozen edition. It was reconciled against the
+implemented system on 2026-09-27, when the M0 milestone document, this status
+section, and the ADR citations were last brought current. Prior documentation
+artifacts, including the external `papyrus-docs` package and an untracked
+in-repo memory bank, have been retired rather than maintained alongside it.
