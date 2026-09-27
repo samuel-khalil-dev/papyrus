@@ -14,13 +14,13 @@ push to `main` and every pull request:
 1. **Restore** — `dotnet restore Papyrus.sln`.
 2. **Build with warnings treated as errors** —
    `dotnet build Papyrus.sln --configuration Release --no-restore /p:TreatWarningsAsErrors=true`.
-3. **Tests** — `dotnet test Papyrus.sln` exercises 86 unique .NET tests in CI:
-   70 provider-independent/non-integration tests plus 16 PostgreSQL integration
+3. **Tests** — `dotnet test Papyrus.sln` exercises 90 unique .NET tests in CI:
+   74 provider-independent/non-integration tests plus 16 PostgreSQL integration
    tests.
 4. **PostgreSQL integration tests** — the `Papyrus.Tests.Integration` filter
    runs the 16 integration tests against a `postgres:17-alpine` service. The
    workflow runs the full suite first and then repeats this integration subset
-   explicitly; the unique CI test count remains 86, not 102.
+   explicitly; the unique CI test count remains 90, not 106.
 5. **Secret scan** — `gitleaks/gitleaks-action@v3.0.0`.
 6. **NuGet vulnerability scan** — `dotnet list ... package --vulnerable
    --include-transitive`; fails on any vulnerable package.

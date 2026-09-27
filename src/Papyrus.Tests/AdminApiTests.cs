@@ -21,6 +21,8 @@ namespace Papyrus.Tests;
 
 public sealed class AdminApiTests : IAsyncLifetime
 {
+    private const string OnePixelPng = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+
     private WebApplication _app = null!;
     private HttpClient _client = null!;
     private string _databaseName = null!;
@@ -251,6 +253,105 @@ public sealed class AdminApiTests : IAsyncLifetime
         await using var otherVerification = Db(new TenantContext("other"));
         Assert.Equal("Other project", (await otherVerification.Projects.SingleAsync()).Title);
     }
+
+    [Fact]
+    public async Task Media_upload_without_a_file_returns_a_problem_details_response()
+    {
+        using var upload = new MultipartFormDataContent();
+        upload.Add(new StringContent("not a file"), "description");
+
+        var response = await _client.PostAsync("/api/v1/media", upload);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var problem = await ReadProblemAsync(response);
+        Assert.Equal(400, problem.Status);
+        Assert.Equal("A media file is required.", problem.Title);
+        Assert.Contains("multipart/form-data", problem.Detail, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Malformed_media_upload_body_returns_a_problem_details_response_instead_of_failing()
+    {
+        // An empty MultipartFormDataContent serializes a boundary with no
+        // Content-Disposition, which the form reader rejects.
+        using var upload = new MultipartFormDataContent();
+
+        var response = await _client.PostAsync("/api/v1/media", upload);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var problem = await ReadProblemAsync(response);
+        Assert.Equal(400, problem.Status);
+        Assert.Equal("The multipart request body could not be read.", problem.Title);
+    }
+
+    [Fact]
+    public async Task Rejected_media_upload_returns_a_problem_details_response_without_echoing_the_rejection_reason()
+    {
+        using var upload = new MultipartFormDataContent();
+        var svg = new StringContent("<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>");
+        svg.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/svg+xml");
+        upload.Add(svg, "file", "logo.svg");
+
+        var response = await _client.PostAsync("/api/v1/media", upload);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var problem = await ReadProblemAsync(response);
+        Assert.Equal(400, problem.Status);
+        Assert.Equal("The uploaded file was rejected.", problem.Title);
+        Assert.Contains("SVG is not accepted", problem.Detail, StringComparison.Ordinal);
+
+        // The previous handler returned Results.BadRequest(exception.Message), which
+        // echoed LocalMediaService's internal rejection text and exception type.
+        Assert.DoesNotContain("Only jpeg, png, gif, and webp images are allowed", problem.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("InvalidOperationException", problem.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("at Papyrus.", problem.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Deleting_referenced_media_returns_a_problem_details_response_and_keeps_the_asset()
+    {
+        using var upload = new MultipartFormDataContent();
+        var image = new ByteArrayContent(Convert.FromBase64String(OnePixelPng));
+        image.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/png");
+        upload.Add(image, "file", "cover.png");
+        var uploaded = await (await _client.PostAsync("/api/v1/media", upload)).Content
+            .ReadFromJsonAsync<MediaUploadResult>();
+        Assert.NotNull(uploaded);
+
+        var projectResponse = await _client.PostAsJsonAsync("/api/v1/projects",
+            new ProjectUpsertRequest("covers", "Covers", "Summary", null, null, null, uploaded.Url, null, false, true, DateTimeOffset.UtcNow, []));
+        Assert.Equal(HttpStatusCode.Created, projectResponse.StatusCode);
+
+        var response = await _client.DeleteAsync($"/api/v1/media/{uploaded.FileName}");
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var problem = await ReadProblemAsync(response);
+        Assert.Equal(409, problem.Status);
+        Assert.Equal("The media file is still referenced.", problem.Title);
+
+        // The reference guard is a precondition check, not a partial delete.
+        var remaining = await _client.GetFromJsonAsync<List<MediaFileResult>>("/api/v1/media");
+        Assert.NotNull(remaining);
+        Assert.Contains(remaining, media => media.FileName == uploaded.FileName);
+    }
+
+    private static async Task<ProblemResponse> ReadProblemAsync(HttpResponseMessage response)
+    {
+        var body = await response.Content.ReadAsStringAsync();
+        using var document = System.Text.Json.JsonDocument.Parse(body);
+        var root = document.RootElement;
+        return new ProblemResponse(
+            root.GetProperty("status").GetInt32(),
+            root.GetProperty("title").GetString(),
+            root.GetProperty("detail").GetString(),
+            body);
+    }
+
+    private sealed record ProblemResponse(int Status, string? Title, string? Detail, string Body);
 
     private HttpClient CreateClient(string tenantId)
     {
