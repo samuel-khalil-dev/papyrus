@@ -39,6 +39,94 @@ Infrastructure    EF Core adapters, migrations, interceptors, DbContext
 
 ## 3. Roadmap
 
+### How to read this roadmap: two tracking schemas
+
+Papyrus tracks delivery through **two complementary schemas**. They are not
+competing roadmaps; they operate at different altitudes and reconcile against
+each other. Confusing them is the most common source of apparent contradiction
+in this repository, so the relationship is stated explicitly here.
+
+| Schema | Scope | Status | Primary audience |
+| --- | --- | --- | --- |
+| **Phases 0–7** — Platform Bootstrap & Hardening | Structural foundation: security, layering, contracts, delivery pipeline, test depth, observability, release readiness | **Completed / verified baseline** (Phase 7 release tag intentionally open) | Contributors, reviewers, auditors |
+| **Milestones M0–M32** — Product Feature Evolution | Visible product capability: routing, theming, localization, content, AI, growth | **Target sequence.** M0 is partially delivered; M1–M32 have not started as a tracked sequence | Product planning, roadmap review |
+
+**Phases 0–7 answer "is the platform sound?"** They are complete or near-complete
+and are verified by the numbers in
+[Actual Progress](#actual-progress-as-of-last-verified-state) below: build
+warnings, test counts, migration ownership, load-test p95 figures, and release
+gate status.
+
+**Milestones M0–M32 answer "what does the product become next?"** They describe
+the intended feature trajectory. Section 4 gives the canonical ordering, and each
+milestone is detailed in `05-milestones/`.
+
+### How the two schemas overlap
+
+The schemas are not sequential-disjoint. Three milestones in the M-sequence have
+*adjacent* work that landed during the bootstrap phases. The overlap is real but
+partial in every case, so each entry below states only what the repository can
+evidence today and what is still open against the milestone's own scope.
+
+- **M5 (Infrastructure & Resource Monitoring)** — the bootstrap baseline built the
+  **application** observability layer: a shared `Papyrus` W3C `ActivitySource`,
+  logger-backed audit events, tenant-safe redaction and sampling, the dashboard
+  definition in `docs/observability/dashboards/`, and the K6 load evidence. None of
+  M5's own in-scope items are delivered: `docker-compose.yml` sets no
+  per-container resource limits, and there is no host/per-container monitoring
+  agent, no threshold-based alerting, and no private resource dashboard. M5 is
+  therefore **entirely open**; see
+  `05-milestones/m5-infrastructure-and-resource-monitoring.md`.
+- **M6 (SEO & Discoverability)** — RSS syndication
+  (`Web.Shared/Syndication/SiteFeed.cs`), sitemap generation, canonical URLs, and
+  Open Graph metadata in the shared layout shipped during Phase 4. Still open
+  against `05-milestones/m6-seo-and-discoverability.md`: JSON-LD structured data
+  (`Person` on Portfolio, `BlogPosting` on Blog — no `application/ld+json` block
+  exists today) and the Admin indexing exclusion (`robots.txt` disallow plus a
+  per-route `noindex`; neither `robots.txt` nor `noindex` exists today).
+- **M8 (Brand & Motion Implementation)** — the shared stylesheet
+  (`Web.Shared/wwwroot/css/papyrus.css`) defines the design tokens
+  (`--font-sans`, `--font-display`, `--font-mono`) that the black-and-gold
+  Portfolio and Blog surfaces already consume, together with entrance keyframes
+  and a `prefers-reduced-motion` path, and `Web.Shared/wwwroot/js/papyrus.js`
+  wires scroll-triggered `.reveal-on-scroll` sections. The design **spec** lives in
+  `docs/03-design-system/`. Still open against
+  `05-milestones/m8-brand-and-motion-implementation.md`: self-hosted typefaces
+  (no `@font-face` and no font asset is tracked), the hero scroll-unroll entrance,
+  the accent shimmer and card-lift interactions, and the milestone's rollout
+  verification (third-party font-request check, Lighthouse, accessibility).
+
+### M0 as the permanent structural contract
+
+M0 (Architectural Guardrails) is the one milestone that is **not** merely a
+feature. It formalizes the structural boundaries that the bootstrap phases
+already established, converting a convention into an enforced contract:
+
+- Architecture fitness tests (`src/Papyrus.Tests/Architecture/`) assert that
+  Core does not depend on Infrastructure or web frameworks, that public
+  contracts do not leak Application/Infrastructure internals, that Web.Shared
+  stays presentation-only, that public delivery layers cannot depend on the
+  Admin write layer, and that Application does not depend on delivery layers.
+- Migration ownership tests assert that Infrastructure owns the `DbContext` and
+  migrations, and that only Admin startup authorizes schema migration.
+- The `Application → Infrastructure` inversion is recorded in
+  `02-architecture/decisions/adr-0002-application-owned-ports-with-infrastructure-adapters.md`.
+
+Because these tests run in CI, M0's guardrails now govern **every future M1–M32
+milestone**: new feature work is required to preserve the same boundaries rather
+than re-litigate them per feature. Of M0's four Definition-of-Done items, one is
+now met: the **feature-scoped Admin endpoint grouping** is delivered by
+`src/Papyrus.Api.Admin/Endpoints/`. The three still open are uniform
+`ProblemDetails` error responses (the media upload and delete paths still return
+plain text), the Presentation-to-Infrastructure reference audit, and the fitness
+test that would enforce that audit. All three are tracked independently of the
+phase work.
+
+**Reading rule:** when the phase tracker and the milestone sequence disagree,
+the phase tracker is authoritative for *what is built and verified today*, and
+the milestone sequence is authoritative for *what is planned next*. Neither
+invalidates the other.
+
 ### Foundation
 M0 Architectural Guardrails · M1 Routing Truth · M2 Reverse Proxy & TLS Termination · M3 Admin Two-Factor Authentication · M4 Backup & Disaster Recovery · M5 Infrastructure & Resource Monitoring · M6 SEO & Discoverability · M7 Contact, Compliance & Trust · M8 Brand & Motion Implementation · M9 Case-Study Project Pages
 
@@ -80,7 +168,14 @@ Each milestone is tracked as a GitHub Milestone; each deliverable within it as a
 
 This section records what has genuinely been shipped, separated from the M0–M32
 forward plan above so a reader can compare "what the roadmap says" with "what's
-actually built". Phases 0–6 are **complete**; Phase 7 (release readiness and
+actually built". It is the evidence half of the two-schema model described in
+[How to read this roadmap](#how-to-read-this-roadmap-two-tracking-schemas): the
+phases below are the *completed / verified baseline*, while the M0–M32 sequence
+in Section 3 is the *target sequence*. Where a milestone (notably M5, M6, and
+M8) has adjacent work that already shipped, Section 3 states exactly how much and
+what is still open, so nothing is double-counted here.
+
+Phases 0–6 are **complete**; Phase 7 (release readiness and
 GitHub showcase) is **in progress** with only roadmap item 4 (tagging a release)
 still open; Phase 8 is a decision gate and not started.
 
@@ -125,7 +220,8 @@ still open; Phase 8 is a decision gate and not started.
 ### Implementation alignment note (2026-09-08)
 
 The `Application → Infrastructure` dependency was inverted to align with
-ADR 0001: `Papyrus.Application` owns the persistence ports
+ADR-0002 (application-owned ports with Infrastructure adapters):
+`Papyrus.Application` owns the persistence ports
 (`IPublicContentStore`, `IContentCommandStore`, `IContentQueryStore`,
 `ITaxonomyCommandStore`, `IContentLifecycleStore`) and thin facades;
 `Papyrus.Infrastructure` implements them with EF Core adapters (`Ef*Store`).
