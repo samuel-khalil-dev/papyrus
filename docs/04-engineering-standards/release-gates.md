@@ -39,7 +39,8 @@ the committed [`docs/api/openapi.json`](../api/openapi.json).
 ## Architecture baseline note (2026-09-08)
 
 The `Application → Infrastructure` dependency was inverted to align with
-ADR 0001. `Papyrus.Application` owns the persistence ports (`IPublicContentStore`,
+[ADR-0002 (application-owned ports with Infrastructure adapters)](../02-architecture/decisions/adr-0002-application-owned-ports-with-infrastructure-adapters.md).
+`Papyrus.Application` owns the persistence ports (`IPublicContentStore`,
 `IContentCommandStore`, `IContentQueryStore`, `ITaxonomyCommandStore`,
 `IContentLifecycleStore`) and thin facades; `Papyrus.Infrastructure` implements
 them with EF Core adapters (`Ef*Store`). The application layer no longer depends
