@@ -42,19 +42,17 @@ place, and no parallel, untracked documentation tree is kept. See
   verification) and O4 (production telemetry configuration). See
   [`04-engineering-standards/release-gates.md`](04-engineering-standards/release-gates.md).
 - **Milestone M0 (Architectural Guardrails) is partially delivered.** Endpoint
-  grouping is done; uniform `ProblemDetails` error responses, the
-  Presentation-to-Infrastructure reference audit, and the fitness test that
-  enforces that boundary are open and tracked as issue #53. The M1–M32 sequence
+  grouping and uniform RFC 7807 `ProblemDetails` error responses are done. The
+  Presentation-to-Infrastructure reference audit and the fitness test that would
+  enforce that boundary are open and tracked as issue #53. The M1–M32 sequence
   has not started.
-- The local baseline is 70 passing non-integration .NET tests and a
+- The local baseline is 74 passing non-integration .NET tests and a
   zero-warning, zero-error warnings-as-errors build. CI runs 16 PostgreSQL-backed
-  integration tests, for 86 unique .NET tests; those tests require the test
+  integration tests, for 90 unique .NET tests; those tests require the test
   database infrastructure.
 - Five Playwright browser tests are tracked; they are not part of the .NET count.
 - Five EF Core migrations are applied. The admin migration job is the sole
   migration owner.
-- The Admin API returns RFC 7807 `ProblemDetails` on every error path except the
-  media upload and delete responses, which are still plain text.
 
 ## Documentation conventions
 

@@ -6,6 +6,14 @@ All notable changes to Papyrus will be documented in this file. The format is ba
 
 ## [Unreleased]
 
+### M0 uniform `ProblemDetails` error responses on the media endpoints — 2026-09-28
+
+- **Error contract completed:** the media upload and delete paths were the only Admin endpoints returning a plain-text body. Both now return RFC 7807 `ProblemDetails`, which makes the statement in `04-engineering-standards/api-standards.md` that every endpoint returns `ProblemDetails` true as written. Closes M0 Definition-of-Done item 2.
+- **Information disclosure closed:** the upload handler returned `Results.BadRequest(exception.Message)`, echoing `LocalMediaService`'s rejection text to any authenticated caller. The rejection reason is now logged server-side and the client receives fixed, client-safe text. Recorded as T-09 in the threat register.
+- **Robustness fix found while testing:** the handler read `request.Form` unguarded, so a malformed multipart body surfaced as an unhandled 500 rather than a 400. The form read is now awaited with the cancellation token and guarded, returning a distinct 400 problem. `request.Form` was also a synchronous read on the request path.
+- **Contract artifacts regenerated:** `docs/api/openapi.json` and `src/Papyrus.Admin.UI/src/api/schema.d.ts` now declare `application/problem+json` and reference the shared `ProblemDetails` schema for the media 400 and 409 responses. No Admin UI change was required; `MediaPage` keys on the status code and does not read the body.
+- **Coverage:** four `AdminApiTests` cases cover the missing-file, malformed-body, rejected-upload, and referenced-asset delete paths, asserting the content type, status, title, and detail, plus a negative assertion that the body contains no service rejection text, exception type name, or stack frames. The non-integration suite is now 74 tests (90 unique in CI).
+
 ### Documentation currency and agent-guidance ownership — 2026-09-27
 
 - **Single source of truth:** `docs/07-governance/documentation-maintenance.md` now states that `docs/` is the only authoritative record of project facts, that a fact lives in exactly one place, and that session or workstation-specific context belongs to agent tooling rather than to a second documentation tree.

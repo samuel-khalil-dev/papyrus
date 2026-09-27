@@ -114,12 +114,12 @@ already established, converting a convention into an enforced contract:
 
 Because these tests run in CI, M0's guardrails now govern **every future M1–M32
 milestone**: new feature work is required to preserve the same boundaries rather
-than re-litigate them per feature. Of M0's four Definition-of-Done items, one is
+than re-litigate them per feature. Of M0's four Definition-of-Done items, two are
 now met: the **feature-scoped Admin endpoint grouping** is delivered by
-`src/Papyrus.Api.Admin/Endpoints/`. The three still open are uniform
-`ProblemDetails` error responses (the media upload and delete paths still return
-plain text), the Presentation-to-Infrastructure reference audit, and the fitness
-test that would enforce that audit. All three are tracked independently of the
+`src/Papyrus.Api.Admin/Endpoints/`, and **every Admin error response now conforms
+to RFC 7807 `ProblemDetails`**, including the media upload and delete paths. The
+two still open are the Presentation-to-Infrastructure reference audit and the
+fitness test that would enforce that audit. Both are tracked independently of the
 phase work.
 
 **Reading rule:** when the phase tracker and the milestone sequence disagree,
@@ -200,7 +200,7 @@ still open; Phase 8 is a decision gate and not started.
 
 ### Key verified figures
 
-- **Tests:** 86 unique .NET tests in CI (70 provider-independent /
+- **Tests:** 90 unique .NET tests in CI (74 provider-independent /
   non-integration tests plus 16 PostgreSQL-backed integration tests), plus a
   separate 5-test Playwright browser smoke suite. The warnings-as-errors build
   is 0 warnings / 0 errors.

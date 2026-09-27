@@ -6,13 +6,13 @@ Establish clean structural boundaries before further feature milestones add surf
 ## Background
 At milestone definition the Admin API's endpoints resided in a single large file
 and Presentation-layer Infrastructure references were unaudited. Endpoint grouping
-has since been delivered; the error-response and Presentation-to-Infrastructure
-items remain open and are tracked as issue #53.
+and the uniform error-response contract have since been delivered; the
+Presentation-to-Infrastructure item remains open and is tracked as issue #53.
 
 ## Status
-One of four Definition-of-Done items is met. The three open items are uniform
-`ProblemDetails` error responses, the Presentation-to-Infrastructure reference
-audit, and the fitness test that would enforce that audit.
+Two of four Definition-of-Done items are met. The Presentation-to-Infrastructure
+reference audit and the fitness test that would enforce it remain open and are
+tracked as issue #53.
 
 ## Scope
 
@@ -43,7 +43,7 @@ audit, and the fitness test that would enforce that audit.
 
 ## Definition of Done
 - [x] All endpoints organized into feature-scoped groups. — Delivered by `src/Papyrus.Api.Admin/Endpoints/`; 23 versioned registrations and their order are unchanged.
-- [ ] All error responses conform to ProblemDetails. — Open: the media upload and delete paths return plain-text 400/409 (`MediaEndpoints.cs`); all other Admin endpoints return `ValidationProblem` via `Endpoints/AdminEndpointSupport.cs`.
+- [x] All error responses conform to ProblemDetails. — Delivered: `MediaEndpoints` returns `Results.Problem` for a missing file, an unreadable multipart body, a rejected upload, and a referenced-asset delete, and the endpoint metadata declares `ProducesProblem` for 400 and 409. Covered by four `AdminApiTests` cases.
 - [ ] No Presentation file outside a composition root references Infrastructure. — Open: the audit found `PapyrusDbContext` injected into the post, project, taxonomy, and media endpoint groups, into `Endpoints/AdminEndpointSupport.cs`, and into `AdminUi/AdminContentSupport.cs`. Writes reach the Application command handlers, but endpoint reads and the tag and media-reference writes bypass `IContentQueryStore` and `ITaxonomyCommandStore`.
 - [ ] A fitness test enforces this and passes in CI. — Open: `LayerDependencyTests` constrains Core, Contracts, Web.Shared, the public delivery hosts, and Application, but not the Presentation-to-Infrastructure boundary. A public-host rule must exempt composition roots, which resolve Infrastructure through `AddPapyrusInfrastructure()`.
 
