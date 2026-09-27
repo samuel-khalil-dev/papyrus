@@ -32,6 +32,7 @@ Consult the [threat register](../04-engineering-standards/threat-register.md) (i
 
 - Respect accepted ADRs under `02-architecture/decisions/` (start with [adr-0001](../02-architecture/decisions/adr-0001-adopt-a-modular-monolith-over-microservices.md)); proposing to violate one requires an ADR change, not a silent code change.
 - Modular monolith boundaries: Core/Application/Contracts/Infrastructure/Admin responsibilities must not blur. Public hosts (Blog/Portfolio) must stay read-only and must not call migration APIs.
+- [ADR-0010](../02-architecture/decisions/adr-0010-scoped-presentation-to-infrastructure-access.md) scopes Presentation access to Infrastructure. Flag any new Presentation type outside a composition root that reaches Infrastructure, and any new `PapyrusDbContext` or `Ef*Store` reference in a public host. Widening either requires a superseding ADR, not a fitness-test edit.
 - CQRS discipline in `Papyrus.Application`: commands/query separation, bounded no-tracking projections; flag any new N+1 or missing `AsNoTracking()`.
 
 ## Correctness / regression checkpoints for this repo

@@ -6,7 +6,7 @@ and Consequences. They are **not** implementation plans and they are **not**
 status trackers — a decision that is later reversed is superseded by a new ADR,
 not edited in place.
 
-All nine decisions below are **Accepted**. The ADR files do not carry decision
+All ten decisions below are **Accepted**. The ADR files do not carry decision
 dates, so none are listed here rather than inferred.
 
 | ADR | Decision | One-line summary |
@@ -20,6 +20,7 @@ dates, so none are listed here rather than inferred.
 | [ADR-0007](adr-0007-pluggable-ai-provider-architecture-via-resolver-and-factory.md) | Pluggable AI provider architecture via resolver and factory | An `IContentAssistant`/`ILlmClient` port plus an admin-configured `AiProviderProfile` makes the provider switchable without a redeploy, mirroring `IThemeResolver`. |
 | [ADR-0008](adr-0008-rtl-layout-from-inception.md) | Include right-to-left layout support in the localization foundation from inception | `Locale` carries a text-direction attribute and shared components use logical CSS properties from the first line, so RTL is a content exercise, not a redesign. |
 | [ADR-0009](adr-0009-reverse-proxy-and-edge-layer-caddy-behind-cloudflare.md) | Reverse proxy and edge layer: Caddy behind Cloudflare | Caddy terminates TLS and routes by host; Cloudflare fronts it for CDN caching, DDoS protection, and Turnstile bot mitigation. |
+| [ADR-0010](adr-0010-scoped-presentation-to-infrastructure-access.md) | Scoped Presentation-to-Infrastructure access | A composition root is an entry point plus its request-dispatch code; Presentation code outside it must not reach Infrastructure, and the accepted current shape is a machine-checked ratchet. |
 
 ## Frequently cited
 
@@ -29,6 +30,7 @@ dates, so none are listed here rather than inferred.
 | [ADR-0002](adr-0002-application-owned-ports-with-infrastructure-adapters.md) | [Release gates](../../04-engineering-standards/release-gates.md), [roadmap](../../Papyrus_Roadmap.md) |
 | [ADR-0004](adr-0004-retain-multitenant-entities.md) | [Security baseline](../../04-engineering-standards/security-baseline.md), [agent review playbook](../../07-governance/agent-review-playbook.md), [C4 diagrams](../c4-diagrams.md), [roadmap](../../Papyrus_Roadmap.md) |
 | [ADR-0009](adr-0009-reverse-proxy-and-edge-layer-caddy-behind-cloudflare.md) | [Architecture overview](../architecture-overview.md) |
+| [ADR-0010](adr-0010-scoped-presentation-to-infrastructure-access.md) | [Architecture overview](../architecture-overview.md), [M0 milestone](../../05-milestones/m0-architectural-guardrails.md), [agent review playbook](../../07-governance/agent-review-playbook.md), `AGENTS.md` |
 
 ## How to change a decision
 

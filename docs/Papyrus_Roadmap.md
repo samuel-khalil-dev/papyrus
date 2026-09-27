@@ -49,7 +49,7 @@ in this repository, so the relationship is stated explicitly here.
 | Schema | Scope | Status | Primary audience |
 | --- | --- | --- | --- |
 | **Phases 0–7** — Platform Bootstrap & Hardening | Structural foundation: security, layering, contracts, delivery pipeline, test depth, observability, release readiness | **Completed / verified baseline** (Phase 7 release tag intentionally open) | Contributors, reviewers, auditors |
-| **Milestones M0–M32** — Product Feature Evolution | Visible product capability: routing, theming, localization, content, AI, growth | **Target sequence.** M0 is partially delivered; M1–M32 have not started as a tracked sequence | Product planning, roadmap review |
+| **Milestones M0–M32** — Product Feature Evolution | Visible product capability: routing, theming, localization, content, AI, growth | **Target sequence.** M0 is complete; M1–M32 have not started as a tracked sequence | Product planning, roadmap review |
 
 **Phases 0–7 answer "is the platform sound?"** They are complete or near-complete
 and are verified by the numbers in
@@ -114,13 +114,13 @@ already established, converting a convention into an enforced contract:
 
 Because these tests run in CI, M0's guardrails now govern **every future M1–M32
 milestone**: new feature work is required to preserve the same boundaries rather
-than re-litigate them per feature. Of M0's four Definition-of-Done items, two are
-now met: the **feature-scoped Admin endpoint grouping** is delivered by
-`src/Papyrus.Api.Admin/Endpoints/`, and **every Admin error response now conforms
-to RFC 7807 `ProblemDetails`**, including the media upload and delete paths. The
-two still open are the Presentation-to-Infrastructure reference audit and the
-fitness test that would enforce that audit. Both are tracked independently of the
-phase work.
+than re-litigate them per feature. **M0 is complete: all four Definition-of-Done
+items are met.** The feature-scoped Admin endpoint grouping is delivered by
+`src/Papyrus.Api.Admin/Endpoints/`; every Admin error response conforms to RFC 7807
+`ProblemDetails`; and the Presentation-to-Infrastructure reference audit produced
+[ADR-0010](02-architecture/decisions/adr-0010-scoped-presentation-to-infrastructure-access.md),
+which scopes the boundary and enforces it with three fitness rules. M1 Routing
+Truth is the next milestone in the sequence.
 
 **Reading rule:** when the phase tracker and the milestone sequence disagree,
 the phase tracker is authoritative for *what is built and verified today*, and
@@ -200,7 +200,7 @@ still open; Phase 8 is a decision gate and not started.
 
 ### Key verified figures
 
-- **Tests:** 90 unique .NET tests in CI (74 provider-independent /
+- **Tests:** 93 unique .NET tests in CI (77 provider-independent /
   non-integration tests plus 16 PostgreSQL-backed integration tests), plus a
   separate 5-test Playwright browser smoke suite. The warnings-as-errors build
   is 0 warnings / 0 errors.

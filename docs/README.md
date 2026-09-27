@@ -41,14 +41,15 @@ place, and no parallel, untracked documentation tree is kept. See
   require production evidence: W7 (production observability collector
   verification) and O4 (production telemetry configuration). See
   [`04-engineering-standards/release-gates.md`](04-engineering-standards/release-gates.md).
-- **Milestone M0 (Architectural Guardrails) is partially delivered.** Endpoint
-  grouping and uniform RFC 7807 `ProblemDetails` error responses are done. The
-  Presentation-to-Infrastructure reference audit and the fitness test that would
-  enforce that boundary are open and tracked as issue #53. The M1–M32 sequence
-  has not started.
-- The local baseline is 74 passing non-integration .NET tests and a
+- **Milestone M0 (Architectural Guardrails) is complete.** All four
+  Definition-of-Done items are met: endpoint grouping, uniform RFC 7807
+  `ProblemDetails` error responses, the Presentation-to-Infrastructure audit
+  (recorded as [ADR-0010](02-architecture/decisions/adr-0010-scoped-presentation-to-infrastructure-access.md)),
+  and the fitness tests that enforce it. M1 Routing Truth is the next milestone;
+  M2–M32 have not started.
+- The local baseline is 77 passing non-integration .NET tests and a
   zero-warning, zero-error warnings-as-errors build. CI runs 16 PostgreSQL-backed
-  integration tests, for 90 unique .NET tests; those tests require the test
+  integration tests, for 93 unique .NET tests; those tests require the test
   database infrastructure.
 - Five Playwright browser tests are tracked; they are not part of the .NET count.
 - Five EF Core migrations are applied. The admin migration job is the sole

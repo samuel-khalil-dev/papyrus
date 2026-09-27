@@ -5,14 +5,15 @@ Establish clean structural boundaries before further feature milestones add surf
 
 ## Background
 At milestone definition the Admin API's endpoints resided in a single large file
-and Presentation-layer Infrastructure references were unaudited. Endpoint grouping
-and the uniform error-response contract have since been delivered; the
-Presentation-to-Infrastructure item remains open and is tracked as issue #53.
+and Presentation-layer Infrastructure references were unaudited. Both are now
+resolved: endpoint grouping and the uniform error-response contract are
+delivered, and the reference audit produced
+[ADR-0010](../02-architecture/decisions/adr-0010-scoped-presentation-to-infrastructure-access.md).
 
 ## Status
-Two of four Definition-of-Done items are met. The Presentation-to-Infrastructure
-reference audit and the fitness test that would enforce it remain open and are
-tracked as issue #53.
+All four Definition-of-Done items are met. The milestone is complete. ADR-0010
+scopes the Presentation-to-Infrastructure boundary and records the port
+extraction that remains follow-on work rather than a gate.
 
 ## Scope
 

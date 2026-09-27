@@ -33,14 +33,17 @@ Implements Application's ports as EF Core adapters; owns the DbContext, entity c
 - `Papyrus.Web.Blog`, `Papyrus.Web.Portfolio` - server-rendered Razor Pages calling Application in-process.
 
 A Presentation project may reference Infrastructure only inside its composition
-root. This rule is **not yet satisfied or enforced** on the Admin API: the
-endpoint groups inject `PapyrusDbContext` directly and no fitness test covers
-the boundary, so the audit and its test are open items of
-[`05-milestones/m0-architectural-guardrails.md`](../05-milestones/m0-architectural-guardrails.md).
-The dependency direction itself is fixed by
-[ADR-0002](decisions/adr-0002-application-owned-ports-with-infrastructure-adapters.md),
-which the Admin endpoints are expected to reach through the Application ports
-rather than through `PapyrusDbContext`.
+root, where a composition root is an entry point plus the code that exists to
+wire and dispatch requests. The scope is defined and enforced by
+[ADR-0010](decisions/adr-0010-scoped-presentation-to-infrastructure-access.md):
+the read-only public hosts reach Infrastructure only from their entry point and
+never reference the `Ef*Store` adapters, and Admin's endpoint and Admin support
+layers are its composition root. New Presentation code outside those boundaries
+cannot reach `PapyrusDbContext` without a superseding ADR. The Admin endpoint
+handlers still read and write through `PapyrusDbContext` directly rather than the
+Application ports, so [ADR-0002](decisions/adr-0002-application-owned-ports-with-infrastructure-adapters.md)
+is not yet true end to end; extraction behind the ports is recorded as follow-on
+work in ADR-0010.
 
 ## Edge and network layer
 

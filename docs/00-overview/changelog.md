@@ -6,6 +6,16 @@ All notable changes to Papyrus will be documented in this file. The format is ba
 
 ## [Unreleased]
 
+### ADR-0010 and the Presentation-to-Infrastructure fitness rules — 2026-09-28
+
+- **M0 complete:** all four Definition-of-Done items are now met. The reference audit is recorded as [ADR-0010](../02-architecture/decisions/adr-0010-scoped-presentation-to-infrastructure-access.md), which defines a composition root as an entry point plus its request-dispatch code, and enforces that definition with three new `LayerDependencyTests` rules.
+- **The audit, as found:** every Infrastructure reference in `Papyrus.Api.Admin` sits in the entry point, `Endpoints/`, or `AdminUi/`; nothing is scattered. The Admin endpoint handlers and `AdminContentSupport` inject `PapyrusDbContext` directly, so those reads, the tag-link writes, and the media-reference check bypass the Application ports. Each public host's only data-access reference is a `PapyrusDbContext` parameter on its `/feed.xml` and `/sitemap.xml` handler registrations; page content goes through Application, and no public host references an `Ef*Store` adapter.
+- **Why extraction was not chosen:** `IContentQueryStore` exposes only unpaged `List<ContentListItem>` reads and `ITaxonomyCommandStore` only save operations, while the endpoints need paged projections with category, tag, and post includes, tag-link mutation, and a media-reference existence check. Closing that by extraction means a materially new port surface, which is a refactor sized for its own milestone. ADR-0010 records it as follow-on work and accepts that ADR-0002 is not true end to end.
+- **The rules are a ratchet, not a blank cheque:** they were verified to fail on an introduced violation, with a message naming the offending type and dependency, before the probe was removed. They forbid Infrastructure outside a public host's entry point, deny the public hosts every `Ef*Store` adapter, and stop Admin Presentation code outside `Endpoints/` and `AdminUi/` from reaching Infrastructure other than `ITenantContext`.
+- `ITenantContext` remains in `Papyrus.Infrastructure.MultiTenancy` while Presentation consumes it, recorded in ADR-0010 as a known seam that is not a clean assembly boundary.
+- Documentation follows: the ADR index moves to ten decisions, the architecture overview and `AGENTS.md` now cite ADR-0010 instead of describing the boundary as unenforced, and the limitation that the Application ports understate the real data-access surface is stated explicitly. The non-integration suite is now 77 tests (93 unique in CI).
+- Closes #53.
+
 ### M0 uniform `ProblemDetails` error responses on the media endpoints — 2026-09-28
 
 - **Error contract completed:** the media upload and delete paths were the only Admin endpoints returning a plain-text body. Both now return RFC 7807 `ProblemDetails`, which makes the statement in `04-engineering-standards/api-standards.md` that every endpoint returns `ProblemDetails` true as written. Closes M0 Definition-of-Done item 2.
