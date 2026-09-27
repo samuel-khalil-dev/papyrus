@@ -271,7 +271,7 @@ flowchart TB
 
 #### PapyrusDbContext + TenantContext + PapyrusSaveChangesInterceptor (Infrastructure)
 
-- **PapyrusDbContext:** The EF Core context. Applies tenant and soft-delete global query filters and calls `EnforceTenantBoundary()` to stamp `TenantId` on added entities and reject any save whose tenant differs from the current context. RLS is **not** used (ADR 0007); application-level filtering is the sole enforcement layer.
+- **PapyrusDbContext:** The EF Core context. Applies tenant and soft-delete global query filters and calls `EnforceTenantBoundary()` to stamp `TenantId` on added entities and reject any save whose tenant differs from the current context. RLS is **not** used ([ADR 0004](decisions/adr-0004-retain-multitenant-entities.md)); application-level filtering is the sole enforcement layer.
 - **TenantContext:** A scoped resolver that reads the `X-Tenant-Id` header (default `main`) and validates it against `^[a-z0-9][a-z0-9-]{0,62}$`.
 - **PapyrusSaveChangesInterceptor:** Sets audit timestamps/actors on save and converts deletes to soft-deletes.
 
