@@ -6,6 +6,16 @@ All notable changes to Papyrus will be documented in this file. The format is ba
 
 ## [Unreleased]
 
+### The observability stack is now tracked and deployed, and three defects that stopped it producing data are fixed - 2026-09-28
+
+- **The production observability stack was not in the repository.** The OTLP collector, Prometheus, Grafana, and blackbox-exporter configuration existed only as files hand-placed on the VPS, and no release step started it. W7 and O4 claimed a platform that nothing in the repository described. The stack now lives in `ops/observability/`, which the `.gitignore` had been excluding wholesale, and the `deploy` job starts it with the same tracked, reviewed compose path as the applications.
+- **The collector would have received nothing.** `docker-compose.yml` never published `OTEL_EXPORTER_OTLP_ENDPOINT`, which is the variable that gates the OTLP exporter. The stack could have been started, healthy, and completely empty. The endpoint is now published to all three hosts; leaving it empty keeps the exporter off and structured audit logging intact.
+- **The collector's transform processor was wrong twice.** It renamed a *span* rather than a metric, and used a metric context that does not accept `metric.attributes`. The documented contract groups request metrics by `papyrus_service`, so the resource service name is now copied onto each data point, which is what the Prometheus exporter actually turns into a label.
+- **The availability alerts had nothing to alert on.** `up{job=...}` was scraped from targets that served no Prometheus text. The two availability alerts are now satisfied by blackbox probes of each host's `/health` and of Postgres over TCP.
+- **The audit and diagnostic metrics were permanently empty.** A count connector now derives every metric the alert rules and dashboard query. `PapyrusAuditSignalLost` was added, because the audit-volume alert cannot fire when the audit signal itself disappears, a failure mode that was previously invisible.
+- **Test baseline moved 449 to 454 non-integration** (169 to 174 behavioural, 471 to 476 unique) from three new `PipelineWiringTests` cases. Each was mutation-checked: reintroducing the defect makes the test fail. The suite itself is clean; only the documented counts were behind.
+- **W7 and O4 remain open.** Configuration work does not close a gate. Live redaction-output inspection, cross-host trace correlation, alert firing and recovery, the audit-volume-drop drill, dashboard data, alert delivery, and retention verification all still require executing the production checklist against the live deployment.
+
 ### The documented test counts were measured wrong, and most of them were not behaviours — 2026-09-28
 
 - **The published baseline overstated what CI actually ran.** Five documents claimed 436 non-integration / 16 integration / 452 unique .NET tests, but the suite really runs 449 / 22 / 471. The 436 was `433 + 3`, and the 3 came from `SourceEncodingTests`: it enumerates the *working tree* with a hard-coded exclusion list that omitted `.vs/`, so a developer machine contributed two Visual Studio JSON files and `tests/e2e/test-results/` one. In a clean checkout — which is what CI sees — none of those exist. `release-gates.md` was therefore describing a count the `verify` job never produced.

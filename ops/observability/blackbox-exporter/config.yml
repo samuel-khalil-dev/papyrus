@@ -1,0 +1,24 @@
+# Blackbox probe modules for the Papyrus availability alerts.
+#
+# PapyrusApplicationDown and PapyrusPostgresDown evaluate `up`, so the targets
+# in prometheus/prometheus.yml are probed rather than scraped directly: the
+# applications do not serve Prometheus text, and Postgres speaks its own wire
+# protocol. Only the applications that serve HTTP use http_2xx.
+modules:
+  http_2xx:
+    prober: http
+    timeout: 5s
+    http:
+      method: GET
+      # /health is the anonymous liveness surface every Papyrus host maps.
+      # It is excluded from tracing, so probing it does not distort the
+      # diagnostic sampling ratio.
+      valid_status_codes: [200]
+      preferred_ip_protocol: ip4
+      follow_redirects: true
+
+  tcp_connect:
+    prober: tcp
+    timeout: 5s
+    tcp:
+      preferred_ip_protocol: ip4

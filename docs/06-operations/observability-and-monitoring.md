@@ -2,9 +2,23 @@
 
 ## Application-Level Observability (Current)
 
-Papyrus runs a real OTLP-based telemetry pipeline today: an OTLP collector feeding Prometheus and Grafana, with a dedicated `Papyrus` `ActivitySource`, controlled sampling (`Telemetry:SamplingRate`), a cardinality limit (`Telemetry:CardinalityLimit`), and nine live alert families defined below. `EventId 1001` is intentionally never sampled. The Grafana dashboard definition is tracked at [`observability/dashboards/papyrus-dashboard.json`](../observability/dashboards/papyrus-dashboard.json).
+Papyrus runs a real OTLP-based telemetry pipeline today: an OTLP collector feeding Prometheus and Grafana, with a dedicated `Papyrus` `ActivitySource`, controlled sampling (`Telemetry:SamplingRate`), a cardinality limit (`Telemetry:CardinalityLimit`), and ten alert families defined below. `EventId 1001` is intentionally never sampled. The Grafana dashboard definition is tracked at [`observability/dashboards/papyrus-dashboard.json`](../observability/dashboards/papyrus-dashboard.json), and the deployable stack is tracked at [`ops/observability/`](../../ops/observability).
 
 Do not describe this stack as absent, and do not propose replacing it — Prometheus and Grafana are not "too heavy" for this platform; they are already running successfully on it.
+
+### Where the stack lives
+
+The stack is **tracked configuration, not host state**. It is deployed by the `deploy` job in [release.yml](../../.github/workflows/release.yml) with `docker compose -f docker-compose.yml -f ops/observability/docker-compose.observability.yml up -d` and never hand-placed on the VPS. Any change to the collector, alert rules, or Grafana provisioning belongs in `ops/observability/` and ships through the pipeline.
+
+| File | Role |
+| --- | --- |
+| [`ops/observability/docker-compose.observability.yml`](../../ops/observability/docker-compose.observability.yml) | Collector, Prometheus, Grafana, and blackbox-exporter, all pinned by digest and bound to loopback |
+| [`ops/observability/collector/config.yaml`](../../ops/observability/collector/config.yaml) | OTLP receivers and the derivation of every collector-boundary metric |
+| [`ops/observability/prometheus/prometheus.yml`](../../ops/observability/prometheus/prometheus.yml) | Scrape configuration, including the `up` targets the availability alerts require |
+| [`ops/observability/prometheus/papyrus-alerts.yml`](../../ops/observability/prometheus/papyrus-alerts.yml) | The alert families below, transcribed from this document |
+| [`ops/observability/grafana/provisioning/`](../../ops/observability/grafana/provisioning) | Datasource and dashboard providers; the dashboard itself is mounted from `docs/` |
+
+The applications receive `OTEL_EXPORTER_OTLP_ENDPOINT` from compose. The release workflow sets it to `http://otel-collector:4317`; a deployment that does not run the stack leaves it empty, which keeps the exporter disabled and structured audit logging intact.
 
 ## Telemetry contracts (Current)
 
@@ -65,6 +79,11 @@ The dashboard definition is tracked at [`observability/dashboards/papyrus-dashbo
 | `PapyrusCardinalityGuardCollapse` | Collector count of request attributes equal to `[other]`, by tag key | `> 0` values/s for 10m | SEV-3 |
 | `PapyrusApplicationDown` | `min by (job) (up{job=~"admin-api|blog|portfolio"})` | `< 1` for 2m | SEV-1 |
 | `PapyrusPostgresDown` | `min(up{job="postgres"})` | `< 1` for 2m | SEV-1 |
+| `PapyrusAuditSignalLost` | `absent(papyrus_audit_events_total) or absent(papyrus_audit_log_records_total)` | Both audit signals absent for 15m | SEV-2 |
+
+The two availability alerts read `up`, which the OTLP path does not produce. They are satisfied by **blackbox probes**: Prometheus scrapes blackbox-exporter, which probes each host's anonymous `/health` over HTTP and Postgres over TCP, and the relabelled probe results become the `up{job=...}` series the rules evaluate. The probe targets carry the `job` label the alert expressions match on. Because `/health` is excluded from tracing, probing does not distort the diagnostic-sampling ratio.
+
+`PapyrusAuditSignalLost` is not one of the originally documented nine families. It exists because the audit families depend on a signal that can vanish silently: if both the audit span and the audit log record stop reaching the collector, `PapyrusAuditVolumeDrop` cannot fire — there is simply nothing to compare. This alert is what makes that failure visible.
 
 The request signals come from `Papyrus.Request` and its service, endpoint, and status tags. The audit signal comes from `Papyrus.AuditEvent` and structured EventId `1001`. Audit events are independent of diagnostic sampling, so an audit-volume alert must not be dismissed as a low `Telemetry:SamplingRate`.
 
@@ -72,13 +91,14 @@ The request signals come from `Papyrus.Request` and its service, endpoint, and s
 
 The application emits activities and structured logs, not Prometheus counters directly. The following are **collector-derived recording views**, not application counters, and no application instrumentation with these names exists:
 
-- `http_server_request_duration_seconds_count` and `_bucket` normalize the HTTP server duration signal and carry `papyrus_service` and `http_response_status_code`. They back request rate, latency, 5xx, and 429 alerts.
-- `papyrus_audit_events_total` counts structured `AuditEvent` records (EventId `1001`) and may be grouped by `papyrus_audit_outcome`.
-- `papyrus_audit_redacted_total` counts EventId `1001` records whose redacted allowlist fields equal `[redacted]`.
-- `papyrus_cardinality_collapsed_total` counts request attributes equal to `[other]`, grouped by `papyrus_tag_key`.
-- `papyrus_diagnostic_sampled_total` is a collector view of sampled request diagnostics.
+- `http_server_request_duration_seconds_count` and `_bucket` normalize the HTTP server duration signal and carry `papyrus_service` and `http_response_status_code`. They back request rate, latency, 5xx, and 429 alerts. The Prometheus exporter exposes resource attributes through `target_info` rather than as labels, so the collector's `transform/metric_labels` processor copies `service.name` onto each data point to produce the `papyrus_service` label the contract requires.
+- `papyrus_audit_events_total` counts `Papyrus.AuditEvent` spans and may be grouped by `papyrus_audit_outcome`.
+- `papyrus_audit_log_records_total` counts the same audit records from the logger side (EventId `1001`). It is the availability-independent view: the span can be dropped by sampling, the log record cannot.
+- `papyrus_audit_redacted_total` counts audit spans whose redacted allowlist fields equal `[redacted]`.
+- `papyrus_cardinality_collapsed_total` counts request activities with a `[other]` guard value, grouped by `papyrus_tag_key`.
+- `papyrus_diagnostic_sampled_total` counts `Papyrus.Request` spans the sampling policy admitted.
 
-If a collector uses different names, change recording rules at the collector boundary and update the dashboard together with these rules. Do not invent application labels or a second naming scheme for the same signal.
+If the collector uses different names, change the count connector in `ops/observability/collector/config.yaml` and update the dashboard and the alert rules together. Do not invent application labels or a second naming scheme for the same signal. `PipelineWiringTests.Alert_rules_only_query_metrics_the_collector_derives` fails if a rule queries a name the collector does not derive.
 
 ## Production observability verification checklist (W7 / O4)
 

@@ -168,11 +168,12 @@ jobs:
           # Every document that publishes a figure from the canonical row, and
           # the figures each must contain. Six independent restatements is how
           # a three-case drift survived review once, so all of them are checked
-          # rather than the marker alone.
+          # rather than the marker alone. These must match the
+          # test-baseline marker in docs/00-overview/feature-matrix.md.
           RESTATEMENTS = {
-              'docs/README.md': ('449', '280', '169', '22', '471', '10'),
-              'docs/00-overview/limitations.md': ('449', '280', '169', '22', '471', '10'),
-              'docs/Papyrus_Roadmap.md': ('449', '280', '169', '22', '471', '191', '10'),
+              'docs/README.md': ('454', '280', '174', '22', '476', '10'),
+              'docs/00-overview/limitations.md': ('454', '280', '174', '22', '476', '10'),
+              'docs/Papyrus_Roadmap.md': ('454', '280', '174', '22', '476', '196', '10'),
           }
 
           trx_files = sorted(Path('TestResults').rglob('*.trx'))
