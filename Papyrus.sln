@@ -1,5 +1,4 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
@@ -23,10 +22,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Papyrus.Web.Shared", "src\P
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Papyrus.Tests", "src\Papyrus.Tests\Papyrus.Tests.csproj", "{6D9E9EAC-C5CE-4FC7-973E-F68BE4480510}"
 EndProject
-	Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Papyrus.Application", "src\Papyrus.Application\Papyrus.Application.csproj", "{F9C6FB5B-D3E4-4862-A07C-79BA4A1A6A23}"
-	EndProject
-	Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Papyrus.Contracts", "src\Papyrus.Contracts\Papyrus.Contracts.csproj", "{A4F74D39-7B54-4F55-9DB8-0B56F08BFA2E}"
-	EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Papyrus.Application", "src\Papyrus.Application\Papyrus.Application.csproj", "{F9C6FB5B-D3E4-4862-A07C-79BA4A1A6A23}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Papyrus.Contracts", "src\Papyrus.Contracts\Papyrus.Contracts.csproj", "{A4F74D39-7B54-4F55-9DB8-0B56F08BFA2E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

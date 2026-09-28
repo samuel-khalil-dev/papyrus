@@ -53,6 +53,23 @@ jobs:
       - name: Compare committed OpenAPI artifact
         run: diff --strip-trailing-cr --unified=3 docs/api/openapi.json /tmp/openapi.sorted.json
 
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.21.0
+          cache: npm
+          cache-dependency-path: src/Papyrus.Admin.UI/package-lock.json
+
+      - name: Install Admin UI dependencies
+        run: npm ci --prefix src/Papyrus.Admin.UI
+
+      - name: Compare committed Admin UI client schema
+        run: |
+          node src/Papyrus.Admin.UI/node_modules/openapi-typescript/bin/cli.js \
+            /tmp/openapi.json -o /tmp/schema.d.ts
+          diff --strip-trailing-cr --unified=3 \
+            src/Papyrus.Admin.UI/src/api/schema.d.ts /tmp/schema.d.ts
+
       - name: Stop admin API
         if: always()
         run: |

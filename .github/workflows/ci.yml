@@ -96,6 +96,49 @@ jobs:
           if has_vulnerabilities(document):
               raise SystemExit('Vulnerable NuGet packages detected.')
 
+      - name: Verify brand asset copies have not drifted
+        run: |
+          python3 - <<'PY'
+          import sys
+          from pathlib import Path
+
+          # Each asset is served from a different root: the documentation, the Admin SPA
+          # bundle, and the public hosts' shared static web assets. The copies are
+          # structural, so the invariant that is enforced is that they stay byte-identical
+          # to the canonical source. See docs/01-product/brand-identity.md.
+          GROUPS = {
+              'Papyrus_Logo.svg': (
+                  'src/Papyrus.Web.Shared/wwwroot/images/Papyrus_Logo.svg',
+                  'src/Papyrus.Admin.UI/public/Papyrus_Logo.svg',
+                  'docs/assets/Papyrus_Logo.svg',
+              ),
+              'Papyrus_Background.svg': (
+                  'src/Papyrus.Web.Shared/wwwroot/images/Papyrus_Background.svg',
+                  'src/Papyrus.Admin.UI/src/assets/Papyrus_Background.svg',
+                  'docs/assets/Papyrus_Background.svg',
+              ),
+              'favicon.ico': (
+                  'src/Papyrus.Web.Blog/wwwroot/favicon.ico',
+                  'src/Papyrus.Web.Portfolio/wwwroot/favicon.ico',
+              ),
+          }
+
+          drifted = []
+          for asset, (canonical, *copies) in GROUPS.items():
+              expected = Path(canonical).read_bytes()
+              for candidate in copies:
+                  if Path(candidate).read_bytes() != expected:
+                      drifted.append((asset, canonical, candidate))
+
+          if drifted:
+              print('Brand asset copies have drifted from their canonical source:')
+              for asset, canonical, candidate in drifted:
+                  print(f'  {candidate} no longer matches {canonical} ({asset})')
+              sys.exit(1)
+
+          print('Brand asset copies are identical to their canonical source.')
+          PY
+
   browser-smoke:
     needs: verify
     runs-on: ubuntu-latest
@@ -153,6 +196,9 @@ jobs:
 
       - name: Compile Admin UI
         run: npm run build --prefix src/Papyrus.Admin.UI
+
+      - name: Check Admin UI bundle budget
+        run: npm run check:bundle --prefix src/Papyrus.Admin.UI
 
       - name: Install browser test dependencies
         run: npm ci --prefix tests/e2e

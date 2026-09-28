@@ -1,2 +1,0 @@
-export function apiErrorMessage(error: unknown): string { return error instanceof Error ? error.message : 'An unexpected API error occurred.'; }
-export function notifyApiError(status: number): string { return status === 401 ? 'Your admin API key is invalid.' : status === 403 ? 'You are not authorized for this action.' : status === 429 ? 'Too many requests. Please try again shortly.' : 'The API request failed.'; }

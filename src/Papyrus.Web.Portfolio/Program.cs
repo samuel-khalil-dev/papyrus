@@ -24,11 +24,14 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UsePapyrusSecurityHeaders();
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UsePapyrusTelemetry();
-app.MapDefaultEndpoints();
 app.UseRouting();
 app.UseAuthorization();
+app.MapDefaultEndpoints();
 app.MapStaticAssets();
 app.MapGet("/feed.xml", async (PapyrusDbContext db, IOptions<SiteOptions> siteOptions, HttpRequest request, CancellationToken cancellationToken) =>
 {

@@ -1,4 +1,10 @@
-@import "tailwindcss";
+@import "tailwindcss" source(none);
+
+/* Bound class detection to the application source. Automatic detection scans
+   every file in the project, so a tooling script or a document that happens to
+   contain a word like "static" or "container" would otherwise add a utility to
+   the production stylesheet. index.html carries no class attributes. */
+@source "./";
 
 @theme {
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;

@@ -98,7 +98,11 @@ security vulnerabilities publicly—follow [`SECURITY.md`](SECURITY.md) instead.
 │   ├── Papyrus.Web.Shared/        # Shared public Razor components
 │   ├── Papyrus.AppHost/           # Aspire orchestration
 │   ├── Papyrus.ServiceDefaults/  # Shared service defaults
-│   └── Papyrus.Tests/             # Automated tests
+│   ├── Papyrus.Tests/             # Automated tests
+│   └── Papyrus.Admin.UI/          # Admin SPA (npm, not a solution project)
+├── tests/
+│   ├── e2e/                       # Playwright smoke suite
+│   └── load/                      # K6 load scripts and production-like seed
 ├── docs/                          # Consolidated documentation home
 ├── Papyrus.sln                    # Solution entry point
 ├── Dockerfile.admin               # Admin container image
