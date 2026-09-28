@@ -29,7 +29,7 @@ public sealed class SourceEncodingTests
     public static TheoryData<string> SourceFiles()
     {
         var data = new TheoryData<string>();
-        foreach (var path in TrackedSourceFiles().Where(path =>
+        foreach (var path in CandidateSourceFiles().Where(path =>
                      TrackedExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase)))
         {
             data.Add(Path.GetRelativePath(RepositoryRoot(), path).Replace('\\', '/'));
@@ -40,7 +40,7 @@ public sealed class SourceEncodingTests
 
     [Theory]
     [MemberData(nameof(SourceFiles))]
-    public void A_tracked_file_is_plain_utf8_text(string relativePath)
+    public void A_source_file_is_plain_utf8_text(string relativePath)
     {
         var bytes = File.ReadAllBytes(Path.Combine(RepositoryRoot(), relativePath));
 
@@ -64,16 +64,29 @@ public sealed class SourceEncodingTests
     private static bool ContainsNul(byte[] bytes) =>
         Array.IndexOf(bytes, (byte)0) >= 0;
 
-    private static IEnumerable<string> TrackedSourceFiles() =>
+    /// <summary>
+    /// Every source-shaped file in the working tree, minus the untracked
+    /// directories an editor or tool creates. This is not <c>git ls-files</c>:
+    /// the working tree is the point of the guard, because that is where a
+    /// corrupt file is still visible before it is committed.
+    /// </summary>
+    private static IEnumerable<string> CandidateSourceFiles() =>
         Directory.EnumerateFiles(RepositoryRoot(), "*", SearchOption.AllDirectories)
             .Where(path => !IsExcluded(path));
 
     private static bool IsExcluded(string path)
     {
         var normalized = path.Replace('\\', '/');
+        // Every entry is a directory an editor, IDE, or tool creates outside
+        // version control. Leaving one out makes the guard's file set depend on
+        // what a particular machine happens to have written to disk, which is
+        // what made the published test counts unreproducible: .vs/ held two
+        // JSON files and tests/e2e/test-results/ one, so the case count a
+        // developer measured exceeded the count CI measures.
         string[] excluded =
         [
-            "/.git/", "/bin/", "/obj/", "/node_modules/", "/dist/", "/.claude/", "/.kilo/"
+            "/.git/", "/bin/", "/obj/", "/node_modules/", "/dist/", "/.claude/", "/.kilo/",
+            "/.vs/", "/.idea/", "/.history/", "/TestResults/", "/playwright-report/", "/test-results/"
         ];
         return excluded.Any(segment => normalized.Contains(segment, StringComparison.OrdinalIgnoreCase));
     }
