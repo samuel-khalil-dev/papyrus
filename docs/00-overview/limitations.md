@@ -13,7 +13,7 @@
 ## Deployment and operations limitations
 
 - PostgreSQL-backed integration tests require the test database service and are run in CI in the supported verification flow; they are not guaranteed to run on a fresh workstation without the test profile and configuration.
-- The local .NET verification baseline is 82 passing non-integration tests. CI covers those plus 16 PostgreSQL integration tests, for 98 unique .NET tests; the separate Playwright browser smoke suite contains 5 tests. These counts are distinct from one another, and the browser suite is not part of the .NET count.
+- The local .NET verification baseline is 100 passing non-integration tests. CI covers those plus 16 PostgreSQL integration tests, for 116 unique .NET tests; the separate Playwright browser smoke suite contains 5 tests. These counts are distinct from one another, and the browser suite is not part of the .NET count.
 - Compose requires production public-base settings for Blog and Portfolio. A standalone deployment with `Site__PublicBaseUrl` unset can produce relative URLs; that fallback is safer than deriving URLs from an untrusted Host header, but it is not a release-ready public URL configuration.
 - Backups, restore drills, media-volume recovery, ingress restrictions for `/health` and `/alive`, dashboards, alerting, and telemetry retention are deployment responsibilities and require evidence for release approval.
 - The local media volume is durable only when the deployment preserves the configured volume. A container replacement without volume recovery loses uploaded media.
