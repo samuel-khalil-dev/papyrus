@@ -70,7 +70,6 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
     app.UseHsts();
 }
-app.UsePapyrusTelemetry();
 var mediaOptions = app.Services.GetRequiredService<IOptions<MediaOptions>>().Value;
 var mediaRoot = MediaRootResolver.Resolve(app.Environment, mediaOptions);
 Directory.CreateDirectory(mediaRoot);
@@ -106,6 +105,10 @@ app.UseStaticFiles(new StaticFileOptions
 // authentication: the API-key scheme uses endpoint metadata to recognise
 // anonymous endpoints such as the health probes.
 app.UseRouting();
+// Declared after routing so the telemetry middleware can read the selected
+// endpoint and tag it, and before authentication so the span covers the final
+// status including rejections.
+app.UsePapyrusTelemetry();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<AdminAuditMiddleware>();
