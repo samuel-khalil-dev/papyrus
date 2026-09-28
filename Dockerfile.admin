@@ -1,11 +1,11 @@
-FROM node:24.21.0@sha256:6dac556d980b7f0e5498d08f08cee0ca67798b4ad6c23964a9214920e67758d0 AS admin-ui-build
+FROM node:24.21.0@sha256:64af3819f9275802414d7cdc38c27e9d82bd564dec4d4da87d008255d36c63b4 AS admin-ui-build
 WORKDIR /ui
 COPY src/Papyrus.Admin.UI/package.json src/Papyrus.Admin.UI/package-lock.json ./
 RUN npm ci
 COPY src/Papyrus.Admin.UI/ ./
 RUN npm run build
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:2fa828c68761b1b8c23d7662dc134421b9d3b59fe1425fdbc80804e390cdb24d AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:35d40304542c8689331f8cab17c65926cdf48fe711e289321d71924b230a7d29 AS build
 WORKDIR /src
 COPY Papyrus.sln ./
 COPY src/Papyrus.Api.Admin/Papyrus.Api.Admin.csproj Papyrus.Api.Admin/
@@ -25,7 +25,7 @@ COPY src/Papyrus.Contracts/ Papyrus.Contracts/
 COPY --from=admin-ui-build /ui/dist Papyrus.Api.Admin/wwwroot
 RUN dotnet publish Papyrus.Api.Admin/Papyrus.Api.Admin.csproj -c Release -o /app/publish --no-restore
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:6a94333d37514e385650a3c81a55e5350b67253dbe136e9cf17e499c35606a8c AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:2d584d8147faddb0d678c5748d47953e5b8e18621ed4fb7049a91381d9d7746f AS runtime
 WORKDIR /app
 ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
