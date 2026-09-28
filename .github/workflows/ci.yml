@@ -313,6 +313,12 @@ jobs:
 
       - name: Set up K6
         uses: grafana/setup-k6-action@43b9fc21641a76002687994433dd586f56e791b1  # v1.2.2
+        with:
+          # Pin the same version perf-baseline.yml uses, so load-smoke results are
+          # comparable with the archived evidence in docs/history. Left unpinned,
+          # this job tracked the action's default and moved whenever the action
+          # was bumped.
+          k6-version: 0.45.0
 
       - name: Run public K6 load smoke
         run: k6 run tests/load/k6/public-listing.js
