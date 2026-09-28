@@ -46,8 +46,13 @@ public static class ContentValidation
             $"{displayName} is required and must be at most {maxLength} characters.");
     }
 
-    private static ValidationError? EmptyTag(IReadOnlyCollection<Guid> tags) =>
-        tags.Any(tag => tag == Guid.Empty)
+    private static ValidationError? EmptyTag(IReadOnlyCollection<Guid>? tags) =>
+        // A null collection is the JSON binder's result for an omitted optional
+        // tagIds property, and it means "no tags" exactly as an empty array does.
+        // Treating it as empty here keeps an unannotated optional field from
+        // becoming an unhandled NullReferenceException, and keeps the
+        // non-nullable command signature honest about what callers must pass.
+        tags?.Any(tag => tag == Guid.Empty) == true
             ? new ValidationError("tag.invalid", "Tag identifiers must be non-empty.")
             : null;
 }
