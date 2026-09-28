@@ -129,6 +129,23 @@ internal static class AdminEndpointSupport
     /// </summary>
     public static Guid[] Tags(Guid[]? tagIds) => tagIds ?? [];
 
+    /// <summary>
+    /// Maps a failed command result onto the right status: 409 for a slug
+    /// conflict, 400 for everything else.
+    /// <para>
+    /// A slug conflict is deliberately not a <c>ValidationProblemDetails</c>:
+    /// the request is well formed and a different resource holds the slug, so
+    /// the response names that resource instead of listing field errors.
+    /// </para>
+    /// </summary>
+    public static IResult CommandFailure(IReadOnlyList<ValidationError> errors) =>
+        ContentValidation.HasSlugConflict(errors)
+            ? Results.Problem(
+                title: "The slug is already in use.",
+                detail: errors.First(ContentValidation.IsSlugConflict).Message,
+                statusCode: StatusCodes.Status409Conflict)
+            : ValidationProblem(errors);
+
     public static ContentCategoryResponse ToResponse(this ContentCategory category) =>
         new(category.Id, category.Slug, category.Name, category.Description, category.IsPublished, category.CreatedAt, category.UpdatedAt);
 

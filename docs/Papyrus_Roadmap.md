@@ -205,8 +205,8 @@ still open; Phase 8 is a decision gate and not started.
 
 ### Key verified figures
 
-- **Tests:** 458 unique .NET tests in CI (442 provider-independent /
-  non-integration tests plus 16 PostgreSQL-backed integration tests), plus a
+- **Tests:** 474 unique .NET tests in CI (452 provider-independent /
+  non-integration tests plus 22 PostgreSQL-backed integration tests), plus a
   separate 10-test Playwright browser smoke suite. The warnings-as-errors build
   is 0 warnings / 0 errors.
 - **Migrations:** five EF Core migrations applied; the Admin API is the sole
