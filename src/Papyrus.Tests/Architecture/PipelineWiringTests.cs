@@ -15,6 +15,18 @@ public sealed class PipelineWiringTests
         Path.Combine("src", "Papyrus.Web.Portfolio", "Program.cs"),
     ];
 
+    /// <summary>
+    /// The M1 routing policy is applied per public host, and each host serves a
+    /// different site, so the expected kind is part of what must be declared.
+    /// </summary>
+    public static TheoryData<string, string> PublicHostPrograms()
+    {
+        var data = new TheoryData<string, string>();
+        data.Add(Path.Combine("src", "Papyrus.Web.Blog", "Program.cs"), "SiteHostValidator.BlogKind");
+        data.Add(Path.Combine("src", "Papyrus.Web.Portfolio", "Program.cs"), "SiteHostValidator.PortfolioKind");
+        return data;
+    }
+
     public static TheoryData<string> HostPrograms()
     {
         var data = new TheoryData<string>();
@@ -81,6 +93,18 @@ public sealed class PipelineWiringTests
             routing < telemetry,
             $"{relativeProgramPath} declares UsePapyrusTelemetry() at offset {telemetry} and UseRouting() at {routing}; "
             + "routing must come first or the endpoint tag is always the unmatched fallback.");
+    }
+
+    [Theory]
+    [MemberData(nameof(PublicHostPrograms))]
+    public void Public_host_still_applies_the_routing_truth_policy(string relativeProgramPath, string expectedKind)
+    {
+        // A deleted or mis-kinded call would leave AllowedHosts at its default
+        // and serve every Host header, while every SiteHostValidatorTests case
+        // still passed against the shared helper.
+        var source = ReadProgram(relativeProgramPath);
+
+        Assert.Contains($"builder.UsePapyrusSiteHostPolicy({expectedKind});", source, StringComparison.Ordinal);
     }
 
     private static string ReadProgram(string relativeProgramPath)

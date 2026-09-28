@@ -50,11 +50,13 @@ place, and no parallel, untracked documentation tree is kept. See
   Definition-of-Done items are met: endpoint grouping, uniform RFC 7807
   `ProblemDetails` error responses, the Presentation-to-Infrastructure audit
   (recorded as [ADR-0010](02-architecture/decisions/adr-0010-scoped-presentation-to-infrastructure-access.md)),
-  and the fitness tests that enforce it. M1 Routing Truth is the next milestone;
-  M2–M32 have not started.
-- The local baseline is 135 passing non-integration .NET tests and a
+  and the fitness tests that enforce it. **M1 Routing Truth is also complete**
+  ([m1-routing-truth.md](05-milestones/m1-routing-truth.md)): each public host
+  validates its own site identity at startup and serves only its configured
+  canonical host plus loopback. M2–M32 have not started.
+- The local baseline is 436 passing non-integration .NET tests and a
   zero-warning, zero-error warnings-as-errors build. CI runs 16 PostgreSQL-backed
-  integration tests, for 151 unique .NET tests; those tests require the test
+  integration tests, for 452 unique .NET tests; those tests require the test
   database infrastructure.
 - Five Playwright browser tests are tracked; they are not part of the .NET count.
 - Five EF Core migrations are applied. The admin migration job is the sole
