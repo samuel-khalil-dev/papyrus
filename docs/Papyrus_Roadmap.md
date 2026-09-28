@@ -207,11 +207,11 @@ still open; Phase 8 is a decision gate and not started.
 
 ### Key verified figures
 
-- **Tests:** 471 unique .NET test cases in CI (449 provider-independent /
+- **Tests:** 476 unique .NET test cases in CI (454 provider-independent /
   non-integration plus 22 PostgreSQL-backed integration), plus a separate
-  10-test Playwright browser smoke suite. 280 of the 449 non-integration cases
-  are whole-file encoding cases in `SourceEncodingTests`; 169 assert behaviour,
-  and 191 cases in total are behavioural. The warnings-as-errors build is
+  10-test Playwright browser smoke suite. 280 of the 454 non-integration cases
+  are whole-file encoding cases in `SourceEncodingTests`; 174 assert behaviour,
+  and 196 cases in total are behavioural. The warnings-as-errors build is
   0 warnings / 0 errors. The
   [feature matrix](00-overview/feature-matrix.md) is the canonical count.
 - **Migrations:** five EF Core migrations applied; the Admin API is the sole

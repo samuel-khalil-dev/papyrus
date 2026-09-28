@@ -54,10 +54,10 @@ place, and no parallel, untracked documentation tree is kept. See
   ([m1-routing-truth.md](05-milestones/m1-routing-truth.md)): each public host
   validates its own site identity at startup and serves only its configured
   canonical host plus loopback. M2–M32 have not started.
-- The local baseline is 449 passing non-integration .NET test cases and a
-  zero-warning, zero-error warnings-as-errors build. 280 of those 449 are
-  whole-file encoding cases in `SourceEncodingTests`; 169 assert behaviour. CI
-  runs 22 PostgreSQL-backed integration tests, for 471 unique .NET test cases;
+- The local baseline is 454 passing non-integration .NET test cases and a
+  zero-warning, zero-error warnings-as-errors build. 280 of those 454 are
+  whole-file encoding cases in `SourceEncodingTests`; 174 assert behaviour. CI
+  runs 22 PostgreSQL-backed integration tests, for 476 unique .NET test cases;
   those tests require the test database infrastructure. The
   [feature matrix](00-overview/feature-matrix.md) is the canonical count.
 - Ten Playwright browser tests are tracked; they are not part of the .NET count.
