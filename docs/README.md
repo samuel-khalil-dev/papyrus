@@ -54,11 +54,11 @@ place, and no parallel, untracked documentation tree is kept. See
   ([m1-routing-truth.md](05-milestones/m1-routing-truth.md)): each public host
   validates its own site identity at startup and serves only its configured
   canonical host plus loopback. M2–M32 have not started.
-- The local baseline is 442 passing non-integration .NET tests and a
-  zero-warning, zero-error warnings-as-errors build. CI runs 16 PostgreSQL-backed
-  integration tests, for 458 unique .NET tests; those tests require the test
+- The local baseline is 158 passing non-integration .NET tests and a
+  zero-warning, zero-error warnings-as-errors build. CI runs 20 PostgreSQL-backed
+  integration tests, for 178 unique .NET tests; those tests require the test
   database infrastructure.
-- Five Playwright browser tests are tracked; they are not part of the .NET count.
+- Ten Playwright browser tests are tracked; they are not part of the .NET count.
 - Five EF Core migrations are applied. The admin migration job is the sole
   migration owner.
 
