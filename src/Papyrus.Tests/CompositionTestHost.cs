@@ -68,6 +68,7 @@ internal static class CompositionTestHost
         // The production scheme, not a stand-in: the point of these tests is to
         // exercise ApiKeyAuthenticationHandler itself.
         builder.Services.AddAdminApiAuthentication(builder.Configuration);
+        builder.Services.AddAdminApiRateLimiting();
 
         return builder.Build();
     }

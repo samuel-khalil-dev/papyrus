@@ -30,6 +30,13 @@ is process-local and the limiter is keyed by source IP; it does not model
 multiple keys, operators, or replicas. The write workload creates unpublished
 test posts and should be run against a disposable or reset database.
 
+Because the limiter is keyed by source IP and everything local shares `127.0.0.1`,
+running an admin load script, or more than 120 admin requests in a minute, leaves
+the browser smoke suite's admin tests to fail with 429s. That is the limiter
+working, not a regression. Restart the Admin API, or wait out the one-minute
+window, before re-running the Playwright suite. The CI `browser-smoke` job is
+unaffected because it starts the three hosts fresh.
+
 `Site__PublicBaseUrl` is not required by these requests and is intentionally not
 set by the CI smoke job. Consequently, this test measures relative page/feed
 request performance only; it does not establish production absolute canonical,

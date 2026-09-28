@@ -55,6 +55,14 @@ public sealed class PipelineWiringTests
         Assert.Equal([Path.Combine("src", "Papyrus.Api.Admin", "Program.cs")], callers);
     }
 
+    [Fact]
+    public void The_admin_host_still_registers_its_rate_limit()
+    {
+        // A missing or renamed registration would leave the API unmetered while
+        // every rate-limit test still passed against its own host.
+        Assert.Contains("builder.Services.AddAdminApiRateLimiting();", ReadProgram(Path.Combine("src", "Papyrus.Api.Admin", "Program.cs")), StringComparison.Ordinal);
+    }
+
     private static string ReadProgram(string relativeProgramPath)
     {
         var path = Path.Combine(FindRepositoryRoot(), relativeProgramPath);

@@ -32,13 +32,7 @@ builder.Services.AddAdminApiAuthentication(builder.Configuration);
 builder.Services.Configure<MediaOptions>(builder.Configuration.GetSection(MediaOptions.SectionName));
 builder.Services.AddScoped<LocalMediaService>();
 builder.Services.Configure<FormOptions>(options => options.MultipartBodyLengthLimit = 5 * 1024 * 1024);
-builder.Services.AddRateLimiter(options =>
-{
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    options.AddPolicy("admin-api", context => RateLimitPartition.GetFixedWindowLimiter(
-        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-        _ => new FixedWindowRateLimiterOptions { PermitLimit = 120, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
-});
+builder.Services.AddAdminApiRateLimiting();
 builder.Services.AddProblemDetails(options =>
 {
     options.CustomizeProblemDetails = context =>
