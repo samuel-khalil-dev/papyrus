@@ -108,6 +108,10 @@ app.UseStaticFiles(new StaticFileOptions
     }
 });
 
+// Routing is declared explicitly so endpoint selection happens before
+// authentication: the API-key scheme uses endpoint metadata to recognise
+// anonymous endpoints such as the health probes.
+app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<AdminAuditMiddleware>();

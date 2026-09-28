@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Diagnostics;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 using Papyrus.ServiceDefaults.Telemetry;
 
@@ -21,6 +22,17 @@ internal sealed class ApiKeyAuthenticationHandler(
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
+        // Endpoints that are not subject to authorization — the health and
+        // aliveness probes the orchestrator polls, which are mapped without a
+        // policy — are not authentication attempts. Returning NoResult lets the
+        // authorization middleware short-circuit them, and skipping the audit
+        // record keeps a probe every few seconds from filling the security trail
+        // with 401 failures that read like attacks.
+        if (IsOutsideAuthorization(Context.GetEndpoint()))
+        {
+            return Task.FromResult(AuthenticateResult.NoResult());
+        }
+
         var configuredKeys = Context.RequestServices
             .GetRequiredService<IOptionsMonitor<AdminApiKeyOptions>>()
             .CurrentValue
@@ -56,6 +68,19 @@ internal sealed class ApiKeyAuthenticationHandler(
 
         RecordAuthEvent("success");
         return Task.FromResult(AuthenticateResult.Success(ticket));
+    }
+
+    // An endpoint is outside authorization when it opts out with AllowAnonymous, or
+    // when no authorization requirement was ever applied to it.
+    private static bool IsOutsideAuthorization(Endpoint? endpoint)
+    {
+        if (endpoint is null)
+        {
+            return false;
+        }
+
+        return endpoint.Metadata.GetMetadata<IAllowAnonymous>() is not null
+            || endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>().Count == 0;
     }
 
     private void RecordAuthEvent(string outcome) => auditEvents.Record(new AuditEvent(

@@ -17,9 +17,6 @@ namespace Papyrus.ServiceDefaults;
 // To learn more about using this project, see https://aka.ms/aspire/service-defaults
 public static class Extensions
 {
-    private const string HealthEndpointPath = "/health";
-    private const string AlivenessEndpointPath = "/alive";
-
     public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
         builder.ConfigureOpenTelemetry();
@@ -70,10 +67,7 @@ public static class Extensions
                     .AddSource(TelemetryActivitySource.Name)
                     .AddAspNetCoreInstrumentation(tracing =>
                         // Exclude health check requests from tracing
-                        tracing.Filter = context =>
-                            !context.Request.Path.StartsWithSegments(HealthEndpointPath)
-                            && !context.Request.Path.StartsWithSegments(AlivenessEndpointPath)
-                    )
+                        tracing.Filter = context => !HealthEndpointFilter.IsExcluded(context.Request.Path))
                     // Uncomment the following line to enable gRPC instrumentation (requires the OpenTelemetry.Instrumentation.GrpcNetClient package)
                     //.AddGrpcClientInstrumentation()
                     .AddHttpClientInstrumentation();
@@ -116,7 +110,7 @@ public static class Extensions
     {
         // Keep these endpoints anonymous so load balancers and Aspire can probe them.
         // Restrict access at the network/ingress layer if health details are sensitive.
-        app.MapHealthChecks(HealthEndpointPath, new HealthCheckOptions
+        app.MapHealthChecks(HealthEndpointFilter.HealthEndpointPath, new HealthCheckOptions
         {
             // Keep dependency names and exception details off the public response.
             // The deployment ingress must restrict this endpoint to the orchestrator
@@ -128,7 +122,7 @@ public static class Extensions
                 await context.Response.WriteAsync(report.Status == HealthStatus.Healthy ? "Healthy" : "Unhealthy");
             }
         });
-        app.MapHealthChecks(AlivenessEndpointPath, new HealthCheckOptions
+        app.MapHealthChecks(HealthEndpointFilter.AlivenessEndpointPath, new HealthCheckOptions
         {
             Predicate = r => r.Tags.Contains("live"),
             ResponseWriter = static async (context, _) =>
