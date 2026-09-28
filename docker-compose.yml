@@ -43,6 +43,7 @@ services:
       ConnectionStrings__papyrus: Host=db;Port=5432;Database=papyrus;Username=${POSTGRES_USER:-papyrus};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
       AdminApi__ApiKey: ${ADMIN_API_KEY:?ADMIN_API_KEY must be set}
       Media__RootPath: /data/media
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
     ports:
       - "${ADMIN_PORT:-5205}:8080"
     volumes:
@@ -67,6 +68,7 @@ services:
       Site__MediaBaseUrl: ${MEDIA_BASE_URL:?MEDIA_BASE_URL must be set}
       Site__BlogBaseUrl: ${BLOG_PUBLIC_BASE_URL:-http://localhost:5075}
       Site__PortfolioBaseUrl: ${PORTFOLIO_PUBLIC_BASE_URL:-http://localhost:5024}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
     ports:
       - "${BLOG_PORT:-5075}:8080"
     networks:
@@ -89,6 +91,7 @@ services:
       Site__MediaBaseUrl: ${MEDIA_BASE_URL:?MEDIA_BASE_URL must be set}
       Site__BlogBaseUrl: ${BLOG_PUBLIC_BASE_URL:-http://localhost:5075}
       Site__PortfolioBaseUrl: ${PORTFOLIO_PUBLIC_BASE_URL:-http://localhost:5024}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
     ports:
       - "${PORTFOLIO_PORT:-5024}:8080"
     networks:

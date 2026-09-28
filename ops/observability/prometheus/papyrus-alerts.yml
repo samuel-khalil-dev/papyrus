@@ -1,0 +1,127 @@
+# Papyrus alert families, transcribed from
+# docs/06-operations/observability-and-monitoring.md "Live alert families".
+# Thresholds and `for` durations are reproduced exactly as documented.
+#
+# Metric names are the collector-boundary contract. They are derived in
+# ops/observability/collector/config.yaml; if a name changes there, it changes
+# here and in docs/observability/dashboards/papyrus-dashboard.json together.
+
+groups:
+  - name: papyrus-availability
+    rules:
+      - alert: PapyrusApplicationDown
+        expr: min by (job) (up{job=~"admin-api|blog|portfolio"}) < 1
+        for: 2m
+        labels:
+          severity: SEV-1
+        annotations:
+          summary: "Papyrus application {{ $labels.job }} is down"
+
+      - alert: PapyrusPostgresDown
+        expr: min(up{job="postgres"}) < 1
+        for: 2m
+        labels:
+          severity: SEV-1
+        annotations:
+          summary: "Papyrus Postgres is down"
+
+  - name: papyrus-request
+    rules:
+      - alert: PapyrusRequestLatencyHigh
+        expr: >-
+          histogram_quantile(0.95,
+            sum by (le, papyrus_service) (
+              rate(http_server_request_duration_seconds_bucket[5m])
+            )
+          ) > 1
+        for: 10m
+        labels:
+          severity: SEV-2
+        annotations:
+          summary: "p95 latency above 1s for {{ $labels.papyrus_service }}"
+
+      - alert: PapyrusRequest5xxRate
+        expr: >-
+          (
+            sum by (papyrus_service) (rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[5m]))
+            /
+            sum by (papyrus_service) (rate(http_server_request_duration_seconds_count[5m]))
+          ) > 0.01
+        for: 10m
+        labels:
+          severity: SEV-2
+        annotations:
+          summary: "5xx rate above 1% for {{ $labels.papyrus_service }}"
+
+      - alert: PapyrusRateLimit429
+        expr: >-
+          sum by (papyrus_service) (
+            rate(http_server_request_duration_seconds_count{http_response_status_code="429"}[5m])
+          ) > 0
+        for: 10m
+        labels:
+          severity: SEV-3
+        annotations:
+          summary: "429 responses for {{ $labels.papyrus_service }}"
+
+  - name: papyrus-audit
+    rules:
+      # The audit volume is measured from Papyrus.AuditEvent spans, which are
+      # never subject to diagnostic sampling. papyrus_audit_log_records_total is
+      # the logger-backed (EventId 1001) view of the same records; it is the
+      # fallback if the audit spans stop reaching the collector.
+      - alert: PapyrusAuditVolumeDrop
+        expr: >-
+          (
+            sum(increase(papyrus_audit_events_total[15m]))
+            <
+            0.5 * sum(increase(papyrus_audit_events_total[1h] offset 15m))
+          )
+          and sum(increase(papyrus_audit_events_total[1h] offset 15m)) >= 10
+        for: 15m
+        labels:
+          severity: SEV-2
+        annotations:
+          summary: "Audit event volume dropped below half the prior hour"
+
+      - alert: PapyrusAuditSignalLost
+        expr: absent(papyrus_audit_events_total) or absent(papyrus_audit_log_records_total)
+        for: 15m
+        labels:
+          severity: SEV-2
+        annotations:
+          summary: "Both the audit span and the audit log signal are missing"
+
+      - alert: PapyrusRedactionActivity
+        expr: >-
+          sum(rate(papyrus_audit_redacted_total[5m])) > 10
+          or
+          sum(rate(papyrus_audit_redacted_total[5m]))
+            > 5 * sum(rate(papyrus_audit_redacted_total[1h] offset 5m))
+        for: 10m
+        labels:
+          severity: SEV-3
+        annotations:
+          summary: "Unusually high redaction activity"
+
+      - alert: PapyrusDiagnosticSamplingSuppressed
+        expr: >-
+          (
+            sum(rate(papyrus_diagnostic_sampled_total[5m]))
+            /
+            sum(rate(http_server_request_duration_seconds_count[5m]))
+          ) < 0.1
+        for: 10m
+        labels:
+          severity: SEV-3
+        annotations:
+          summary: "Diagnostic sampling suppressed below configured rate"
+
+      - alert: PapyrusCardinalityGuardCollapse
+        expr: sum by (papyrus_tag_key) (rate(papyrus_cardinality_collapsed_total[5m])) > 0
+        for: 10m
+        labels:
+          severity: SEV-3
+        annotations:
+          summary: "Cardinality guard collapsing values for {{ $labels.papyrus_tag_key }}"
+

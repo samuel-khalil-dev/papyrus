@@ -1,0 +1,124 @@
+# OTLP collector for the Papyrus stack.
+#
+# The application emits activities and OTel metrics; it does not emit Prometheus
+# counters. Every metric named in the collector-boundary contract in
+# docs/06-operations/observability-and-monitoring.md is therefore derived here.
+#
+# Derivation map (metric name -> source):
+#   http_server_request_duration_seconds_*  <- SDK metrics pipeline (ASP.NET Core
+#       instrumentation), relabelled with papyrus_service below.
+#   papyrus_diagnostic_sampled_total        <- count/audit_views, spans named Papyrus.Request
+#   papyrus_audit_events_total              <- count/audit_views, spans named Papyrus.AuditEvent
+#   papyrus_audit_redacted_total            <- count/audit_views, audit spans with a [redacted] field
+#   papyrus_cardinality_collapsed_total     <- count/audit_views, spans with a [other] guard value
+#   papyrus_audit_log_records_total         <- count/audit_views, logger-backed EventId 1001
+#
+# If a metric below is renamed here, the dashboard and the alert rules in
+# prometheus/papyrus-alerts.yml must be renamed with it. Do not introduce a
+# second naming scheme for the same signal.
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  memory_limiter:
+    check_interval: 5s
+    limit_percentage: 75
+    spike_limit_percentage: 20
+
+  batch:
+    timeout: 5s
+    send_batch_size: 512
+
+  # The Prometheus exporter exposes resource attributes through target_info, not
+  # as labels on each series. The documented contract groups every request
+  # metric by `papyrus_service`, so copy the resource service name onto each
+  # data point, which is what the exporter turns into a label.
+  transform/metric_labels:
+    error_mode: ignore
+    metric_statements:
+      - context: datapoint
+        statements:
+          - set(attributes["papyrus_service"], resource.attributes["service.name"]) where resource.attributes["service.name"] != nil
+          - set(attributes["papyrus_service"], "unknown") where attributes["papyrus_service"] == nil
+
+  # Tag a span with which cardinality guard collapsed it, so a single count
+  # metric can be grouped by papyrus_tag_key as the contract requires.
+  transform/cardinality_tag:
+    error_mode: ignore
+    trace_statements:
+      - context: span
+        statements:
+          - set(attributes["papyrus_tag_key"], "papyrus.service") where attributes["papyrus.service"] == "[other]"
+          - set(attributes["papyrus_tag_key"], "papyrus.endpoint") where attributes["papyrus.endpoint"] == "[other]"
+
+connectors:
+  # Derives the audit/diagnostic counting views from span and log data. Each
+  # metric counts a distinct, documented condition; see the derivation map above.
+  count/audit_views:
+    spans:
+      papyrus_diagnostic_sampled_total:
+        description: Request diagnostics that the sampling policy admitted.
+        conditions:
+          - 'name == "Papyrus.Request"'
+      papyrus_audit_events_total:
+        description: Structured Papyrus.AuditEvent audit records observed.
+        conditions:
+          - 'name == "Papyrus.AuditEvent"'
+        attributes:
+          - key: papyrus.audit.outcome
+            default_value: unknown
+      papyrus_audit_redacted_total:
+        description: Audit records whose allowlisted fields were replaced by the fail-closed redactor.
+        conditions:
+          - 'name == "Papyrus.AuditEvent" and (attributes["papyrus.audit.action"] == "[redacted]" or attributes["papyrus.audit.target"] == "[redacted]" or attributes["papyrus.audit.outcome"] == "[redacted]" or attributes["papyrus.tenant_id"] == "[redacted]")'
+      papyrus_cardinality_collapsed_total:
+        description: Request activities whose guarded tag value was collapsed to [other].
+        conditions:
+          - 'attributes["papyrus_tag_key"] != nil'
+        attributes:
+          - key: papyrus_tag_key
+            default_value: unknown
+    logs:
+      # Papyrus emits the audit record to the logger (EventId 1001) and to a
+      # span. The span can be suppressed by head sampling while the log record
+      # cannot, so this is the availability-independent audit signal.
+      papyrus_audit_log_records_total:
+        description: Logger-backed structured audit records (EventId 1001).
+        conditions:
+          - 'event_name == "AuditEvent"'
+
+exporters:
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    resource_to_telemetry_conversion:
+      enabled: true
+  debug:
+    verbosity: basic
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, transform/cardinality_tag, batch]
+      exporters: [count/audit_views, debug]
+    # The connector is a metrics-source: it is an exporter on the traces and
+    # logs pipelines, and a receiver on the metrics pipeline. Omitting it here
+    # leaves the derived counts with nowhere to go and the collector refuses to
+    # start.
+    metrics:
+      receivers: [otlp, count/audit_views]
+      processors: [memory_limiter, transform/metric_labels, batch]
+      exporters: [prometheus]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [count/audit_views, debug]
+  telemetry:
+    logs:
+      level: info

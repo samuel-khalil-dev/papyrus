@@ -132,16 +132,22 @@ a later sub-task, it is marked **Pending** rather than fabricated.
   documented Prometheus datasource placeholder, and a synthetic W3C
   `traceparent` health request returned HTTP 200. The runbook and alert-family
   mapping were reviewed against the dashboard contract.
+- **Production observability stack is now tracked and deployed by the pipeline.**
+  The collector, Prometheus, Grafana, and blackbox-exporter configuration lives
+  in [`ops/observability/`](../../ops/observability) and is started by the
+  `deploy` job in [`release.yml`](../../.github/workflows/release.yml) with
+  `docker compose -f docker-compose.yml -f ops/observability/docker-compose.observability.yml up -d`.
+  It is no longer hand-placed on the host. `promtool check config` validated the
+  scrape configuration and all rules.
 - **Production verification checklist:** the required production observability
   platform (OTLP collector, Prometheus alert evaluator, Grafana, retention
   policy) and the exact verification steps to close this gate are documented in
   the W7/O4 section of
   [`observability-and-monitoring.md`](../06-operations/observability-and-monitoring.md).
-  No OTLP collector, Prometheus alert evaluator, or Grafana instance is
-  configured in this workspace, so live redaction-output inspection, cross-host
-  trace correlation, alert firing and recovery, and the audit-volume-drop
-  runbook exercise remain pending and must be executed against the production
-  deployment using that checklist.
+  Live redaction-output inspection, cross-host trace correlation, alert firing
+  and recovery, and the audit-volume-drop runbook exercise still require
+  executing that checklist against the live production deployment; they are not
+  closed by the configuration work above.
 
 ### W8 — Release documentation and CI
 
@@ -180,15 +186,21 @@ a later sub-task, it is marked **Pending** rather than fabricated.
   latency, 5xx, 429, audit, redaction, sampling, cardinality, and app/PostgreSQL
   health views; alert expressions and the telemetry runbook use the same
   collector-derived metric contract.
+- **Production telemetry configuration is tracked and deployed.** The collector
+  derives every documented collector-boundary metric from spans, metrics, and
+  logs in [`ops/observability/collector/config.yaml`](../../ops/observability/collector/config.yaml);
+  the release workflow publishes `OTEL_EXPORTER_OTLP_ENDPOINT` to all three
+  hosts so the exporter is actually enabled in production. Grafana provisions
+  the tracked dashboard from `docs/observability/dashboards/`, and Prometheus
+  retention is set from `OBSERVABILITY_RETENTION` (30d default).
 - **Production verification checklist:** the required production observability
   platform (OTLP collector, dashboard service, alert evaluator, retention
   policy) and the exact verification steps to close this gate are documented in
   the W7/O4 section of
   [`observability-and-monitoring.md`](../06-operations/observability-and-monitoring.md).
-  This repository contains no deployed collector, dashboard service, alert
-  evaluator, or retention policy, so live dashboard data, alert
-  delivery/recovery, and retention configuration remain unverified and must be
-  attached from the production observability platform using that checklist.
+  Live dashboard data, alert delivery/recovery, and retention configuration
+  remain unverified and must be attached by executing that checklist against the
+  production deployment.
 
 ### O7 — Restore/load drills
 

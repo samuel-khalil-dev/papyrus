@@ -177,6 +177,10 @@ jobs:
       BLOG_PUBLIC_BASE_URL: ${{ vars.BLOG_PUBLIC_BASE_URL }}
       PORTFOLIO_PUBLIC_BASE_URL: ${{ vars.PORTFOLIO_PUBLIC_BASE_URL }}
       MEDIA_BASE_URL: ${{ vars.MEDIA_BASE_URL }}
+      # Gating the OTLP exporter. The exporter stays off unless a collector
+      # endpoint is configured, so a deployment without the observability stack
+      # keeps structured audit logging and simply exports nothing.
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -209,6 +213,36 @@ jobs:
             done
             curl --fail --silent "$url" > /dev/null
           done
+
+      # The observability stack is deployed from the tracked configuration in
+      # ops/observability, never hand-placed on the host. The application
+      # network is created by the platform compose file above, so the collector,
+      # Prometheus, Grafana, and blackbox-exporter attach to it as external.
+      - name: Start the observability stack
+        if: ${{ !inputs.dry_run }}
+        env:
+          GRAFANA_ADMIN_USER: ${{ secrets.GRAFANA_ADMIN_USER }}
+          GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+        run: |
+          docker compose \
+            --file docker-compose.yml \
+            --file ops/observability/docker-compose.observability.yml \
+            up --detach --remove-orphans
+
+      - name: Verify the observability stack is serving
+        if: ${{ !inputs.dry_run }}
+        run: |
+          for url in http://127.0.0.1:9090/-/healthy http://127.0.0.1:3000/api/health; do
+            for attempt in {1..45}; do
+              if curl --fail --silent "$url" > /dev/null; then break; fi
+              sleep 1
+            done
+            curl --fail --silent "$url" > /dev/null
+          done
+          # The alert rules must be loaded and evaluable, not merely running.
+          curl --fail --silent http://127.0.0.1:9090/api/v1/rules \
+            | grep --quiet PapyrusApplicationDown
+
       - name: Validate deployment configuration (dry run)
         if: ${{ inputs.dry_run }}
         run: |
@@ -216,3 +250,9 @@ jobs:
           echo "Admin image:   ${{ env.IMAGE_PREFIX }}/admin:${{ github.ref_name }}"
           echo "Blog image:    ${{ env.IMAGE_PREFIX }}/blog:${{ github.ref_name }}"
           echo "Portfolio image: ${{ env.IMAGE_PREFIX }}/portfolio:${{ github.ref_name }}"
+          # Fail the dry run if the observability stack would not even parse.
+          docker compose \
+            --file docker-compose.yml \
+            --file ops/observability/docker-compose.observability.yml \
+            config > /dev/null
+          echo "Observability stack: ops/observability/docker-compose.observability.yml parsed."

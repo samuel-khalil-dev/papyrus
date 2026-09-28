@@ -1,0 +1,12 @@
+apiVersion: 1
+providers:
+  - name: papyrus
+    orgId: 1
+    folder: Papyrus
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      # Mounted read-only from the tracked dashboard definition in
+      # docs/observability/dashboards/papyrus-dashboard.json.
+      path: /var/lib/grafana/dashboards
