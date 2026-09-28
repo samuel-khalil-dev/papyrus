@@ -78,9 +78,7 @@ if (!app.Environment.IsDevelopment())
 }
 app.UsePapyrusTelemetry();
 var mediaOptions = app.Services.GetRequiredService<IOptions<MediaOptions>>().Value;
-var mediaRoot = Path.IsPathRooted(mediaOptions.RootPath)
-    ? mediaOptions.RootPath
-    : Path.Combine(app.Environment.ContentRootPath, mediaOptions.RootPath);
+var mediaRoot = MediaRootResolver.Resolve(app.Environment, mediaOptions);
 Directory.CreateDirectory(mediaRoot);
 app.Use(async (context, next) =>
 {

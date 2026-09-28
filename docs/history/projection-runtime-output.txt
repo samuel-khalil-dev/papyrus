@@ -1,0 +1,131 @@
+DROP TABLE
+CREATE TABLE
+DO
+    query_name    | min_ms | p50_ms | p95_ms | max_ms | samples 
+------------------+--------+--------+--------+--------+---------
+ admin-blog-posts |  0.005 |  0.008 |  0.037 |  0.370 |      30
+ admin-categories |  0.007 |  0.008 |  0.022 |  1.117 |      30
+ admin-projects   |  0.006 |  0.009 |  0.020 |  0.815 |      30
+ admin-tags       |  0.007 |  0.009 |  0.115 |  0.763 |      30
+ blog-detail      |  0.006 |  0.008 |  0.049 |  0.641 |      30
+ blog-index       |  0.007 |  0.009 |  0.073 |  1.983 |      30
+ portfolio-detail |  0.005 |  0.007 |  0.016 |  0.336 |      30
+ portfolio-index  |  0.007 |  0.009 |  0.041 |  1.162 |      30
+(8 rows)
+
+                                                                        QUERY PLAN                                                                         
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=8.17..8.17 rows=1 width=1909) (actual time=0.020..0.021 rows=1 loops=1)
+   Buffers: shared hit=2
+   ->  Sort  (cost=8.17..8.17 rows=1 width=1909) (actual time=0.020..0.020 rows=1 loops=1)
+         Sort Key: (COALESCE("PublishedAt", "CreatedAt")) DESC
+         Sort Method: quicksort  Memory: 25kB
+         Buffers: shared hit=2
+         ->  Index Scan using "IX_BlogPosts_TenantId_Slug" on "BlogPosts" b  (cost=0.14..8.16 rows=1 width=1909) (actual time=0.015..0.016 rows=1 loops=1)
+               Index Cond: (("TenantId")::text = 'main'::text)
+               Filter: ("IsPublished" AND (("PublishedAt" IS NULL) OR ("PublishedAt" <= clock_timestamp())))
+               Buffers: shared hit=2
+ Planning Time: 0.167 ms
+ Execution Time: 0.043 ms
+(12 rows)
+
+                                                                       QUERY PLAN                                                                        
+---------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=8.17..8.17 rows=1 width=1909) (actual time=0.032..0.033 rows=1 loops=1)
+   Buffers: shared hit=2
+   ->  Sort  (cost=8.17..8.17 rows=1 width=1909) (actual time=0.031..0.031 rows=1 loops=1)
+         Sort Key: (COALESCE("PublishedAt", "CreatedAt")) DESC
+         Sort Method: quicksort  Memory: 25kB
+         Buffers: shared hit=2
+         ->  Index Scan using "IX_Projects_TenantId_Slug" on "Projects" p  (cost=0.14..8.16 rows=1 width=1909) (actual time=0.022..0.024 rows=1 loops=1)
+               Index Cond: (("TenantId")::text = 'main'::text)
+               Filter: ("IsPublished" AND (("PublishedAt" IS NULL) OR ("PublishedAt" <= clock_timestamp())))
+               Buffers: shared hit=2
+ Planning Time: 0.293 ms
+ Execution Time: 0.065 ms
+(12 rows)
+
+                                                                     QUERY PLAN                                                                      
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.14..8.16 rows=1 width=1400) (actual time=0.016..0.017 rows=1 loops=1)
+   Buffers: shared hit=2
+   ->  Index Scan using "IX_BlogPosts_TenantId_Slug" on "BlogPosts" b  (cost=0.14..8.16 rows=1 width=1400) (actual time=0.015..0.016 rows=1 loops=1)
+         Index Cond: ((("TenantId")::text = 'main'::text) AND (("Slug")::text = 'building-papyrus-platform-foundation'::text))
+         Filter: ("IsPublished" AND (("PublishedAt" IS NULL) OR ("PublishedAt" <= clock_timestamp())))
+         Buffers: shared hit=2
+ Planning Time: 0.114 ms
+ Execution Time: 0.031 ms
+(8 rows)
+
+                                                                    QUERY PLAN                                                                     
+---------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.14..8.16 rows=1 width=1400) (actual time=0.012..0.012 rows=1 loops=1)
+   Buffers: shared hit=2
+   ->  Index Scan using "IX_Projects_TenantId_Slug" on "Projects" p  (cost=0.14..8.16 rows=1 width=1400) (actual time=0.011..0.012 rows=1 loops=1)
+         Index Cond: ((("TenantId")::text = 'main'::text) AND (("Slug")::text = 'platform-foundation'::text))
+         Filter: ("IsPublished" AND (("PublishedAt" IS NULL) OR ("PublishedAt" <= clock_timestamp())))
+         Buffers: shared hit=2
+ Planning Time: 0.089 ms
+ Execution Time: 0.024 ms
+(8 rows)
+
+                                                                                QUERY PLAN                                                                                
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=8.16..8.17 rows=1 width=901) (actual time=0.020..0.021 rows=1 loops=1)
+   Buffers: shared hit=2
+   ->  Sort  (cost=8.16..8.17 rows=1 width=901) (actual time=0.019..0.020 rows=1 loops=1)
+         Sort Key: "Name"
+         Sort Method: quicksort  Memory: 25kB
+         Buffers: shared hit=2
+         ->  Index Scan using "IX_ContentCategories_TenantId_Slug" on "ContentCategories" c  (cost=0.14..8.15 rows=1 width=901) (actual time=0.011..0.013 rows=1 loops=1)
+               Index Cond: (("TenantId")::text = 'main'::text)
+               Buffers: shared hit=2
+ Planning Time: 0.076 ms
+ Execution Time: 0.030 ms
+(11 rows)
+
+                                                                          QUERY PLAN                                                                          
+--------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=8.16..8.17 rows=1 width=868) (actual time=0.018..0.019 rows=2 loops=1)
+   Buffers: shared hit=2
+   ->  Sort  (cost=8.16..8.17 rows=1 width=868) (actual time=0.017..0.018 rows=2 loops=1)
+         Sort Key: "Name"
+         Sort Method: quicksort  Memory: 25kB
+         Buffers: shared hit=2
+         ->  Index Scan using "IX_ContentTags_TenantId_Slug" on "ContentTags" t  (cost=0.14..8.15 rows=1 width=868) (actual time=0.009..0.010 rows=2 loops=1)
+               Index Cond: (("TenantId")::text = 'main'::text)
+               Buffers: shared hit=2
+ Planning Time: 0.059 ms
+ Execution Time: 0.031 ms
+(11 rows)
+
+                                                                       QUERY PLAN                                                                        
+---------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=8.16..8.17 rows=1 width=1409) (actual time=0.017..0.017 rows=1 loops=1)
+   Buffers: shared hit=2
+   ->  Sort  (cost=8.16..8.17 rows=1 width=1409) (actual time=0.016..0.016 rows=1 loops=1)
+         Sort Key: "IsFeatured" DESC, (COALESCE("PublishedAt", "CreatedAt")) DESC
+         Sort Method: quicksort  Memory: 25kB
+         Buffers: shared hit=2
+         ->  Index Scan using "IX_Projects_TenantId_Slug" on "Projects" p  (cost=0.14..8.15 rows=1 width=1409) (actual time=0.010..0.011 rows=1 loops=1)
+               Index Cond: (("TenantId")::text = 'main'::text)
+               Buffers: shared hit=2
+ Planning Time: 0.085 ms
+ Execution Time: 0.031 ms
+(11 rows)
+
+                                                                        QUERY PLAN                                                                         
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=8.16..8.17 rows=1 width=1408) (actual time=0.011..0.012 rows=1 loops=1)
+   Buffers: shared hit=2
+   ->  Sort  (cost=8.16..8.17 rows=1 width=1408) (actual time=0.011..0.011 rows=1 loops=1)
+         Sort Key: (COALESCE("PublishedAt", "CreatedAt")) DESC
+         Sort Method: quicksort  Memory: 25kB
+         Buffers: shared hit=2
+         ->  Index Scan using "IX_BlogPosts_TenantId_Slug" on "BlogPosts" b  (cost=0.14..8.15 rows=1 width=1408) (actual time=0.008..0.009 rows=1 loops=1)
+               Index Cond: (("TenantId")::text = 'main'::text)
+               Buffers: shared hit=2
+ Planning Time: 0.087 ms
+ Execution Time: 0.025 ms
+(11 rows)
+
