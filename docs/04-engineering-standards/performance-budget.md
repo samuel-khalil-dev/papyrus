@@ -21,9 +21,17 @@ Motion restricted to `transform`/`opacity`. **Planned (M13):** static assets ser
 
 The Admin SPA is an authenticated internal tool, not a public page: its bundle
 is served only from the admin origin, is never cached publicly, and is not part
-of any public load measurement. Vite emits its default 500 kB advisory, which is
-**not** the enforced ceiling. The enforced ceiling is 600 kB minified and
-180 kB gzipped, with the measured baseline below.
+of any public load measurement. The enforced ceiling is 600 kB minified and
+180 kB gzipped, with the measured baseline below. Vite's default 500 kB advisory
+is **not** the ceiling and is not expected to fire.
+
+The authoritative values live in `src/Papyrus.Admin.UI/bundle-budget.json`.
+`npm run check:bundle` measures the build output against that file and fails
+when a ceiling is exceeded; the CI `browser-smoke` job runs it immediately after
+compiling the SPA, so it costs no additional build time. `vite.config.ts` reads
+the same file to set `build.chunkSizeWarningLimit`, so the build-time advisory,
+the gate, and this document cannot disagree. The check is also runnable locally
+after `npm run build`.
 
 Measure the figure from a clean `npm ci --prefix src/Papyrus.Admin.UI` install.
 A stale `node_modules` produces a materially different bundle: an install left
@@ -33,16 +41,17 @@ made against it.
 
 | Artifact | Measured (2026-09-28) | Ceiling |
 | --- | ---: | ---: |
-| `assets/index-*.js` minified | 574.97 kB | 600 kB |
-| `assets/index-*.js` gzipped | 174.15 kB | 180 kB |
-| `assets/index-*.css` minified | 25.53 kB | 40 kB |
-| `assets/Papyrus_Background-*.svg` | 98.16 kB (44.38 kB gzipped) | fixed asset |
+| JavaScript, minified | 574.97 kB | 600 kB |
+| JavaScript, gzipped | 174.15 kB | 180 kB |
+| CSS, minified | 25.53 kB | 40 kB |
+| `Papyrus_Background.svg` | 98.16 kB (44.38 kB gzipped) | static asset, not gated |
 
-Budgets are expressed in the units Vite reports. Exceeding a ceiling is a
-release-blocking defect on the same terms as any other regression in this
-document. Closing the remaining ~25 kB of headroom needs route-level code
-splitting, which is product work rather than maintenance; re-measure the
-baseline if that change lands.
+The ceiling covers the total JavaScript and CSS emitted into `dist/assets`, so it
+stays meaningful if the bundle is later split into several chunks. Budgets are
+expressed in the units Vite reports. Exceeding a ceiling is a release-blocking
+defect on the same terms as any other regression in this document. Closing the
+remaining ~25 kB of headroom needs route-level code splitting, which is product
+work rather than maintenance; re-measure the baseline if that change lands.
 
 ## Infrastructure headroom
 

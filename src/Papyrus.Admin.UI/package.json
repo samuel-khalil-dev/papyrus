@@ -11,6 +11,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "check:bundle": "node check-bundle.mjs",
     "generate-api": "npx openapi-typescript http://localhost:5205/openapi/v1.json -o src/api/schema.d.ts"
   },
   "dependencies": {

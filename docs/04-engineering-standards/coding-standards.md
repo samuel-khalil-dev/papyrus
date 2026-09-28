@@ -28,3 +28,16 @@ Adapters: `Ef<Aggregate><Responsibility>Store`. Ports: `I<Aggregate><Responsibil
 ## Front-end dependencies
 
 The public hosts serve no third-party JavaScript. The shared design system in `Papyrus.Web.Shared/wwwroot` is the only public stylesheet and the only client-side code. Adding a vendored client-side library requires a row in `06-operations/vendor-dependency-map.md` and, if the library duplicates something `papyrus.css` already provides, an argument for not adding it.
+
+## Front-end styling
+
+Tailwind class detection in `src/Papyrus.Admin.UI/src/index.css` is bounded with
+`source(none)` plus an explicit `@source "./"`. Without that boundary Tailwind
+scans every file in the project, so a build script, a workflow, or a document
+that happens to contain a word like `static`, `container`, or `block` silently
+adds a utility to the production stylesheet. It was observed doing exactly that
+when a tooling script was added to the project root. If new source is introduced
+outside `src/`, add it to the `@source` list rather than relaxing the boundary.
+
+The Admin SPA bundle has an enforced ceiling; see
+`performance-budget.md` for the measured baseline and the check.
