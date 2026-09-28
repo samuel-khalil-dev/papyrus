@@ -32,7 +32,7 @@ internal static class PostEndpoints
         {
             var result = await handlers.SaveBlogPostAsync(new(null, request.Slug, request.Title, request.Summary, request.ContentMarkdown,
                 request.CoverImageUrl, request.ProjectId, request.CategoryId, request.IsFeatured, request.IsPublished,
-                request.PublishedAt, request.TagIds), cancellationToken);
+                request.PublishedAt, Tags(request.TagIds)), cancellationToken);
             if (!result.IsSuccess) return ValidationProblem(result.Errors);
             var blogPost = result.Value!;
             var created = await LoadBlogPostAsync(db, blogPost.Id, cancellationToken);
@@ -43,7 +43,7 @@ internal static class PostEndpoints
         {
             var result = await handlers.SaveBlogPostAsync(new(id, request.Slug, request.Title, request.Summary, request.ContentMarkdown,
                 request.CoverImageUrl, request.ProjectId, request.CategoryId, request.IsFeatured, request.IsPublished,
-                request.PublishedAt, request.TagIds), cancellationToken);
+                request.PublishedAt, Tags(request.TagIds)), cancellationToken);
             if (!result.IsSuccess) return result.Errors.Any(x => x.Code == "post.not_found") ? Results.NotFound() : ValidationProblem(result.Errors);
             var updated = await LoadBlogPostAsync(db, id, cancellationToken);
             return Results.Ok(updated!.ToResponse());
