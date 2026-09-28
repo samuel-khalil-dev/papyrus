@@ -8,7 +8,7 @@
 | Unit | xUnit | Application use cases and resolver fallback logic, in isolation. |
 | Integration | xUnit + PostgreSQL | Infrastructure adapters against a real database. |
 | End-to-end | Playwright | Full user journeys; browser-smoke is a hard CI gate. |
-| Accessibility | axe-core (in Playwright) | WCAG AA checks on every milestone introducing new interactive UI. |
+| Accessibility | Manual pass (keyboard + screen reader) | Required before any milestone introducing new interactive UI. No automated scanner runs in CI today; axe-core in Playwright is a committed M7 deliverable. |
 | Performance | k6 | Load/response-time budgets; regressions block merge. |
 
 ## RTL-specific coverage

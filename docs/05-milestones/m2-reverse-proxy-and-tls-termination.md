@@ -37,6 +37,17 @@ Nothing in the platform yet defines how Portfolio, Blog, and Admin are actually 
 - [ ] All three hosts are reachable over HTTPS with valid, auto-renewing certificates.
 - [ ] Requests route to the correct container per host.
 - [ ] Admin is not reachable without TLS under any configuration.
+- [ ] A **malformed** `Site:PublicBaseUrl` no longer silently disables host enforcement. A value
+      such as `https//blog.example.com`, or one with no scheme, is currently indistinguishable
+      from an unset value: `HostOf` returns `null` for both, the allowlist degrades to `"*"`,
+      and no warning is logged — unlike a `Site:Kind` mismatch, which fails startup loudly.
+      `docker-compose.yml`'s `${VAR:?...}` checks only that the variable is non-empty, so a
+      one-character typo in a production secret turns off M1's entire host-allowlist control
+      with no signal. The validator must distinguish *unset* from *unparseable* and fail
+      loudly, or at minimum log a warning naming the offending key. This item is owned here
+      because it is the same configuration surface and the same fail-loud principle; it was
+      previously tracked as a "candidate follow-up" in
+      [M1 routing truth](m1-routing-truth.md) with no milestone attached.
 
 ## Test plan
 - Automated smoke test per host verifying TLS validity and correct backend routing.

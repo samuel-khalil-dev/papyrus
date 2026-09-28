@@ -116,8 +116,14 @@ rejects it, the allowlist silently becomes `"*"`, and the host starts cleanly
 with no warning. `docker-compose.yml` uses `:?` on `BLOG_PUBLIC_BASE_URL`, which
 checks only that the variable is non-empty, not that it is a well-formed
 absolute URL. This is inconsistent with the fail-loud treatment a `Site:Kind`
-mismatch receives, and it is a candidate follow-up to make the validator
-distinguish "unset" from "unparseable".
+mismatch receives. The validator must distinguish "unset" from "unparseable".
+
+**Owner:** this follow-up is now carried by
+[M2 — Reverse Proxy & TLS Termination](m2-reverse-proxy-and-tls-termination.md),
+as an added Definition-of-Done item, rather than being left as an unassigned
+candidate. It is the same configuration surface and the same fail-loud
+principle, so it lands with the proxy work that also depends on this file being
+configured correctly.
 
 ### Deployment-visible behaviour change
 

@@ -14,18 +14,22 @@ push to `main` and every pull request:
 1. **Restore** — `dotnet restore Papyrus.sln`.
 2. **Build with warnings treated as errors** —
    `dotnet build Papyrus.sln --configuration Release --no-restore /p:TreatWarningsAsErrors=true`.
-3. **Tests** — `dotnet test Papyrus.sln` exercises 452 unique .NET tests in CI:
-   436 provider-independent/non-integration tests plus 16 PostgreSQL integration
-   tests.
-4. **PostgreSQL integration tests** — the `Papyrus.Tests.Integration` filter
-   runs the 16 integration tests against a `postgres:17-alpine` service. The
-   workflow runs the full suite first and then repeats this integration subset
-   explicitly; the unique CI test count remains 452, not 468.
+3. **Tests** — `dotnet test Papyrus.sln` runs the full suite: the
+   provider-independent/non-integration tests, then the
+   `Papyrus.Tests.Integration` tests against a `postgres:17-alpine` service.
+   Every case must pass. The current case count lives in the
+   [feature matrix](../00-overview/feature-matrix.md) and is deliberately not
+   restated here, because a count is not a gate — the gate is that the job runs
+   and nothing fails, is skipped, or errors.
+4. **PostgreSQL integration tests** — the workflow runs the full suite first and
+   then repeats the `Papyrus.Tests.Integration` filter explicitly. The repeated
+   run is a re-assertion, not additional coverage; the unique test count is
+   unchanged by it.
 5. **Secret scan** — `gitleaks/gitleaks-action@v3.0.0`.
 6. **NuGet vulnerability scan** — `dotnet list ... package --vulnerable
    --include-transitive`; fails on any vulnerable package.
 
-The `browser-smoke` job (after `verify`) builds the Admin UI, runs the 5
+The `browser-smoke` job (after `verify`) builds the Admin UI, runs the 10
 Playwright browser smoke tests against the Admin API, Blog, and Portfolio, and
 uploads the report. The `load-smoke` job runs the K6 public and admin load
 smokes. The `containers` job builds each image and scans it with Trivy for
