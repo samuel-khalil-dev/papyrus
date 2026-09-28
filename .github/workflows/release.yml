@@ -154,6 +154,15 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 10.0.x
+      # `dotnet ef` needs the projects' assets to be restored; it builds and
+      # loads them, so a missing project.assets.json is NETSDK1004 rather than
+      # anything to do with the database.
+      - name: Restore solution
+        run: dotnet restore Papyrus.sln
       # `dotnet ef` is shimmed from the global tool path, which the self-hosted
       # runner service does not export into the job PATH. `dotnet tool install
       # --global` therefore reports "already installed" while the next step
@@ -175,15 +184,22 @@ jobs:
             --project src/Papyrus.Infrastructure/Papyrus.Infrastructure.csproj \
             --startup-project src/Papyrus.Api.Admin/Papyrus.Api.Admin.csproj \
             --connection "$CONNECTION_STRING"
-      - name: Validate migration connection string (dry run)
+      - name: Validate migration readiness (dry run)
         if: ${{ inputs.dry_run }}
         run: |
           set -euo pipefail
           test -n "$CONNECTION_STRING"
-          # Prove the CLI itself runs, not just that the variable is set: a dry
-          # run that cannot reach `dotnet ef` cannot certify the real step.
-          dotnet tool run dotnet-ef --version
-          echo "Dry run: migration connection string is configured and the EF Core CLI runs; no migrations applied."
+          # Exercise the same code path the real step does. `--version` alone is
+          # not enough: it never builds the projects, so it passed while
+          # `database update` failed on a missing project.assets.json. Building
+          # here is what makes a dry run a real rehearsal.
+          dotnet build Papyrus.sln --nologo
+          dotnet tool run dotnet-ef migrations list \
+            --project src/Papyrus.Infrastructure/Papyrus.Infrastructure.csproj \
+            --startup-project src/Papyrus.Api.Admin/Papyrus.Api.Admin.csproj \
+            --connection "$CONNECTION_STRING" \
+            --no-build
+          echo "Dry run: connection string is configured, the solution builds, and the EF Core CLI enumerates migrations against the database; none applied."
 
   deploy:
     needs: [images, migrate]
