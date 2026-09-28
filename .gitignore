@@ -15,6 +15,7 @@ artifacts/
 
 # Visual Studio and VS Code local state
 .vs/
+# Only the shareable VS Code configuration is tracked; all other local state is not.
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
@@ -36,6 +37,11 @@ TestResults/
 coverage/
 *.coverage
 *.coveragexml
+
+# Playwright output
+test-results/
+playwright-report/
+blob-report/
 
 # Aspire and local tooling state
 .aspire/

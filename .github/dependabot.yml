@@ -81,8 +81,6 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: eslint-plugin-react-hooks
         update-types: ["version-update:semver-major"]
-      - dependency-name: framer-motion
-        update-types: ["version-update:semver-major"]
       - dependency-name: openapi-fetch
         update-types: ["version-update:semver-major"]
       - dependency-name: openapi-typescript

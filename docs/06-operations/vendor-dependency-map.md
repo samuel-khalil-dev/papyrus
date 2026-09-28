@@ -12,6 +12,22 @@ A single reference for every external dependency this platform relies on, what b
 | GitHub API | Repository metadata, contribution heatmap, comments (giscus) | Widgets degrade gracefully; comments become temporarily unavailable | No action required unless the fallback itself fails |
 | GHCR | Container image registry for releases | New releases cannot be deployed | Existing running containers are unaffected; investigate before the next release only |
 
+## Client-side runtime dependencies
+
+The public Blog and Portfolio hosts serve **no third-party JavaScript**. The
+shared design system (`Papyrus.Web.Shared/wwwroot`) is the only stylesheet, and
+the only client-side code is the repository's own `papyrus.js` and
+`papyrus-theme.js`. Vendored Bootstrap, jQuery, jQuery Validate, and jQuery
+Unobtrusive were removed on 2026-09-28; nothing referenced them, and
+`papyrus.css` already restated the only classes in use.
+
+| Dependency | Role | Impact if unavailable | Recovery path |
+|---|---|---|---|
+| Google Fonts (Cinzel, Inter, JetBrains Mono) | Display, body, and mono typefaces, loaded from the CDN in the shared layout and the Admin UI shell | Degraded typography only; the `font-display`, `font-sans`, and `font-mono` token stacks fall back to system fonts and the sites stay fully readable | Self-host the three families under `wwwroot/fonts` and change the `@font-face` declarations in `papyrus.css` and `src/index.css`; no application code changes |
+
+The Admin UI has no runtime CDN dependency: it loads only its own bundle and
+`/Papyrus_Logo.svg`.
+
 ## Declared but unused packages
 
 Package-level dependencies in `src/Papyrus.Admin.UI/package.json` that are
@@ -22,19 +38,20 @@ still declared.
 
 | Package | Why it is unneeded |
 |---|---|
-| `@radix-ui/react-label` | `components/ui/label.tsx` renders a plain `<label>`; it does not wrap the Radix primitive. |
+| `@radix-ui/react-alert-dialog` | The wrapping `components/ui/alert-dialog.tsx` was unreferenced and has been deleted. |
+| `@radix-ui/react-dropdown-menu` | The wrapping `components/ui/dropdown-menu.tsx` was unreferenced and has been deleted. |
+| `@radix-ui/react-label` | Nothing imports it; labels are plain `<label>` elements. |
 | `@radix-ui/react-select` | `components/ui/select.tsx` renders a native `<select>` on purpose, because the form contract requires `multiple` selection and native mobile controls. |
-| `@radix-ui/react-separator` | `components/ui/separator.tsx` renders a plain `<div role="separator">`. |
+| `@radix-ui/react-separator` | Nothing imports it; separators are plain elements. |
 | `@radix-ui/react-slot` | `components/ui/button.tsx` applies variants by conditional class rather than through `Slot` composition. |
+| `@radix-ui/react-tabs` | The wrapping `components/ui/tabs.tsx` was unreferenced and has been deleted. |
 | `@radix-ui/react-toast` | Toasts are served by `sonner`; `components/ui/toast.tsx` re-exports it. |
 | `class-variance-authority` | No import. Button variant styling is a conditional-class switch in `components/ui/button.tsx`. |
 
-Three local components are also unreferenced and can be deleted or adopted on
-demand: `components/ui/badge.tsx` (the status badge in use is
-`components/shared/status-badge.tsx`), `components/ui/table.tsx`, and
-`components/ui/skeleton.tsx`.
+`@radix-ui/react-dialog` is the only Radix package with a live import.
 
-Removing these is a dependency-hygiene change, not a functional one. Verify with
+Removing any of these is a dependency-hygiene change, not a functional one, and
+it requires a matching `package.json` and `package-lock.json` update. Verify with
 `npm ci`, `npm run build`, and `npm run lint` before and after.
 
 ## Review cadence

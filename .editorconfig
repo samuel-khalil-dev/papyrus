@@ -1,20 +1,31 @@
 root = true
 
 [*]
-charset = utf-8-bom
-end_of_line = crlf
+charset = utf-8
+end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
+
+# .gitattributes pins these to CRLF in the working tree; keep editors in step
+# with git so a save never produces a line-ending diff.
+[*.{cs,csx,vb,vbx,cshtml,csproj,fsproj,vbproj,props,targets,sln,slnx,ps1}]
+end_of_line = crlf
 
 [*.{cs,csx,vb,vbx}]
 indent_style = space
 indent_size = 4
 tab_width = 4
 
-[*.{json,jsonc,yml,yaml,xml,props,targets,csproj,sln}]
+[*.{json,jsonc,yml,yaml,xml,props,targets,csproj,fsproj,vbproj}]
 indent_style = space
 indent_size = 2
 tab_width = 2
+
+# Visual Studio writes solution files with four-space indentation.
+[*.{sln,slnx}]
+indent_style = space
+indent_size = 4
+tab_width = 4
 
 [*.md]
 trim_trailing_whitespace = false

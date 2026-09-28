@@ -20,3 +20,11 @@ Shared components use CSS logical properties exclusively for spacing/positioning
 
 ## Naming conventions
 Adapters: `Ef<Aggregate><Responsibility>Store`. Ports: `I<Aggregate><Responsibility>Store`. Configurations: `<Entity>Configuration`.
+
+## Text files and line endings
+
+`.gitattributes` is the authority for line endings: the index is LF for every tracked file, and the working tree is CRLF for the .NET, project, solution, and PowerShell file types and LF for everything else. `.editorconfig` mirrors that split, so a save never produces a line-ending diff. The repository is UTF-8 without a byte-order mark.
+
+## Front-end dependencies
+
+The public hosts serve no third-party JavaScript. The shared design system in `Papyrus.Web.Shared/wwwroot` is the only public stylesheet and the only client-side code. Adding a vendored client-side library requires a row in `06-operations/vendor-dependency-map.md` and, if the library duplicates something `papyrus.css` already provides, an argument for not adding it.

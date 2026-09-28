@@ -5,7 +5,7 @@ import { fileURLToPath, URL } from 'node:url';
 
 const apiTarget = process.env['services__admin-api__http__0']
   ?? process.env.VITE_API_BASE_URL
-  ?? 'http://localhost:5000';
+  ?? 'http://localhost:5205';
 
 export default defineConfig({
   base: '/',

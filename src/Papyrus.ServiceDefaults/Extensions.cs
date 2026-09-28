@@ -120,7 +120,7 @@ public static class Extensions
         {
             // Keep dependency names and exception details off the public response.
             // The deployment ingress must restrict this endpoint to the orchestrator
-            // or an internal monitoring network (see DEPLOYMENT.md).
+            // or an internal monitoring network (see docs/06-operations/deployment-guide.md).
             ResponseWriter = static async (context, report) =>
             {
                 context.Response.ContentType = "text/plain; charset=utf-8";
