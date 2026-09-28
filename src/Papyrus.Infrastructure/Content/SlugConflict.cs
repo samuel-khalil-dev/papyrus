@@ -18,8 +18,8 @@ namespace Papyrus.Infrastructure.Content;
 /// Two layers, because one is not enough. The pre-check resolves the ordinary
 /// case without a failed write, and the <c>23505</c> translation is the only
 /// race-proof backstop: two concurrent creates with the same new slug can both
-/// pass any pre-check, and exactly one of them is rejected by the index. Every
-/// other <see cref="DbUpdateException"/> is rethrown unchanged so a genuine
+/// pass any pre-check, and exactly one of them is rejected by the index. A
+/// violation on any other constraint is rethrown unchanged, so a genuine
 /// database fault is still a 500.
 /// </para>
 /// </summary>
@@ -52,16 +52,16 @@ internal static class SlugConflict
             .FirstOrDefaultAsync(cancellationToken);
 
     /// <summary>
-    /// Runs <paramref name="save"/>, and if it fails on a unique-index
-    /// violation returns <paramref name="error"/> instead. Every other
+    /// Runs <paramref name="save"/>, and if it fails on one of the four slug
+    /// unique indexes returns <paramref name="error"/> instead. Every other
     /// exception propagates, so a genuine database fault is still a 500.
     /// <para>
     /// The caller must not touch its <c>DbContext</c> again after this returns
-    /// false: a failed <c>SaveChanges</c> leaves the added entry tracked, so a
-    /// retry through the same context throws again. That is why the endpoints
-    /// return the conflict without re-reading the entity. It is also why this
-    /// path cannot name the row that won the race — only the pre-check knows
-    /// it.
+    /// a failed result: a failed <c>SaveChanges</c> leaves the added entry
+    /// tracked, so a retry through the same context throws again. That is why
+    /// the endpoints return the conflict without re-reading the entity. It is
+    /// also why this path cannot name the row that won the race — only the
+    /// pre-check knows it.
     /// </para>
     /// </summary>
     public static async Task<CommandResult<T>> TranslateAsync<T>(
@@ -83,5 +83,42 @@ internal static class SlugConflict
         new(error.Code, $"{error.Message} It is used by {conflictingId}.");
 
     private static bool IsUniqueViolation(DbUpdateException exception) =>
-        exception.InnerException is PostgresException { SqlState: UniqueViolation };
+        exception.InnerException is PostgresException { SqlState: UniqueViolation } postgres
+        && IsSlugConstraint(postgres.ConstraintName);
+
+    /// <summary>
+    /// True only for the four <c>(TenantId, Slug)</c> unique indexes.
+    /// <para>
+    /// <c>SqlState</c> alone is not a sufficient discriminator. Every entity in
+    /// the same <c>SaveChanges</c> also has a composite primary key, and a
+    /// duplicate <c>(TenantId, BlogPostId, TagId)</c> or
+    /// <c>(TenantId, ProjectId, TagId)</c> join row is equally a
+    /// <c>unique_violation</c>. Reporting one of those as a slug conflict would
+    /// tell an operator their post is taken when the real fault is a tag link,
+    /// so the constraint name is checked instead.
+    /// </para>
+    /// <para>
+    /// A null constraint name is treated as <em>not</em> a slug conflict. That
+    /// is the fail-loud direction: the unrecognised violation propagates and
+    /// surfaces as a 500 rather than being mislabelled.
+    /// </para>
+    /// </summary>
+    private static bool IsSlugConstraint(string? constraintName) =>
+        constraintName is not null
+        && SlugConstraintTables.Contains(
+            TableNameOf(constraintName), StringComparer.OrdinalIgnoreCase);
+
+    private static readonly HashSet<string> SlugConstraintTables =
+        ["IX_BlogPosts", "IX_Projects", "IX_ContentCategories", "IX_ContentTags"];
+
+    /// <summary>
+    /// Reduces a full index name to its table, so the four entities do not have
+    /// to be enumerated individually. EF Core's default convention is
+    /// <c>IX_{Table}_{Columns}</c>.
+    /// </summary>
+    private static string TableNameOf(string constraintName)
+    {
+        var separator = constraintName.IndexOf("_TenantId_", StringComparison.Ordinal);
+        return separator < 0 ? constraintName : constraintName[..separator];
+    }
 }
