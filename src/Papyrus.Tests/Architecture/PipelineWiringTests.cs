@@ -63,6 +63,26 @@ public sealed class PipelineWiringTests
         Assert.Contains("builder.Services.AddAdminApiRateLimiting();", ReadProgram(Path.Combine("src", "Papyrus.Api.Admin", "Program.cs")), StringComparison.Ordinal);
     }
 
+    [Theory]
+    [MemberData(nameof(HostPrograms))]
+    public void Routing_is_declared_before_the_telemetry_middleware(string relativeProgramPath)
+    {
+        // The telemetry middleware tags the selected endpoint, which is only
+        // available once routing has run. Declaring the two in the wrong order
+        // makes papyrus.endpoint a constant "unmatched-endpoint" on every request
+        // while every behavioural test still passes.
+        var source = ReadProgram(relativeProgramPath);
+        var routing = source.IndexOf("app.UseRouting()", StringComparison.Ordinal);
+        var telemetry = source.IndexOf("app.UsePapyrusTelemetry()", StringComparison.Ordinal);
+
+        Assert.True(routing >= 0, $"{relativeProgramPath} does not declare UseRouting().");
+        Assert.True(telemetry >= 0, $"{relativeProgramPath} does not declare UsePapyrusTelemetry().");
+        Assert.True(
+            routing < telemetry,
+            $"{relativeProgramPath} declares UsePapyrusTelemetry() at offset {telemetry} and UseRouting() at {routing}; "
+            + "routing must come first or the endpoint tag is always the unmatched fallback.");
+    }
+
     private static string ReadProgram(string relativeProgramPath)
     {
         var path = Path.Combine(FindRepositoryRoot(), relativeProgramPath);

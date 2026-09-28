@@ -28,8 +28,10 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
-app.UsePapyrusTelemetry();
+// Routing runs first so the telemetry middleware can read the selected endpoint
+// and tag it; it stays outside authorization so the span covers the final status.
 app.UseRouting();
+app.UsePapyrusTelemetry();
 app.UseAuthorization();
 app.MapDefaultEndpoints();
 app.MapStaticAssets();

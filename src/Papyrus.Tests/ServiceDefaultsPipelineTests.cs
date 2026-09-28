@@ -72,7 +72,7 @@ public sealed class ServiceDefaultsPipelineTests
     }
 
     [Fact]
-    public async Task Request_middleware_emits_a_server_span_tagged_with_service_and_status()
+    public async Task Request_middleware_emits_a_server_span_tagged_with_service_status_and_endpoint()
     {
         var exporter = new CollectingExporter();
         await using var host = await BuildHostAsync(exporter, wireTelemetryMiddleware: true);
@@ -87,6 +87,30 @@ public sealed class ServiceDefaultsPipelineTests
         Assert.Equal(ActivityKind.Server, request.Kind);
         Assert.Equal(host.Environment.ApplicationName, request.GetTagItem("papyrus.service"));
         Assert.Equal(200, Assert.IsType<int>(request.GetTagItem("http.status_code")));
+        // Routing must run before the telemetry middleware, or the selected
+        // endpoint is still null and this tag is a constant "unmatched-endpoint"
+        // on every request in every host.
+        Assert.NotEqual("unmatched-endpoint", request.GetTagItem("papyrus.endpoint"));
+        Assert.Contains("probe", request.GetTagItem("papyrus.endpoint") as string ?? string.Empty, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_request_with_no_matching_endpoint_is_tagged_as_unmatched()
+    {
+        // The control for the assertion above: the fallback is real and reachable,
+        // so the passing case is evidence the tag was populated rather than that
+        // the assertion is satisfied by accident.
+        var exporter = new CollectingExporter();
+        await using var host = await BuildHostAsync(exporter, wireTelemetryMiddleware: true);
+        using var client = host.GetTestClient();
+
+        using var response = await client.GetAsync("/no-such-endpoint");
+
+        Assert.Equal(404, (int)response.StatusCode);
+        ForceFlush(host);
+
+        var request = Assert.Single(exporter.ExportedItems, item => item.DisplayName == "Papyrus.Request");
+        Assert.Equal("unmatched-endpoint", request.GetTagItem("papyrus.endpoint"));
     }
 
     [Fact]
@@ -121,12 +145,16 @@ public sealed class ServiceDefaultsPipelineTests
             tracing.AddProcessor(new SimpleActivityExportProcessor(exporter)));
 
         var app = builder.Build();
-        app.MapDefaultEndpoints();
-        app.MapGet("/probe", () => "ok");
+        // Mirrors the host order: routing before telemetry, so the middleware sees
+        // the selected endpoint.
+        app.UseRouting();
         if (wireTelemetryMiddleware)
         {
             app.UsePapyrusTelemetry();
         }
+
+        app.MapDefaultEndpoints();
+        app.MapGet("/probe", () => "ok");
 
         await app.StartAsync();
         return app;
