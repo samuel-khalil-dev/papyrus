@@ -17,7 +17,9 @@ push to `main` and every pull request:
 3. **Tests** — `dotnet test Papyrus.sln` runs the full suite: the
    provider-independent/non-integration tests, then the
    `Papyrus.Tests.Integration` tests against a `postgres:17-alpine` service.
-   Every case must pass. The current case count lives in the
+   Every case must pass, and none may be skipped: the baseline check below fails
+   on any TRX outcome other than `Passed`, so a skipped case cannot quietly
+   reduce coverage. The current case count lives in the
    [feature matrix](../00-overview/feature-matrix.md) and is deliberately not
    restated here, because a count is not a gate — the gate is that the job runs
    and nothing fails, is skipped, or errors.
@@ -25,8 +27,17 @@ push to `main` and every pull request:
    then repeats the `Papyrus.Tests.Integration` filter explicitly. The repeated
    run is a re-assertion, not additional coverage; the unique test count is
    unchanged by it.
-5. **Secret scan** — `gitleaks/gitleaks-action@v3.0.0`.
-6. **NuGet vulnerability scan** — `dotnet list ... package --vulnerable
+5. **Documented test baseline** — the `verify` job derives the published figures
+   from the TRX files the two test steps already write, and fails if the
+   `<!-- test-baseline: ... -->` marker in the feature matrix, or any figure
+   restated in `README.md`, `limitations.md`, or `Papyrus_Roadmap.md`, disagrees
+   with the run. The figures are never hand-counted. This is what stops a
+   test-adding change from leaving a stale "verified baseline" behind: adding
+   any source file shifts both the total and the encoding-guard count, so the
+   marker must be updated in the same change. The count is checked because it is
+   quoted as evidence; it is not itself a gate on what the suite covers.
+6. **Secret scan** — `gitleaks/gitleaks-action@v3.0.0`.
+7. **NuGet vulnerability scan** — `dotnet list ... package --vulnerable
    --include-transitive`; fails on any vulnerable package.
 
 The `browser-smoke` job (after `verify`) builds the Admin UI, runs the 10
