@@ -24,3 +24,14 @@
 | Independent service extraction | **Planned** | Papyrus remains a modular monolith until measured scale, deployment, or ownership needs justify extraction. |
 
 See [known limitations](limitations.md), the [roadmap](../Papyrus_Roadmap.md), and the [release gates](../04-engineering-standards/release-gates.md) for detail and evidence requirements.
+
+The test counts above are machine-checked. The `verify` job in
+[CI](../../.github/workflows/ci.yml) derives every figure below from the TRX
+files the test steps already write, and fails the build if this marker or any
+restatement of the figures in `README.md`, `limitations.md`, or
+`Papyrus_Roadmap.md` disagrees with the run. Adding, removing, or renaming a
+test — or adding any source file, since the encoding guard contributes one case
+per file — requires updating this marker and those three documents in the same
+change.
+
+<!-- test-baseline: non-integration=449 integration=22 total=471 encoding=280 behavioural=169 behaviour-total=191 playwright=10 -->

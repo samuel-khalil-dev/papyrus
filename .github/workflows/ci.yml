@@ -139,6 +139,129 @@ jobs:
           print('Brand asset copies are identical to their canonical source.')
           PY
 
+      - name: Verify the documented test baseline matches this run
+        run: |
+          python3 - <<'PY'
+          import re
+          import sys
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          # The test figures published in docs/00-overview/feature-matrix.md are
+          # derived here from the TRX files the two steps above already wrote,
+          # rather than restated by hand, so they cannot silently go stale. The
+          # numbers live in exactly one machine-readable marker; the prose
+          # elsewhere must quote the same figures, which is checked too.
+          NAMESPACE = '{http://microsoft.com/schemas/VisualStudio/TeamTest/2010}'
+          INTEGRATION_PREFIX = 'Papyrus.Tests.Integration.'
+          ENCODING_CLASS = 'Papyrus.Tests.SourceEncodingTests.'
+          MARKER = re.compile(r'<!--\s*test-baseline:\s*(?P<body>.*?)\s*-->', re.DOTALL)
+
+          # xUnit on the VSTest logger emits Passed, Failed and NotExecuted
+          # (skipped or filtered). A skipped case is silently reduced coverage,
+          # so anything that is not Passed is treated as a failure.
+          NOT_PASSED = {
+              'NotExecuted', 'Inconclusive', 'Timeout', 'Aborted',
+              'Error', 'Warning', 'Failed',
+          }
+
+          # Every document that publishes a figure from the canonical row, and
+          # the figures each must contain. Six independent restatements is how
+          # a three-case drift survived review once, so all of them are checked
+          # rather than the marker alone.
+          RESTATEMENTS = {
+              'docs/README.md': ('449', '280', '169', '22', '471', '10'),
+              'docs/00-overview/limitations.md': ('449', '280', '169', '22', '471', '10'),
+              'docs/Papyrus_Roadmap.md': ('449', '280', '169', '22', '471', '191', '10'),
+          }
+
+          trx_files = sorted(Path('TestResults').rglob('*.trx'))
+          if len(trx_files) != 2:
+              sys.exit(
+                  f'Expected 2 TRX files from the two dotnet test steps, '
+                  f'found {len(trx_files)}: {[p.name for p in trx_files]}'
+              )
+
+          non_integration = integration = encoding = 0
+          not_passed = []
+          for trx in trx_files:
+              for result in ET.parse(trx).iter(f'{NAMESPACE}UnitTestResult'):
+                  name = result.get('testName', '')
+                  # The two steps differ only by --filter, so the namespace
+                  # prefix is the runner's own split and cannot drift from it.
+                  if name.startswith(INTEGRATION_PREFIX):
+                      integration += 1
+                  else:
+                      non_integration += 1
+                      if name.startswith(ENCODING_CLASS):
+                          encoding += 1
+                  if result.get('outcome', '') in NOT_PASSED:
+                      not_passed.append(f"{name} [{result.get('outcome', '')}]")
+
+          if not_passed:
+              print('Test cases that did not pass:')
+              for entry in sorted(not_passed):
+                  print(f'  {entry}')
+              sys.exit(1)
+
+          measured = {
+              'non-integration': non_integration,
+              'integration': integration,
+              'total': non_integration + integration,
+              'encoding': encoding,
+              'behavioural': non_integration - encoding,
+              'behaviour-total': non_integration - encoding + integration,
+              'playwright': sum(
+                  len(re.findall(r'^\s*test\(', path.read_text(encoding='utf-8'), re.MULTILINE))
+                  for path in sorted(Path('tests/e2e').glob('*.spec.ts'))
+              ),
+          }
+
+          matrix = Path('docs/00-overview/feature-matrix.md')
+          match = MARKER.search(matrix.read_text(encoding='utf-8'))
+          if match is None:
+              sys.exit(f"No '<!-- test-baseline: ... -->' marker in {matrix.as_posix()}")
+
+          recorded = {
+              key: int(value)
+              for key, value in re.findall(r'([a-z-]+)=(\d+)', match.group('body'))
+          }
+
+          drift = [
+              (key, value, recorded.get(key))
+              for key, value in measured.items()
+              if recorded.get(key) != value
+          ]
+          for path, expected in RESTATEMENTS.items():
+              body = Path(path).read_text(encoding='utf-8')
+              missing = [value for value in expected if value not in body]
+              if missing:
+                  drift.append((path, f"missing {', '.join(missing)}", None))
+
+          if drift:
+              print('The documented test baseline does not match this run.\n')
+              width = max(len(str(key)) for key, _, _ in drift)
+              print(f"  {'figure'.ljust(width)}  measured  recorded")
+              for key, value, was in drift:
+                  print(f"  {str(key).ljust(width)}  {str(value).rjust(8)}  {str(was).rjust(8)}")
+              print(
+                  '\nThe test suite ran cleanly; only the documentation is behind. '
+                  "Update the '<!-- test-baseline: ... -->' marker in "
+                  'docs/00-overview/feature-matrix.md, and keep the figures quoted in '
+                  'docs/README.md, docs/00-overview/limitations.md and '
+                  'docs/Papyrus_Roadmap.md in step with it.'
+                  '\n\nEncoding cases move with the source tree: every tracked '
+                  '.cs/.csproj/.json/.props/.targets/.md file is one '
+                  'SourceEncodingTests case, so adding or deleting any file -- not '
+                  "only any test -- changes both 'total' and 'encoding'. That is "
+                  'expected; update the marker in the same change.'
+              )
+              sys.exit(1)
+
+          print('Test baseline matches this run: ' + ', '.join(
+              f'{key}={value}' for key, value in measured.items()))
+          PY
+
   browser-smoke:
     needs: verify
     runs-on: ubuntu-latest
