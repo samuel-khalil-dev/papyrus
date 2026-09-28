@@ -112,3 +112,8 @@ pnpm-debug.log*
 ops/*
 !ops/observability/
 plans/
+
+# Local .NET tool manifest. The release workflow creates this in the checkout
+# to pin the EF Core CLI without relying on the runner's global tool PATH, so it
+# is generated per run and must not be committed.
+dotnet-tools.json

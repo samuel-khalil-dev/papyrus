@@ -154,21 +154,36 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Install EF Core CLI
-        run: dotnet tool install --global dotnet-ef --version 10.0.11
+      # `dotnet ef` is shimmed from the global tool path, which the self-hosted
+      # runner service does not export into the job PATH. `dotnet tool install
+      # --global` therefore reports "already installed" while the next step
+      # fails with "a dotnet-prefixed executable with this name could not be
+      # found on the PATH" — this has been failing since 2026-09-09. A local
+      # tool manifest is resolved relative to the checkout, so it needs no
+      # ambient PATH and cannot drift with the runner's environment.
+      - name: Install EF Core CLI as a local tool
+        run: |
+          set -euo pipefail
+          dotnet new tool-manifest --force
+          dotnet tool install dotnet-ef --version 10.0.11
       - name: Apply database migrations as the dedicated migration job
         if: ${{ !inputs.dry_run }}
         run: |
+          set -euo pipefail
           test -n "$CONNECTION_STRING"
-          dotnet ef database update \
+          dotnet tool run dotnet-ef database update \
             --project src/Papyrus.Infrastructure/Papyrus.Infrastructure.csproj \
             --startup-project src/Papyrus.Api.Admin/Papyrus.Api.Admin.csproj \
             --connection "$CONNECTION_STRING"
       - name: Validate migration connection string (dry run)
         if: ${{ inputs.dry_run }}
         run: |
+          set -euo pipefail
           test -n "$CONNECTION_STRING"
-          echo "Dry run: migration connection string is configured; no migrations applied."
+          # Prove the CLI itself runs, not just that the variable is set: a dry
+          # run that cannot reach `dotnet ef` cannot certify the real step.
+          dotnet tool run dotnet-ef --version
+          echo "Dry run: migration connection string is configured and the EF Core CLI runs; no migrations applied."
 
   deploy:
     needs: [images, migrate]
