@@ -109,7 +109,13 @@ jobs:
           tags: ${{ env.IMAGE_PREFIX }}/${{ matrix.name }}:${{ github.ref_name }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      # A dry run builds but does not push, so the image only exists in the
+      # runner's build cache: the reference below is not in the registry and
+      # cannot be scanned or turned into an SBOM. CI's `containers` job scans
+      # the same Dockerfiles, so skipping these here loses no coverage while
+      # keeping the dry run from failing on a step that cannot succeed.
       - name: Scan release image
+        if: ${{ !inputs.dry_run }}
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: ${{ env.IMAGE_PREFIX }}/${{ matrix.name }}:${{ github.ref_name }}
@@ -118,12 +124,14 @@ jobs:
           ignore-unfixed: true
           severity: HIGH,CRITICAL
       - name: Generate SPDX SBOM
+        if: ${{ !inputs.dry_run }}
         uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
           image: ${{ env.IMAGE_PREFIX }}/${{ matrix.name }}:${{ github.ref_name }}
           format: spdx-json
           output-file: sbom-${{ matrix.name }}.spdx.json
       - name: Upload SBOM artifact
+        if: ${{ !inputs.dry_run }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sbom-${{ matrix.name }}
@@ -245,6 +253,12 @@ jobs:
 
       - name: Validate deployment configuration (dry run)
         if: ${{ inputs.dry_run }}
+        env:
+          # The compose files use required-variable syntax, so a dry run must
+          # supply values to reach a real parse rather than failing on the first
+          # unset placeholder. These never start a container.
+          GRAFANA_ADMIN_USER: ${GRAFANA_ADMIN_USER:-dry-run}
+          GRAFANA_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-dry-run}
         run: |
           echo "Dry run: deployment configuration validated; no containers started."
           echo "Admin image:   ${{ env.IMAGE_PREFIX }}/admin:${{ github.ref_name }}"
