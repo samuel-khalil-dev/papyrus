@@ -33,22 +33,30 @@ internal static class ProjectEndpoints
         {
             var result = await handlers.SaveProjectAsync(new(null, request.Slug, request.Title, request.Summary, request.Description,
                 request.RepositoryUrl, request.LiveUrl, request.CoverImageUrl, request.CategoryId, request.IsFeatured,
-                request.IsPublished, request.PublishedAt, request.TagIds), cancellationToken);
-            if (!result.IsSuccess) return ValidationProblem(result.Errors);
+                request.IsPublished, request.PublishedAt, Tags(request.TagIds)), cancellationToken);
+            if (!result.IsSuccess) return CommandFailure(result.Errors);
             var project = result.Value!;
             var created = await LoadProjectAsync(db, project.Id, cancellationToken);
             return Results.Created(ResourcePath("projects", project.Id, versioned), created!.ToResponse());
-        }).Produces<ProjectResponse>(StatusCodes.Status201Created).Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest);
+        }).Produces<ProjectResponse>(StatusCodes.Status201Created).Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         api.MapPut("/projects/{id:guid}", async (Guid id, ProjectUpsertRequest request, PapyrusDbContext db, [FromServices] ContentCommandHandlers handlers, CancellationToken cancellationToken) =>
         {
             var result = await handlers.SaveProjectAsync(new(id, request.Slug, request.Title, request.Summary, request.Description,
                 request.RepositoryUrl, request.LiveUrl, request.CoverImageUrl, request.CategoryId, request.IsFeatured,
-                request.IsPublished, request.PublishedAt, request.TagIds), cancellationToken);
-            if (!result.IsSuccess) return result.Errors.Any(x => x.Code == "project.not_found") ? Results.NotFound() : ValidationProblem(result.Errors);
+                request.IsPublished, request.PublishedAt, Tags(request.TagIds)), cancellationToken);
+            if (!result.IsSuccess)
+            {
+                return result.Errors.Any(error => error.Code == "project.not_found")
+                    ? Results.NotFound()
+                    : CommandFailure(result.Errors);
+            }
+
             var updated = await LoadProjectAsync(db, id, cancellationToken);
             return Results.Ok(updated!.ToResponse());
-        }).Produces<ProjectResponse>().Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest).Produces(StatusCodes.Status404NotFound);
+        }).Produces<ProjectResponse>().Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status409Conflict).Produces(StatusCodes.Status404NotFound);
 
         api.MapDelete("/projects/{id:guid}", async (Guid id, [FromServices] ContentLifecycleHandlers handlers, CancellationToken cancellationToken) =>
         {

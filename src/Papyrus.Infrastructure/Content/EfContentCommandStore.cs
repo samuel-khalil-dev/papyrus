@@ -10,6 +10,9 @@ namespace Papyrus.Infrastructure.Content;
 /// </summary>
 public sealed class EfContentCommandStore(PapyrusDbContext db) : IContentCommandStore
 {
+    // The pre-check is skipped on update when the row already holds this slug:
+    // the query would exclude the row being edited anyway, so the round trip
+    // would buy nothing on the most common write.
     public async Task<CommandResult<Project>> SaveProjectAsync(SaveProjectCommand command, CancellationToken cancellationToken)
     {
         var validation = ContentValidation.ForProjectOrPost(command.Slug, command.Title, command.Summary, command.TagIds);
@@ -23,14 +26,17 @@ public sealed class EfContentCommandStore(PapyrusDbContext db) : IContentCommand
             ? new Project { Id = Guid.NewGuid(), TenantId = db.TenantId }
             : await db.Projects.Include(x => x.ProjectTags).FirstOrDefaultAsync(x => x.Id == command.Id, cancellationToken);
         if (project is null) return CommandResult<Project>.Invalid(new ValidationError("project.not_found", "Project was not found."));
+        if (project.Slug != command.Slug
+            && await SlugConflict.ConflictingIdAsync(db.Projects, command.Slug, command.Id, cancellationToken) is { } conflictingProjectId)
+            return CommandResult<Project>.Invalid(SlugConflict.Conflict(ContentValidation.ProjectSlugTaken, conflictingProjectId));
         project.CategoryId = command.CategoryId; project.Slug = command.Slug; project.Title = command.Title;
         project.Summary = command.Summary; project.Description = command.Description; project.RepositoryUrl = command.RepositoryUrl;
         project.LiveUrl = command.LiveUrl; project.CoverImageUrl = command.CoverImageUrl; project.IsFeatured = command.IsFeatured;
         project.IsPublished = command.IsPublished; project.PublishedAt = command.PublishedAt;
         if (command.Id is null) db.Projects.Add(project);
         await ReplaceProjectTagsAsync(project, command.TagIds, cancellationToken);
-        await db.SaveChangesAsync(cancellationToken);
-        return CommandResult<Project>.Success(project);
+        return await SlugConflict.TranslateAsync(
+            () => db.SaveChangesAsync(cancellationToken), project, ContentValidation.ProjectSlugTaken);
     }
 
     public async Task<CommandResult<BlogPost>> SaveBlogPostAsync(SaveBlogPostCommand command, CancellationToken cancellationToken)
@@ -49,6 +55,9 @@ public sealed class EfContentCommandStore(PapyrusDbContext db) : IContentCommand
             ? new BlogPost { Id = Guid.NewGuid(), TenantId = db.TenantId }
             : await db.BlogPosts.Include(x => x.BlogPostTags).FirstOrDefaultAsync(x => x.Id == command.Id, cancellationToken);
         if (post is null) return CommandResult<BlogPost>.Invalid(new ValidationError("post.not_found", "Blog post was not found."));
+        if (post.Slug != command.Slug
+            && await SlugConflict.ConflictingIdAsync(db.BlogPosts, command.Slug, command.Id, cancellationToken) is { } conflictingPostId)
+            return CommandResult<BlogPost>.Invalid(SlugConflict.Conflict(ContentValidation.BlogPostSlugTaken, conflictingPostId));
         post.ProjectId = command.ProjectId; post.CategoryId = command.CategoryId; post.Slug = command.Slug;
         post.Title = command.Title; post.Summary = command.Summary; post.ContentMarkdown = command.ContentMarkdown;
         post.CoverImageUrl = command.CoverImageUrl; post.IsFeatured = command.IsFeatured; post.IsPublished = command.IsPublished;
@@ -56,8 +65,8 @@ public sealed class EfContentCommandStore(PapyrusDbContext db) : IContentCommand
         if (command.Id is null) db.BlogPosts.Add(post);
         var current = post.BlogPostTags.ToArray(); db.BlogPostTags.RemoveRange(current);
         foreach (var tagId in command.TagIds.Distinct()) post.BlogPostTags.Add(new BlogPostTag { BlogPostId = post.Id, TagId = tagId, TenantId = db.TenantId });
-        await db.SaveChangesAsync(cancellationToken);
-        return CommandResult<BlogPost>.Success(post);
+        return await SlugConflict.TranslateAsync(
+            () => db.SaveChangesAsync(cancellationToken), post, ContentValidation.BlogPostSlugTaken);
     }
 
     private async Task<bool> TagsExistAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken) =>

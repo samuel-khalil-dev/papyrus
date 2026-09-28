@@ -36,16 +36,20 @@ internal static class TaxonomyEndpoints
             var result = await handlers.SaveCategoryAsync(new(null, request.Slug, request.Name, request.Description, request.IsPublished), cancellationToken);
             return result.IsSuccess
                 ? Results.Created(ResourcePath("categories", result.Value!.Id, versioned), result.Value.ToResponse())
-                : ValidationProblem(result.Errors);
-        }).Produces<ContentCategoryResponse>(StatusCodes.Status201Created).Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest);
+                : CommandFailure(result.Errors);
+        }).Produces<ContentCategoryResponse>(StatusCodes.Status201Created).Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         api.MapPut("/categories/{id:guid}", async (Guid id, CategoryUpsertRequest request, [FromServices] TaxonomyCommandHandlers handlers, CancellationToken cancellationToken) =>
         {
             var result = await handlers.SaveCategoryAsync(new(id, request.Slug, request.Name, request.Description, request.IsPublished), cancellationToken);
             return result.IsSuccess
                 ? Results.Ok(result.Value!.ToResponse())
-                : result.Errors.Any(error => error.Code == "category.not_found") ? Results.NotFound() : ValidationProblem(result.Errors);
-        }).Produces<ContentCategoryResponse>().Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest).Produces(StatusCodes.Status404NotFound);
+                : result.Errors.Any(error => error.Code == "category.not_found")
+                    ? Results.NotFound()
+                    : CommandFailure(result.Errors);
+        }).Produces<ContentCategoryResponse>().Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status409Conflict).Produces(StatusCodes.Status404NotFound);
 
         api.MapDelete("/categories/{id:guid}", async (Guid id, [FromServices] ContentLifecycleHandlers handlers, CancellationToken cancellationToken) =>
         {
@@ -75,16 +79,20 @@ internal static class TaxonomyEndpoints
             var result = await handlers.SaveTagAsync(new(null, request.Slug, request.Name), cancellationToken);
             return result.IsSuccess
                 ? Results.Created(ResourcePath("tags", result.Value!.Id, versioned), result.Value.ToResponse())
-                : ValidationProblem(result.Errors);
-        }).Produces<ContentTagResponse>(StatusCodes.Status201Created).Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest);
+                : CommandFailure(result.Errors);
+        }).Produces<ContentTagResponse>(StatusCodes.Status201Created).Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         api.MapPut("/tags/{id:guid}", async (Guid id, TagUpsertRequest request, [FromServices] TaxonomyCommandHandlers handlers, CancellationToken cancellationToken) =>
         {
             var result = await handlers.SaveTagAsync(new(id, request.Slug, request.Name), cancellationToken);
             return result.IsSuccess
                 ? Results.Ok(result.Value!.ToResponse())
-                : result.Errors.Any(error => error.Code == "tag.not_found") ? Results.NotFound() : ValidationProblem(result.Errors);
-        }).Produces<ContentTagResponse>().Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest).Produces(StatusCodes.Status404NotFound);
+                : result.Errors.Any(error => error.Code == "tag.not_found")
+                    ? Results.NotFound()
+                    : CommandFailure(result.Errors);
+        }).Produces<ContentTagResponse>().Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status409Conflict).Produces(StatusCodes.Status404NotFound);
 
         api.MapDelete("/tags/{id:guid}", async (Guid id, [FromServices] ContentLifecycleHandlers handlers, CancellationToken cancellationToken) =>
         {

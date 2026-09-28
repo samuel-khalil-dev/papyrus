@@ -116,6 +116,36 @@ internal static class AdminEndpointSupport
             title: "The request contains validation errors.",
             detail: "Correct the indicated fields and try again.");
 
+    /// <summary>
+    /// Normalises an optional tag-id list to a non-null collection.
+    /// <para>
+    /// <c>tagIds</c> has no <c>[Required]</c> attribute, so a request that omits
+    /// the property binds it to <c>null</c> even though the contract declares a
+    /// non-nullable array. Passing that <c>null</c> into the command store
+    /// produced an unhandled exception and a 500 for a perfectly reasonable
+    /// request that simply asked for no tags. An omitted collection means the
+    /// same thing as an empty one here.
+    /// </para>
+    /// </summary>
+    public static Guid[] Tags(Guid[]? tagIds) => tagIds ?? [];
+
+    /// <summary>
+    /// Maps a failed command result onto the right status: 409 for a slug
+    /// conflict, 400 for everything else.
+    /// <para>
+    /// A slug conflict is deliberately not a <c>ValidationProblemDetails</c>:
+    /// the request is well formed and a different resource holds the slug, so
+    /// the response names that resource instead of listing field errors.
+    /// </para>
+    /// </summary>
+    public static IResult CommandFailure(IReadOnlyList<ValidationError> errors) =>
+        ContentValidation.HasSlugConflict(errors)
+            ? Results.Problem(
+                title: "The slug is already in use.",
+                detail: errors.First(ContentValidation.IsSlugConflict).Message,
+                statusCode: StatusCodes.Status409Conflict)
+            : ValidationProblem(errors);
+
     public static ContentCategoryResponse ToResponse(this ContentCategory category) =>
         new(category.Id, category.Slug, category.Name, category.Description, category.IsPublished, category.CreatedAt, category.UpdatedAt);
 

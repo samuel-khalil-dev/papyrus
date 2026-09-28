@@ -32,22 +32,33 @@ internal static class PostEndpoints
         {
             var result = await handlers.SaveBlogPostAsync(new(null, request.Slug, request.Title, request.Summary, request.ContentMarkdown,
                 request.CoverImageUrl, request.ProjectId, request.CategoryId, request.IsFeatured, request.IsPublished,
-                request.PublishedAt, request.TagIds), cancellationToken);
-            if (!result.IsSuccess) return ValidationProblem(result.Errors);
+                request.PublishedAt, Tags(request.TagIds)), cancellationToken);
+            // A conflict returns before the follow-up read: a rejected
+            // SaveChanges leaves the context unusable, so it must not be queried
+            // again here.
+            if (!result.IsSuccess) return CommandFailure(result.Errors);
             var blogPost = result.Value!;
             var created = await LoadBlogPostAsync(db, blogPost.Id, cancellationToken);
             return Results.Created(ResourcePath("blog-posts", blogPost.Id, versioned), created!.ToResponse());
-        }).Produces<BlogPostResponse>(StatusCodes.Status201Created).Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest);
+        }).Produces<BlogPostResponse>(StatusCodes.Status201Created).Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         api.MapPut("/blog-posts/{id:guid}", async (Guid id, BlogPostUpsertRequest request, PapyrusDbContext db, [FromServices] ContentCommandHandlers handlers, CancellationToken cancellationToken) =>
         {
             var result = await handlers.SaveBlogPostAsync(new(id, request.Slug, request.Title, request.Summary, request.ContentMarkdown,
                 request.CoverImageUrl, request.ProjectId, request.CategoryId, request.IsFeatured, request.IsPublished,
-                request.PublishedAt, request.TagIds), cancellationToken);
-            if (!result.IsSuccess) return result.Errors.Any(x => x.Code == "post.not_found") ? Results.NotFound() : ValidationProblem(result.Errors);
+                request.PublishedAt, Tags(request.TagIds)), cancellationToken);
+            if (!result.IsSuccess)
+            {
+                return result.Errors.Any(error => error.Code == "post.not_found")
+                    ? Results.NotFound()
+                    : CommandFailure(result.Errors);
+            }
+
             var updated = await LoadBlogPostAsync(db, id, cancellationToken);
             return Results.Ok(updated!.ToResponse());
-        }).Produces<BlogPostResponse>().Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest).Produces(StatusCodes.Status404NotFound);
+        }).Produces<BlogPostResponse>().Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status409Conflict).Produces(StatusCodes.Status404NotFound);
 
         api.MapDelete("/blog-posts/{id:guid}", async (Guid id, [FromServices] ContentLifecycleHandlers handlers, CancellationToken cancellationToken) =>
         {

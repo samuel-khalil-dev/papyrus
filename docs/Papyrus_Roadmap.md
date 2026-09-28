@@ -165,7 +165,9 @@ M0 -> M1 -> M2 -> M3 -> M4 -> M5 -> M6 -> M7 -> M8 -> M9 -> M10 -> M11 -> M12 ->
 
 ## 5. Governance
 
-Each milestone is tracked as a GitHub Milestone; each deliverable within it as an Issue. Every new aggregate ships as one complete vertical slice per pull request. Every new external dependency is recorded in `06-operations/vendor-dependency-map.md`.
+Each milestone is tracked as a document in [`05-milestones/`](05-milestones/) — one file per milestone, with its scope, risks, Definition of Done, and test plan — and that document is the tracking record of record. GitHub milestones and issues are **not** currently used for this: the repository has no GitHub Milestones and has opened exactly one issue, which is closed. Do not rely on GitHub to answer "what is M14" or "is M20 done"; read the milestone document and the [feature matrix](00-overview/feature-matrix.md). Every new aggregate ships as one complete vertical slice per pull request. Every new external dependency is recorded in `06-operations/vendor-dependency-map.md`.
+
+If milestone tracking is ever migrated to GitHub Milestones and Issues, this paragraph is the claim that must be updated in the same change that performs the migration — and the migration should be verified to exist, not assumed from this sentence.
 
 ---
 
@@ -205,10 +207,13 @@ still open; Phase 8 is a decision gate and not started.
 
 ### Key verified figures
 
-- **Tests:** 452 unique .NET tests in CI (436 provider-independent /
-  non-integration tests plus 16 PostgreSQL-backed integration tests), plus a
-  separate 10-test Playwright browser smoke suite. The warnings-as-errors build
-  is 0 warnings / 0 errors.
+- **Tests:** 471 unique .NET test cases in CI (449 provider-independent /
+  non-integration plus 22 PostgreSQL-backed integration), plus a separate
+  10-test Playwright browser smoke suite. 280 of the 449 non-integration cases
+  are whole-file encoding cases in `SourceEncodingTests`; 169 assert behaviour,
+  and 191 cases in total are behavioural. The warnings-as-errors build is
+  0 warnings / 0 errors. The
+  [feature matrix](00-overview/feature-matrix.md) is the canonical count.
 - **Migrations:** five EF Core migrations applied; the Admin API is the sole
   migration/seed owner and public hosts never migrate.
 - **S30.5 K6 load evidence (2026-08-29):** public run HTTP p95 23.574 ms,
