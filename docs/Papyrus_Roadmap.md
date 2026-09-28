@@ -49,7 +49,7 @@ in this repository, so the relationship is stated explicitly here.
 | Schema | Scope | Status | Primary audience |
 | --- | --- | --- | --- |
 | **Phases 0–7** — Platform Bootstrap & Hardening | Structural foundation: security, layering, contracts, delivery pipeline, test depth, observability, release readiness | **Completed / verified baseline** (Phase 7 release tag intentionally open) | Contributors, reviewers, auditors |
-| **Milestones M0–M32** — Product Feature Evolution | Visible product capability: routing, theming, localization, content, AI, growth | **Target sequence.** M0 is complete; M1–M32 have not started as a tracked sequence | Product planning, roadmap review |
+| **Milestones M0–M32** — Product Feature Evolution | Visible product capability: routing, theming, localization, content, AI, growth | **Target sequence.** M0 and M1 are complete; M2–M32 have not started as a tracked sequence | Product planning, roadmap review |
 
 **Phases 0–7 answer "is the platform sound?"** They are complete or near-complete
 and are verified by the numbers in
@@ -119,8 +119,13 @@ items are met.** The feature-scoped Admin endpoint grouping is delivered by
 `src/Papyrus.Api.Admin/Endpoints/`; every Admin error response conforms to RFC 7807
 `ProblemDetails`; and the Presentation-to-Infrastructure reference audit produced
 [ADR-0010](02-architecture/decisions/adr-0010-scoped-presentation-to-infrastructure-access.md),
-which scopes the boundary and enforces it with three fitness rules. M1 Routing
-Truth is the next milestone in the sequence.
+which scopes the boundary and enforces it with three fitness rules. **M1 Routing
+Truth is also complete:** each public host now fails startup if its configured
+`Site:Kind` or canonical base URLs disagree with the site it actually serves, and
+serves only its configured canonical host plus the loopback literals, so any
+other Host header is refused with a 400. See
+`05-milestones/m1-routing-truth.md`. **M2 Reverse Proxy & TLS Termination is the
+next milestone in the sequence.**
 
 **Reading rule:** when the phase tracker and the milestone sequence disagree,
 the phase tracker is authoritative for *what is built and verified today*, and

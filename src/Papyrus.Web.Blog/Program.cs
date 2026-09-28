@@ -16,6 +16,12 @@ builder.Services.AddPapyrusWeb(builder.Configuration);
 
 builder.Services.AddRazorPages();
 
+// M1 routing truth: this process serves the blog, so Site:Kind must say so and
+// the canonical base URLs must agree, and every other Host header is refused
+// with a 400. Loopback stays allowed so Aspire and the local run path still
+// work. Fails startup rather than silently serving the wrong site.
+builder.UsePapyrusSiteHostPolicy(SiteHostValidator.BlogKind);
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
