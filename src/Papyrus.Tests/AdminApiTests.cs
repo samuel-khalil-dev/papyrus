@@ -364,17 +364,4 @@ public sealed class AdminApiTests : IAsyncLifetime
 
     private PapyrusDbContext Db(ITenantContext? tenantContext = null) =>
         new(new DbContextOptionsBuilder<PapyrusDbContext>().UseInMemoryDatabase(_databaseName).Options, tenantContext);
-
-    private sealed class TestAuthenticationHandler(
-        Microsoft.Extensions.Options.IOptionsMonitor<AuthenticationSchemeOptions> options,
-        Microsoft.Extensions.Logging.ILoggerFactory logger,
-        System.Text.Encodings.Web.UrlEncoder encoder)
-        : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
-    {
-        protected override Task<AuthenticateResult> HandleAuthenticateAsync()
-        {
-            var identity = new ClaimsIdentity([new Claim(ClaimTypes.Name, "test")], "Test");
-            return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), Scheme.Name)));
-        }
-    }
 }

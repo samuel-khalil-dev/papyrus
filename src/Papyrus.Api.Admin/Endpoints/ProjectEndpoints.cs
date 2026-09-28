@@ -33,7 +33,7 @@ internal static class ProjectEndpoints
         {
             var result = await handlers.SaveProjectAsync(new(null, request.Slug, request.Title, request.Summary, request.Description,
                 request.RepositoryUrl, request.LiveUrl, request.CoverImageUrl, request.CategoryId, request.IsFeatured,
-                request.IsPublished, request.PublishedAt, request.TagIds), cancellationToken);
+                request.IsPublished, request.PublishedAt, Tags(request.TagIds)), cancellationToken);
             if (!result.IsSuccess) return ValidationProblem(result.Errors);
             var project = result.Value!;
             var created = await LoadProjectAsync(db, project.Id, cancellationToken);
@@ -44,7 +44,7 @@ internal static class ProjectEndpoints
         {
             var result = await handlers.SaveProjectAsync(new(id, request.Slug, request.Title, request.Summary, request.Description,
                 request.RepositoryUrl, request.LiveUrl, request.CoverImageUrl, request.CategoryId, request.IsFeatured,
-                request.IsPublished, request.PublishedAt, request.TagIds), cancellationToken);
+                request.IsPublished, request.PublishedAt, Tags(request.TagIds)), cancellationToken);
             if (!result.IsSuccess) return result.Errors.Any(x => x.Code == "project.not_found") ? Results.NotFound() : ValidationProblem(result.Errors);
             var updated = await LoadProjectAsync(db, id, cancellationToken);
             return Results.Ok(updated!.ToResponse());
