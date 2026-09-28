@@ -35,6 +35,7 @@ place, and no parallel, untracked documentation tree is kept. See
 | Security baseline and threat register | [`04-engineering-standards/security-baseline.md`](04-engineering-standards/security-baseline.md) |
 | Getting started | [`01-product/getting-started-tutorial.md`](01-product/getting-started-tutorial.md) |
 | Operations and runbooks | [`06-operations/runbooks.md`](06-operations/runbooks.md) |
+| Performance budget and evidence | [`04-engineering-standards/performance-budget.md`](04-engineering-standards/performance-budget.md), harnesses in [`tests/perf/`](../tests/perf/) and [`tests/load/`](../tests/load/) |
 | Roadmap | [`Papyrus_Roadmap.md`](Papyrus_Roadmap.md) |
 
 ## Current status
@@ -51,9 +52,9 @@ place, and no parallel, untracked documentation tree is kept. See
   (recorded as [ADR-0010](02-architecture/decisions/adr-0010-scoped-presentation-to-infrastructure-access.md)),
   and the fitness tests that enforce it. M1 Routing Truth is the next milestone;
   M2–M32 have not started.
-- The local baseline is 77 passing non-integration .NET tests and a
+- The local baseline is 82 passing non-integration .NET tests and a
   zero-warning, zero-error warnings-as-errors build. CI runs 16 PostgreSQL-backed
-  integration tests, for 93 unique .NET tests; those tests require the test
+  integration tests, for 98 unique .NET tests; those tests require the test
   database infrastructure.
 - Five Playwright browser tests are tracked; they are not part of the .NET count.
 - Five EF Core migrations are applied. The admin migration job is the sole

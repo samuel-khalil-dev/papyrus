@@ -113,11 +113,13 @@ with database `papyrus` and the documented development credentials. The five
 current migrations were applied, and the admin startup seed verified the
 `main` tenant with one live project, one live post, one category, and two tags.
 
-The latency harness executed each representative query 30 times inside
-PostgreSQL using `clock_timestamp()` around the same tenant, soft-delete, live
-publication, ordering, projection-root, and pagination predicates used by the
-handlers. These are server-side query execution timings, excluding HTTP and
-Razor rendering overhead:
+The harness, retained as
+[`runtime-latency.sql`](../../tests/perf/runtime-latency.sql), executed each
+representative query 30 times inside PostgreSQL using `clock_timestamp()`
+around the same tenant, soft-delete, live publication, ordering,
+projection-root, and pagination predicates used by the handlers. These are
+server-side query execution timings, excluding HTTP and Razor rendering
+overhead:
 
 | Query family | p50 (ms) | p95 (ms) | max (ms) | Samples |
 | --- | ---: | ---: | ---: | ---: |
@@ -130,11 +132,13 @@ Razor rendering overhead:
 | Admin projects | 0.009 | 0.020 | 0.815 | 30 |
 | Admin blog posts | 0.008 | 0.037 | 0.370 | 30 |
 
-The live HTTP smoke run returned 200 for all public index/detail pages and the
-first seven admin collection measurements. The admin API rate limiter returned
-429 while the final collection was being driven at 30 consecutive requests;
-the PostgreSQL harness above avoids that transport-level limit and contains the
-required 30 samples for every query family.
+The live HTTP smoke run, driven by
+[`http-latency.py`](../../tests/perf/http-latency.py), returned 200 for all
+public index/detail pages and the first seven admin collection measurements. The
+admin API rate limiter returned 429 while the final collection was being driven
+at 30 consecutive requests; the PostgreSQL harness above avoids that
+transport-level limit and contains the required 30 samples for every query
+family.
 
 Representative `EXPLAIN (ANALYZE, BUFFERS)` output from the live database:
 
@@ -148,6 +152,10 @@ Admin tags: Index Scan using "IX_ContentTags_TenantId_Slug", Sort by Name; Buffe
 Admin projects: Index Scan using "IX_Projects_TenantId_Slug", Sort by IsFeatured DESC and COALESCE(...); Buffers: shared hit=2; Planning Time: 0.085 ms; Execution Time: 0.031 ms
 Admin blog posts: Index Scan using "IX_BlogPosts_TenantId_Slug", Sort by COALESCE(...); Buffers: shared hit=2; Planning Time: 0.087 ms; Execution Time: 0.025 ms
 ```
+
+The full capture, including the complete plan text and the per-family latency
+table this section summarizes, is archived as
+[`projection-runtime-output.txt`](projection-runtime-output.txt).
 
 The plans use tenant/slug indexes for the small seeded tenant and perform
 in-memory quicksorts for the `COALESCE(PublishedAt, CreatedAt)` and name

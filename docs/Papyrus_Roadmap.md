@@ -200,7 +200,7 @@ still open; Phase 8 is a decision gate and not started.
 
 ### Key verified figures
 
-- **Tests:** 93 unique .NET tests in CI (77 provider-independent /
+- **Tests:** 98 unique .NET tests in CI (82 provider-independent /
   non-integration tests plus 16 PostgreSQL-backed integration tests), plus a
   separate 5-test Playwright browser smoke suite. The warnings-as-errors build
   is 0 warnings / 0 errors.
