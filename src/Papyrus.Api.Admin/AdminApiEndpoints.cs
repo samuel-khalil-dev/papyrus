@@ -1,3 +1,4 @@
+using Papyrus.Api.Admin.Authentication;
 using Papyrus.Api.Admin.Endpoints;
 
 namespace Papyrus.Api.Admin;
@@ -6,12 +7,17 @@ internal static class AdminApiEndpoints
 {
     public static IEndpointRouteBuilder MapAdminApi(this IEndpointRouteBuilder app)
     {
-        var api = app.MapGroup("/api/v1").RequireAuthorization().RequireRateLimiting("admin-api");
+        var api = app.MapGroup("/api/v1")
+            .RequireAuthorization()
+            .RequireRateLimiting(AdminRateLimitingExtensions.AdminApiPolicyName);
 
         MapEndpoints(api, true);
 
         // Keep the original unversioned surface during the compatibility window.
-        var legacyApi = app.MapGroup("/api").RequireAuthorization().RequireRateLimiting("admin-api").ExcludeFromDescription();
+        var legacyApi = app.MapGroup("/api")
+            .RequireAuthorization()
+            .RequireRateLimiting(AdminRateLimitingExtensions.AdminApiPolicyName)
+            .ExcludeFromDescription();
         MapEndpoints(legacyApi, false);
 
         return app;
