@@ -17,6 +17,33 @@ they are measured in-process, not on the runner's network path.
 ## Front-end performance
 Motion restricted to `transform`/`opacity`. **Planned (M13):** static assets served via the Cloudflare edge cache to reduce origin load on the VPS.
 
+### Admin SPA bundle
+
+The Admin SPA is an authenticated internal tool, not a public page: its bundle
+is served only from the admin origin, is never cached publicly, and is not part
+of any public load measurement. Vite emits its default 500 kB advisory, which is
+**not** the enforced ceiling. The enforced ceiling is 600 kB minified and
+180 kB gzipped, with the measured baseline below.
+
+Measure the figure from a clean `npm ci --prefix src/Papyrus.Admin.UI` install.
+A stale `node_modules` produces a materially different bundle: an install left
+over from an earlier lockfile reported 540.72 kB where the committed lockfile
+builds 574.97 kB, a 34 kB error that would silently misstate any comparison
+made against it.
+
+| Artifact | Measured (2026-09-28) | Ceiling |
+| --- | ---: | ---: |
+| `assets/index-*.js` minified | 574.97 kB | 600 kB |
+| `assets/index-*.js` gzipped | 174.15 kB | 180 kB |
+| `assets/index-*.css` minified | 25.53 kB | 40 kB |
+| `assets/Papyrus_Background-*.svg` | 98.16 kB (44.38 kB gzipped) | fixed asset |
+
+Budgets are expressed in the units Vite reports. Exceeding a ceiling is a
+release-blocking defect on the same terms as any other regression in this
+document. Closing the remaining ~25 kB of headroom needs route-level code
+splitting, which is product work rather than maintenance; re-measure the
+baseline if that change lands.
+
 ## Infrastructure headroom
 
 **Current:** the 4-core/8GB VPS hosts the application containers and PostgreSQL directly via Docker Compose. **Planned (M2, M5, M13):** a reverse proxy, a lightweight monitoring agent, and the Cloudflare edge layer will add to this footprint — per-container resource limits (M5) are scoped to prevent any of these additions from starving PostgreSQL once they exist.
@@ -41,6 +68,7 @@ a performance regression is a release-blocking defect.
 | Upload | ≤ 5 MiB input; no unbounded buffering; record elapsed cost | media limit + dispatch capture |
 | Managed allocations | ≤ 2 MiB/request public feed; ≤ 1 MiB/request admin read | `dotnet-counters` dispatch review |
 | GC | Gen2 collections = 0 during smoke; Gen0/Gen1 trend recorded | `dotnet-counters` dispatch review |
+| Admin SPA bundle | ≤ 600 kB minified; ≤ 180 kB gzipped | measured on `npm run build` at review |
 
 ### Measured baseline (archived evidence)
 

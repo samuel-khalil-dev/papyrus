@@ -30,29 +30,27 @@ The Admin UI has no runtime CDN dependency: it loads only its own bundle and
 
 ## Declared but unused packages
 
-Package-level dependencies in `src/Papyrus.Admin.UI/package.json` that are
-declared but have no import anywhere in `src/`. They install and are scanned but
-carry no runtime or build behaviour. The Admin UI primitives are hand-rolled
-rather than shadcn-generated, which is why the shadcn scaffolding packages are
-still declared.
+**None.** Every package-level dependency in `src/Papyrus.Admin.UI/package.json`
+is imported somewhere in `src/`. This was verified on 2026-09-28 by removing the
+nine that were not and re-running `npm ci`, `npm run build`, and `npm run lint`;
+the production bundle was byte-identical before and after, confirming they were
+already tree-shaken rather than merely unreferenced. The lockfile lost 25
+packages and 26 KB.
 
-| Package | Why it is unneeded |
-|---|---|
-| `@radix-ui/react-alert-dialog` | The wrapping `components/ui/alert-dialog.tsx` was unreferenced and has been deleted. |
-| `@radix-ui/react-dropdown-menu` | The wrapping `components/ui/dropdown-menu.tsx` was unreferenced and has been deleted. |
-| `@radix-ui/react-label` | Nothing imports it; labels are plain `<label>` elements. |
-| `@radix-ui/react-select` | `components/ui/select.tsx` renders a native `<select>` on purpose, because the form contract requires `multiple` selection and native mobile controls. |
-| `@radix-ui/react-separator` | Nothing imports it; separators are plain elements. |
-| `@radix-ui/react-slot` | `components/ui/button.tsx` applies variants by conditional class rather than through `Slot` composition. |
-| `@radix-ui/react-tabs` | The wrapping `components/ui/tabs.tsx` was unreferenced and has been deleted. |
-| `@radix-ui/react-toast` | Toasts are served by `sonner`; `components/ui/toast.tsx` re-exports it. |
-| `class-variance-authority` | No import. Button variant styling is a conditional-class switch in `components/ui/button.tsx`. |
+`@radix-ui/react-dialog` is the only Radix package retained, because
+`components/ui/dialog.tsx` uses it for focus trapping, Escape handling, and modal
+ARIA behavior, which are correctness requirements rather than styling. The
+remaining hand-rolled primitives are built on native elements on purpose:
+`components/ui/select.tsx` renders a native `<select>` because the form contract
+requires `multiple` selection and native mobile controls, and
+`components/ui/button.tsx` applies variants by conditional class rather than
+through `Slot` composition.
 
-`@radix-ui/react-dialog` is the only Radix package with a live import.
-
-Removing any of these is a dependency-hygiene change, not a functional one, and
-it requires a matching `package.json` and `package-lock.json` update. Verify with
-`npm ci`, `npm run build`, and `npm run lint` before and after.
+When a dependency is removed, `package.json` and `package-lock.json` must change
+together. Verify with `npm ci --prefix src/Papyrus.Admin.UI`, then
+`npm run build` and `npm run lint`, and re-measure the bundle against
+`04-engineering-standards/performance-budget.md`. A new package with no import
+in `src/` is a defect, not a pending decision.
 
 ## Review cadence
-This map is reviewed whenever a new external dependency is introduced by a milestone - the milestone's author adds a row here as part of that milestone's Definition of Done. The declared-but-unused list is re-verified when an Admin UI dependency changes.
+This map is reviewed whenever a new external dependency is introduced by a milestone - the milestone's author adds a row here as part of that milestone's Definition of Done. The declared-but-unused check is re-run whenever an Admin UI dependency changes.
