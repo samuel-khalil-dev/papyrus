@@ -25,6 +25,15 @@ services:
       - papyrus-postgres-data:/var/lib/postgresql/data
     networks:
       - papyrus
+    # Bound to loopback only. The application containers reach the database over
+    # the compose network using the `db` hostname, which does not resolve on the
+    # host. The release pipeline's `migrate` job, however, runs on the host
+    # itself, so it needs a host-reachable endpoint. Binding to 127.0.0.1 keeps
+    # the database off every routable interface: nothing outside the host, and
+    # nothing on the public internet, can reach it, and UFW cannot be bypassed
+    # because Docker never publishes on 0.0.0.0.
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s

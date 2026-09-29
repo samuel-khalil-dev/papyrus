@@ -53,6 +53,19 @@ M25 introduces one new, specific credential type — the AI provider API key —
 
 **Current:** only the Admin API applies and seeds migrations, via `InitializeDatabaseAsync()` at startup. Public hosts (Blog, Portfolio) never run migrations under any circumstance. The release pipeline additionally runs migrations explicitly in a dedicated `migrate` job using `dotnet-ef 10.0.11`, ahead of deploying the application containers. This ownership boundary is deliberate — see the [Migration Ownership](#migration-ownership) section above — and must not be altered without a corresponding decision-record update.
 
+### The migrate job's database endpoint
+
+The `migrate` job runs on the host, not inside the Compose network. The `db` service therefore needs a host-reachable endpoint, and the compose file publishes it on loopback only:
+
+```yaml
+ports:
+  - "127.0.0.1:${DB_PORT:-5432}:5432"
+```
+
+`PRODUCTION_CONNECTION_STRING` must use `Host=127.0.0.1` (or `localhost`), **not** `Host=db`. The `db` hostname only resolves on the Compose network; from the host it fails with a socket error that looks like a connection or credentials problem but is neither. The database stays off every routable interface: binding to `127.0.0.1` means nothing outside the host can reach it, and Docker never publishes on `0.0.0.0`, so UFW cannot be bypassed.
+
+The application containers are unaffected and continue to use `Host=db` over the Compose network.
+
 For a controlled manual migration, use the Admin startup project:
 
 ```powershell
