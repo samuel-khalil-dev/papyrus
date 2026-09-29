@@ -51,25 +51,31 @@ M2 will introduce Caddy as a reverse proxy terminating TLS and routing each host
 ## Release flow
 1. A tagged release triggers `release.yml`.
 2. Images are built and pushed to GHCR using pinned base images.
-3. Deployment executes via a self-hosted runner that mints its own short-lived GHCR pull credential.
+3. Deployment executes via a self-hosted runner using its own per-job job token to pull them.
 4. A post-deploy health check verifies the service before the release is considered successful.
 
 ## Registry credentials (Current)
 
-The `deploy` job pulls images on a self-hosted runner, whose per-job `GITHUB_TOKEN` has no access to GHCR. It therefore mints a **GitHub App installation token** at run time and uses that for `docker/login-action`.
+**The deploy job stores none and uses none.** It pulls with the per-job `GITHUB_TOKEN`, granted `packages: read` in that job's `permissions` block. The token is minted by GitHub for the run, delivered to the self-hosted runner like any other, and expires with the run. The `images` job that publishes the images uses the same mechanism with `packages: write`, and has done so successfully. Do not add a stored registry credential to this repository.
 
-The App is installed on this repository alone with `packages: read`, so the credential it produces is strictly narrower than a personal access token and expires in one hour. There is no long-lived registry PAT in the repository, and none should be added.
+Both jobs run in the same workflow on the same repository, which is what makes the job token sufficient: the package is already linked to the repository because the `images` job published it that way.
 
-| Value | Kind | Purpose |
-| --- | --- | --- |
-| `APP_ID` | secret | The GitHub App's numeric ID, the JWT issuer |
-| `APP_PRIVATE_KEY` | secret | RSA key that signs the installation JWT |
-| `APP_INSTALLATION_ID` | variable | Which installation to mint a token for |
-| `APP_SLUG` | variable | The App's slug, the registry username |
+Nothing about the self-hosted runner, the `production` environment, or the visibility of the packages limits this. Environment protection rules gate whether a job may start, not what the token may do; and `packages: read` is required for the pull, so the permission is declared explicitly rather than inherited from the repository default.
 
-The private key is used only to sign a JWT that is exchanged for a narrower token. Rotate it from the App's settings page; nothing in the repository needs to change.
+### Approaches that were tried and abandoned
 
-**The deploy job is the only consumer.** The `images` job pushes with the job's own `GITHUB_TOKEN` and `packages: write`, which requires no stored credential at all.
+Recorded so they are not attempted again.
+
+| Approach | Why it was dropped |
+| --- | --- |
+| `GHCR_READ_TOKEN` / `GHCR_READ_USER` (classic PAT) | A personal access token never expires, is not attributable to a single job, carries whatever scopes it was created with, and sat indefinitely in the secret store. |
+| GitHub App installation token, minted at run time by signing a JWT with a stored PEM key | Failed in two consecutive releases (`v0.1.0`, `v0.1.1`), both times inside the mint step and before the registry was contacted, so the App's ability to pull was never actually established either way. The mechanism also introduced a stored private key and roughly eighty lines of signing and error handling to replace one line. |
+
+The job token was already available and sufficient. Preferring it was a smaller and safer change than replacing a stored credential with a different stored credential.
+
+### What has not been verified
+
+The `deploy` job's pull path is only exercised by a real tagged release. A dry run performs the registry login but gates every step that actually pulls behind `if: ${{ !inputs.dry_run }}`, and its configuration check runs `docker compose config`, which never contacts a registry. **A green dry run is not evidence that the pull works.** Treat the first successful real release as the verification.
 
 ## Secrets (Current)
 
