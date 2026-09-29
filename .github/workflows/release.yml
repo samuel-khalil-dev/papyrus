@@ -315,6 +315,21 @@ jobs:
       # ops/observability, never hand-placed on the host. The application
       # network is created by the platform compose file above, so the collector,
       # Prometheus, Grafana, and blackbox-exporter attach to it as external.
+      #
+      # The service names are listed explicitly and are load-bearing. This step
+      # layers the observability override on top of the platform file, and
+      # `up` without a service list reconciles *every* service in the merged
+      # result -- including db, admin-api, blog, and portfolio. Because the
+      # override renames the project, that created a second copy of the whole
+      # application stack under `papyrus-observability`, which then collided
+      # with the database the deploy step had just started:
+      #
+      #   Bind for 127.0.0.1:5432 failed: port is already allocated
+      #
+      # Passing `-p papyrus` would not fix it. The duplicate services would
+      # still be created, just under the right project name, and would still
+      # collide on the published ports. Naming the services is what actually
+      # limits the step to the observability stack.
       - name: Start the observability stack
         if: ${{ !inputs.dry_run }}
         env:
@@ -324,7 +339,8 @@ jobs:
           docker compose \
             --file docker-compose.yml \
             --file ops/observability/docker-compose.observability.yml \
-            up --detach --remove-orphans
+            up --detach --remove-orphans \
+            otel-collector prometheus blackbox-exporter grafana
 
       - name: Verify the observability stack is serving
         if: ${{ !inputs.dry_run }}

@@ -20,7 +20,15 @@ scrape_configs:
   # job and PapyrusPostgresDown needs `up` for postgres, so these targets must
   # be reachable and serve Prometheus text. Blackbox-exporter supplies the
   # probe; the relabelled `up` series is what the alert rules evaluate.
-  - job_name: papyrus-blackbox
+  #
+  # Three scrape jobs rather than one, because the public hosts reject a Host
+  # header they do not recognise with 400, and blackbox sends the target's own
+  # hostname by default. Probing `http://blog:8080/health` therefore returned
+  # 400 -- indistinguishable, in the panel, from the host being down -- while
+  # admin-api, which does not filter its Host header, passed. Each public host
+  # gets a probe module configured with the host it actually answers to. The
+  # module is selected per job via the `module` param below.
+  - job_name: papyrus-blackbox-admin
     metrics_path: /probe
     params:
       module: [http_2xx]
@@ -28,9 +36,35 @@ scrape_configs:
       - targets: ['http://admin-api:8080/health']
         labels:
           job: admin-api
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  - job_name: papyrus-blackbox-blog
+    metrics_path: /probe
+    params:
+      module: [http_2xx_blog_host]
+    static_configs:
       - targets: ['http://blog:8080/health']
         labels:
           job: blog
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  - job_name: papyrus-blackbox-portfolio
+    metrics_path: /probe
+    params:
+      module: [http_2xx_portfolio_host]
+    static_configs:
       - targets: ['http://portfolio:8080/health']
         labels:
           job: portfolio
