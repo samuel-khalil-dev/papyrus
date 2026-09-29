@@ -14,6 +14,9 @@ Store secrets in the deployment platform or a local, uncommitted environment. Co
 | `ADMIN_API_KEY` | `admin-api` | `X-Admin-Api-Key` value for Admin API mutations |
 | `BLOG_PUBLIC_BASE_URL` | `blog` and public URL references | Blog's absolute public origin |
 | `PORTFOLIO_PUBLIC_BASE_URL` | `portfolio` and public URL references | Portfolio's absolute public origin |
+| `MEDIA_BASE_URL` | `blog`, `portfolio` and public URL references | Absolute origin uploaded media is served from |
+
+The `BLOG_PUBLIC_BASE_URL`, `PORTFOLIO_PUBLIC_BASE_URL`, and `MEDIA_BASE_URL` values are not secrets, so they live in the repository as Actions **variables** rather than secrets. Set them once under *Settings → Secrets and variables → Actions → Variables*; the `deploy` job fails with the names of any that are missing before it attempts to deploy, and the `migrate` job does not need them at all.
 
 The Compose file also accepts optional image, port, and PostgreSQL-user overrides. The default published ports are Admin API `5205`, Blog `5075`, and Portfolio `5024`; each container listens internally on `8080`.
 
@@ -38,12 +41,29 @@ M2 will introduce Caddy as a reverse proxy terminating TLS and routing each host
 ## Release flow
 1. A tagged release triggers `release.yml`.
 2. Images are built and pushed to GHCR using pinned base images.
-3. Deployment executes via a self-hosted runner with scoped GHCR pull credentials.
+3. Deployment executes via a self-hosted runner that mints its own short-lived GHCR pull credential.
 4. A post-deploy health check verifies the service before the release is considered successful.
+
+## Registry credentials (Current)
+
+The `deploy` job pulls images on a self-hosted runner, whose per-job `GITHUB_TOKEN` has no access to GHCR. It therefore mints a **GitHub App installation token** at run time and uses that for `docker/login-action`.
+
+The App is installed on this repository alone with `packages: read`, so the credential it produces is strictly narrower than a personal access token and expires in one hour. There is no long-lived registry PAT in the repository, and none should be added.
+
+| Value | Kind | Purpose |
+| --- | --- | --- |
+| `APP_ID` | secret | The GitHub App's numeric ID, the JWT issuer |
+| `APP_PRIVATE_KEY` | secret | RSA key that signs the installation JWT |
+| `APP_INSTALLATION_ID` | variable | Which installation to mint a token for |
+| `APP_SLUG` | variable | The App's slug, the registry username |
+
+The private key is used only to sign a JWT that is exchanged for a narrower token. Rotate it from the App's settings page; nothing in the repository needs to change.
+
+**The deploy job is the only consumer.** The `images` job pushes with the job's own `GITHUB_TOKEN` and `packages: write`, which requires no stored credential at all.
 
 ## Secrets (Current)
 
-Operational secrets are supplied via environment variables and configuration — `AdminApi:ApiKeys` / `ADMIN_API_KEY`, `POSTGRES_PASSWORD`, `BLOG_PUBLIC_BASE_URL`, `PORTFOLIO_PUBLIC_BASE_URL` — following standard `appsettings.{Environment}.json` override conventions. None of these are encrypted at the application layer today; they rely on environment/deployment-level protection.
+Operational secrets are supplied via environment variables and configuration — `AdminApi:ApiKeys` / `ADMIN_API_KEY`, `POSTGRES_PASSWORD` — following standard `appsettings.{Environment}.json` override conventions. None of these are encrypted at the application layer today; they rely on environment/deployment-level protection. The three public-origin values (`BLOG_PUBLIC_BASE_URL`, `PORTFOLIO_PUBLIC_BASE_URL`, `MEDIA_BASE_URL`) are configuration rather than secrets and are stored as repository variables, not repository secrets.
 
 ## Secrets (Planned, M25)
 
