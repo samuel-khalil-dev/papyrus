@@ -1,0 +1,59 @@
+# Database-only compose definition for the release `migrate` job.
+#
+# The migrate job runs on the host, outside the Compose network, so it connects
+# to the database over the loopback binding declared in docker-compose.yml. It
+# needs that binding to exist, which only happens when the `db` service is
+# reconciled.
+#
+# Layering the full docker-compose.yml to do that is not an option: Compose
+# interpolates every service in the file before acting on the one named on the
+# command line, so the application services' required variables
+# (BLOG_PUBLIC_BASE_URL, PORTFOLIO_PUBLIC_BASE_URL, MEDIA_BASE_URL) would have
+# to be present in a job that has no reason to know them, and the error surface
+# for a missing one is an interpolation error naming a service nobody started.
+#
+# This file declares `db` alone, with the same image, volume, and health check
+# as docker-compose.yml, so the two must be kept in step. The `papyrus` network
+# and `papyrus-postgres-data` volume names are identical, so this reuses the
+# existing database rather than creating a second one.
+#
+# After this runs, the deploy job starts the full stack from docker-compose.yml
+# and finds the container already healthy.
+
+# The project name determines the container and network names. The live stack
+# was created from the repository root, so its project is `papyrus` and its
+# container is `papyrus-db-1`. Without this line, running from ops/deploy would
+# derive the project name from that directory instead, compose would create a
+# *second* network and volume, and the migrate job would apply migrations to an
+# empty database that the application never uses.
+name: papyrus
+
+services:
+  db:
+    image: postgres:17-alpine@sha256:7456ef82e5f5bc43d997f4781bbd7c0d6389bff397564649a356e206ba473aee
+    environment:
+      POSTGRES_DB: papyrus
+      POSTGRES_USER: ${POSTGRES_USER:-papyrus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+    volumes:
+      - papyrus-postgres-data:/var/lib/postgresql/data
+    networks:
+      - papyrus
+    # Loopback only. See docker-compose.yml: the application containers use the
+    # `db` hostname over the Compose network, and the host-side migrate job uses
+    # this binding. Nothing outside the host can reach it.
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+volumes:
+  papyrus-postgres-data:
+
+networks:
+  papyrus:
+    driver: bridge
