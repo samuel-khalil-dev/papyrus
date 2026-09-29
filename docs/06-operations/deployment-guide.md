@@ -34,6 +34,16 @@ The `db` service is PostgreSQL 17 with the durable `papyrus-postgres-data` volum
 
 The hosts expose anonymous `/health` and `/alive` probes. Restrict those paths at the ingress to orchestrator and monitoring networks; do not expose them on a general public edge. The Admin SPA is served at the root, while Blog and Portfolio serve their public sites on ports `5075` and `5024`.
 
+## Restart policy and host reboots
+
+Every production service declares `restart: unless-stopped`. This is load-bearing, not a default to inherit.
+
+On 2026-09-29 the host rebooted for a kernel upgrade and the entire application stack stayed offline for more than four hours. All services had defaulted to `restart: no`, so Docker had no instruction to restore anything and the containers stayed exited until an operator started them by hand. The signature is `Exited (255)` with an empty `State.Error` and `OOMKilled=false`: that is a host-initiated stop, not an application fault, and it is the first thing to check when the site refuses connections without a crash in the logs.
+
+`unless-stopped` brings the services back after a daemon restart or a crash while still honouring a deliberate `docker compose stop`. The `test-db` service is in the `test` profile and deliberately has no restart policy.
+
+Check policy after any change with `docker inspect <container> --format '{{.HostConfig.RestartPolicy.Name}}'`. A host reboot is a normal event, not an incident, provided this holds.
+
 ## Planned Topology (M2, M13)
 
 M2 will introduce Caddy as a reverse proxy terminating TLS and routing each host to its container. M13 will place Cloudflare in front of that for CDN caching, DDoS mitigation, and Turnstile bot protection. Until both ship, do not assume TLS termination, edge caching, or Turnstile are active in production.
