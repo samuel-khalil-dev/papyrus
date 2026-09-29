@@ -281,10 +281,26 @@ jobs:
         run: |
           set -euo pipefail
           now=$(date +%s)
+          # `openssl dgst -sign` takes a *path* to a key file, not the key
+          # itself. Passing the PEM text directly makes OpenSSL try to stat a
+          # file named after the PEM body, which fails with "unregistered
+          # scheme" and "No such file or directory" -- an error that reads like
+          # a corrupt key rather than a misuse of the flag.
+          key_file=$(mktemp)
+          # 0600 before the secret is written, not after: the runner is a
+          # persistent self-hosted host, so a world-readable key would exist
+          # even briefly.
+          chmod 600 "$key_file"
+          printf '%s\n' "$APP_PRIVATE_KEY" > "$key_file"
+          # Normalise line endings. A secret pasted from a Windows editor can
+          # arrive with CRLF, which OpenSSL refuses inside a PEM block.
+          tr -d '\r' < "$key_file" > "$key_file.clean" && mv "$key_file.clean" "$key_file"
+          trap 'shred -u "$key_file" 2>/dev/null || rm -f "$key_file"' EXIT
+
           b64() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
           header=$(printf '{"alg":"RS256","typ":"JWT"}' | b64)
           payload=$(printf '{"iat":%s,"exp":%s,"iss":"%s"}' "$((now - 60))" "$((now + 540))" "$APP_ID" | b64)
-          signature=$(printf '%s.%s' "$header" "$payload" | openssl dgst -sha256 -sign "$APP_PRIVATE_KEY" | b64)
+          signature=$(printf '%s.%s' "$header" "$payload" | openssl dgst -sha256 -sign "$key_file" | b64)
           response=$(curl --fail --silent --show-error \
             --request POST \
             --header "Authorization: Bearer ${header}.${payload}.${signature}" \
