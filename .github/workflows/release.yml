@@ -280,6 +280,40 @@ jobs:
           APP_SLUG: ${{ vars.APP_SLUG }}
         run: |
           set -euo pipefail
+          # Diagnose before signing. This step has now failed twice, and
+          # "Could not read private key" is compatible with an empty secret, a
+          # truncated one, CRLF line endings, and a PEM whose body was
+          # mangled in transit -- all of which OpenSSL reports identically.
+          # These checks report the *shape* only and never print key material.
+          if [ -z "${APP_PRIVATE_KEY:-}" ]; then
+            echo "::error::APP_PRIVATE_KEY is empty. The secret is not set, or was uploaded as an empty string."
+            exit 1
+          fi
+          key_bytes=$(printf '%s' "$APP_PRIVATE_KEY" | wc -c)
+          first_line=$(printf '%s' "$APP_PRIVATE_KEY" | head -n 1)
+          last_line=$(printf '%s' "$APP_PRIVATE_KEY" | tail -n 1)
+          cr_count=$(printf '%s' "$APP_PRIVATE_KEY" | tr -cd '\r' | wc -c)
+          echo "Key diagnostics: ${key_bytes} bytes, ${cr_count} CR characters."
+          echo "First line: ${first_line}"
+          echo "Last line: ${last_line}"
+          case "$first_line" in
+            "-----BEGIN RSA PRIVATE KEY-----"|"-----BEGIN PRIVATE KEY-----"|"-----BEGIN EC PRIVATE KEY-----")
+              ;;
+            *)
+              echo "::error::The key does not begin with a PEM header."
+              echo "Expected one of: BEGIN RSA PRIVATE KEY, BEGIN PRIVATE KEY, BEGIN EC PRIVATE KEY."
+              echo "This usually means the secret was uploaded through a shell pipeline that re-encoded it."
+              exit 1
+              ;;
+          esac
+          if [ "$last_line" != "-----END RSA PRIVATE KEY-----" ] \
+             && [ "$last_line" != "-----END PRIVATE KEY-----" ] \
+             && [ "$last_line" != "-----END EC PRIVATE KEY-----" ]; then
+            echo "::error::The key does not end with a matching PEM footer."
+            echo "The secret is truncated or was altered in transit."
+            exit 1
+          fi
+
           now=$(date +%s)
           # `openssl dgst -sign` takes a *path* to a key file, not the key
           # itself. Passing the PEM text directly makes OpenSSL try to stat a
@@ -291,11 +325,14 @@ jobs:
           # persistent self-hosted host, so a world-readable key would exist
           # even briefly.
           chmod 600 "$key_file"
-          printf '%s\n' "$APP_PRIVATE_KEY" > "$key_file"
-          # Normalise line endings. A secret pasted from a Windows editor can
-          # arrive with CRLF, which OpenSSL refuses inside a PEM block.
-          tr -d '\r' < "$key_file" > "$key_file.clean" && mv "$key_file.clean" "$key_file"
+          printf '%s\n' "$APP_PRIVATE_KEY" | tr -d '\r' > "$key_file"
           trap 'shred -u "$key_file" 2>/dev/null || rm -f "$key_file"' EXIT
+          if ! openssl rsa -in "$key_file" -noout 2>/dev/null \
+             && ! openssl pkey -in "$key_file" -noout 2>/dev/null; then
+            echo "::error::OpenSSL could not parse the key material."
+            echo "The PEM envelope is well formed but the body is not a valid key."
+            exit 1
+          fi
 
           b64() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
           header=$(printf '{"alg":"RS256","typ":"JWT"}' | b64)
