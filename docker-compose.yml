@@ -40,6 +40,14 @@ services:
       timeout: 5s
       retries: 12
       start_period: 10s
+    # A restart policy is not optional here. On 2026-09-29 the host rebooted for
+    # a kernel upgrade and took the whole application stack offline, because
+    # every service defaulted to `restart: no`: Docker had no instruction to
+    # bring anything back, so the site stayed down for over four hours until an
+    # operator started the containers by hand. `unless-stopped` restores the
+    # services after a daemon restart or a crash while still honouring an
+    # operator's deliberate `docker compose stop`.
+    restart: unless-stopped
 
   admin-api:
     image: ${PAPYRUS_ADMIN_IMAGE:-papyrus-admin:local}
@@ -63,6 +71,7 @@ services:
       db:
         condition: service_healthy
     init: true
+    restart: unless-stopped
 
   blog:
     image: ${PAPYRUS_BLOG_IMAGE:-papyrus-blog:local}
@@ -86,6 +95,7 @@ services:
       admin-api:
         condition: service_started
     init: true
+    restart: unless-stopped
 
   portfolio:
     image: ${PAPYRUS_PORTFOLIO_IMAGE:-papyrus-portfolio:local}
@@ -109,6 +119,7 @@ services:
       admin-api:
         condition: service_started
     init: true
+    restart: unless-stopped
 
 volumes:
   papyrus-postgres-data:
