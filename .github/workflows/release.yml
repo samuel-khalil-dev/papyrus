@@ -151,10 +151,16 @@ jobs:
       name: production-migrations
     env:
       CONNECTION_STRING: ${{ secrets.PRODUCTION_CONNECTION_STRING }}
-      # Needed to reconcile the db service below: compose refuses to start a
-      # service whose required variables are unset.
+      # Compose interpolates every service in the file before acting on the one
+      # named on the command line, so all of the file's required variables must
+      # be present even though only `db` is started. They are validated when the
+      # deploy job runs, not here.
       POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
       POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+      BLOG_PUBLIC_BASE_URL: ${{ vars.BLOG_PUBLIC_BASE_URL }}
+      PORTFOLIO_PUBLIC_BASE_URL: ${{ vars.PORTFOLIO_PUBLIC_BASE_URL }}
+      MEDIA_BASE_URL: ${{ vars.MEDIA_BASE_URL }}
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
