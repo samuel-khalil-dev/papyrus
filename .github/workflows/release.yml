@@ -151,9 +151,24 @@ jobs:
       name: production-migrations
     env:
       CONNECTION_STRING: ${{ secrets.PRODUCTION_CONNECTION_STRING }}
+      # Needed to reconcile the db service below: compose refuses to start a
+      # service whose required variables are unset.
+      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The migrate job connects to 127.0.0.1:5432, but that binding comes from
+      # docker-compose.yml and only exists once the service is recreated by
+      # `docker compose up`. The deploy job runs after this one, so without this
+      # step the binding is never applied and the connection is refused on a
+      # host whose running database predates the change. Bringing up `db` alone
+      # is idempotent: the existing container and its data volume are reused
+      # unless the compose definition itself changed.
+      - name: Reconcile the database service so its port binding is applied
+        run: |
+          set -euo pipefail
+          docker compose --file docker-compose.yml up --detach --wait db
       # No setup-dotnet step: the SDK is already installed system-wide on this
       # runner and setup-dotnet cannot install into /usr/share/dotnet as the
       # unprivileged runner user ("Permission denied"). CI uses setup-dotnet
