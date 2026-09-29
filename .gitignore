@@ -110,7 +110,9 @@ pnpm-debug.log*
 # Local-only tooling directories stay ignored.
 .kilo/
 ops/*
+# Both are reviewed, tracked deployment configuration, not local state.
 !ops/observability/
+!ops/deploy/
 plans/
 
 # Local .NET tool manifest. The release workflow creates this in the checkout

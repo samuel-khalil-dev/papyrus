@@ -151,30 +151,23 @@ jobs:
       name: production-migrations
     env:
       CONNECTION_STRING: ${{ secrets.PRODUCTION_CONNECTION_STRING }}
-      # Compose interpolates every service in the file before acting on the one
-      # named on the command line, so all of the file's required variables must
-      # be present even though only `db` is started. They are validated when the
-      # deploy job runs, not here.
+      # Only the database's own variables. This job reconciles the db service
+      # from a database-only compose file precisely so that it does not need the
+      # application services' required variables.
       POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
       POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-      ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
-      BLOG_PUBLIC_BASE_URL: ${{ vars.BLOG_PUBLIC_BASE_URL }}
-      PORTFOLIO_PUBLIC_BASE_URL: ${{ vars.PORTFOLIO_PUBLIC_BASE_URL }}
-      MEDIA_BASE_URL: ${{ vars.MEDIA_BASE_URL }}
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # The migrate job connects to 127.0.0.1:5432, but that binding comes from
-      # docker-compose.yml and only exists once the service is recreated by
-      # `docker compose up`. The deploy job runs after this one, so without this
-      # step the binding is never applied and the connection is refused on a
-      # host whose running database predates the change. Bringing up `db` alone
-      # is idempotent: the existing container and its data volume are reused
-      # unless the compose definition itself changed.
+      # The migrate job connects to 127.0.0.1:5432, but that binding is declared
+      # in compose and only takes effect when the service is reconciled. The
+      # deploy job runs after this one, so without this step the binding is never
+      # applied and the connection is refused. This uses a database-only compose
+      # file so the job does not need the application services' variables.
       - name: Reconcile the database service so its port binding is applied
         run: |
           set -euo pipefail
-          docker compose --file docker-compose.yml up --detach --wait db
+          docker compose --file ops/deploy/docker-compose.migrate-db.yml up --detach --wait
       # No setup-dotnet step: the SDK is already installed system-wide on this
       # runner and setup-dotnet cannot install into /usr/share/dotnet as the
       # unprivileged runner user ("Permission denied"). CI uses setup-dotnet
@@ -248,6 +241,24 @@ jobs:
         run: |
           prefix="ghcr.io/${{ github.repository }}"
           echo "IMAGE_PREFIX=${prefix,,}" >> "$GITHUB_ENV"
+      # Compose fails with a per-service interpolation error when a required
+      # variable is unset, which reads like a compose problem rather than a
+      # missing repository variable. Check first and name the actual cause.
+      - name: Verify required repository variables are configured
+        run: |
+          set -euo pipefail
+          missing=""
+          for name in BLOG_PUBLIC_BASE_URL PORTFOLIO_PUBLIC_BASE_URL MEDIA_BASE_URL; do
+            if [ -z "${!name:-}" ]; then
+              missing="${missing} ${name}"
+            fi
+          done
+          if [ -n "${missing}" ]; then
+            echo "::error::Missing repository variable(s):${missing}"
+            echo "Set them under Settings -> Secrets and variables -> Actions -> Variables."
+            echo "They are the absolute public origins for the blog, portfolio, and media."
+            exit 1
+          fi
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
