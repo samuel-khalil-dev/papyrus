@@ -177,6 +177,84 @@ public sealed class PipelineWiringTests
         }
     }
 
+    /// <summary>
+    /// The public hosts reject any Host header that is not their configured
+    /// public base URL or loopback, so blackbox has to send the right one or the
+    /// probe returns 400 and <c>up</c> reads 0 forever — which looks exactly
+    /// like a host that is down, and cannot be told apart from a real outage.
+    /// <para>
+    /// The Host headers are literals in the exporter config because
+    /// blackbox-exporter v0.27.0 does not expand <c>${VAR}</c> there. That makes
+    /// them driftable, so this asserts they still name the same host the
+    /// application is configured to answer to. A mismatch fails the build
+    /// instead of silently disabling the availability alert.
+    /// </para>
+    /// </summary>
+    [Theory]
+    [InlineData("http_2xx_blog_host", "BLOG_PUBLIC_BASE_URL", "blog", "http://blog:8080/health")]
+    [InlineData("http_2xx_portfolio_host", "PORTFOLIO_PUBLIC_BASE_URL", "portfolio", "http://portfolio:8080/health")]
+    public void Availability_probe_sends_the_host_the_public_site_answers_to(
+        string module, string baseUrlVariable, string serviceName, string expectedTarget)
+    {
+        var root = FindRepositoryRoot();
+        var blackbox = File.ReadAllText(Path.Combine(
+            root, "ops", "observability", "blackbox-exporter", "config.yml"));
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "release.yml"));
+        var compose = File.ReadAllText(Path.Combine(root, "docker-compose.yml"));
+
+        // The module must exist and carry a Host header, or the probe falls back
+        // to the target's own hostname, which these hosts refuse with 400.
+        var moduleStart = blackbox.IndexOf(module + ":", StringComparison.Ordinal);
+        Assert.True(moduleStart >= 0, $"blackbox config has no module named {module}.");
+        var hostLine = System.Text.RegularExpressions.Regex.Match(
+            blackbox[moduleStart..], @"Host:\s*(\S+)");
+        Assert.True(hostLine.Success, $"module {module} sets no Host header.");
+
+        // The header must be the same host the application container is
+        // configured to answer to, so it cannot go stale.
+        var expectedHost = ExpectedPublicHost(baseUrlVariable);
+        Assert.Equal(expectedHost, hostLine.Groups[1].Value);
+
+        // The variable must actually reach the container that serves the public
+        // host, or the site answers on a different domain and the header is
+        // wrong regardless of what the exporter sends. The compose form is
+        // ${VAR:?message}, so match the variable name rather than the whole
+        // interpolation expression.
+        Assert.Contains(
+            $"Site__PublicBaseUrl: ${{{baseUrlVariable}:?",
+            compose,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            $"{baseUrlVariable}: ${{{{ vars.{baseUrlVariable} }}}}",
+            workflow,
+            StringComparison.Ordinal);
+
+        // The module must not substitute a variable: blackbox-exporter v0.27.0
+        // does not expand ${VAR} in its config, so that form silently sends no
+        // Host header and the probe is blind again.
+        Assert.DoesNotContain("$", hostLine.Groups[1].Value, StringComparison.Ordinal);
+
+        // And Prometheus must actually probe that service with that module.
+        var prometheus = File.ReadAllText(Path.Combine(
+            root, "ops", "observability", "prometheus", "prometheus.yml"));
+        Assert.Contains($"module: [{module}]", prometheus, StringComparison.Ordinal);
+        Assert.Contains($"'{expectedTarget}'", prometheus, StringComparison.Ordinal);
+        Assert.Contains($"job: {serviceName}", prometheus, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The host a public base URL variable is expected to name. Held literally
+    /// here so that changing a configured domain is a deliberate, visible edit
+    /// to this test rather than a silent drift that blinds the probe.
+    /// </summary>
+    private static string ExpectedPublicHost(string baseUrlVariable) => baseUrlVariable switch
+    {
+        "BLOG_PUBLIC_BASE_URL" => "blog.papyrus.quest",
+        "PORTFOLIO_PUBLIC_BASE_URL" => "papyrus.quest",
+        _ => throw new ArgumentOutOfRangeException(
+            nameof(baseUrlVariable), baseUrlVariable, "Unknown base URL variable."),
+    };
+
     private static readonly Dictionary<string, string> HostComposeServices = new(StringComparer.Ordinal)
     {
         [Path.Combine("src", "Papyrus.Api.Admin", "Program.cs")] = "admin-api",

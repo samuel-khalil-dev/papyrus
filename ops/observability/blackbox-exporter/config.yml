@@ -17,6 +17,51 @@ modules:
       preferred_ip_protocol: ip4
       follow_redirects: true
 
+  # Same probe, but with an explicit Host header.
+  #
+  # The public hosts derive their allowed Host list from the configured public
+  # base URL plus loopback (SiteHostValidator.ResolveAllowedHosts), and reject
+  # anything else with 400. Probing `http://blog:8080/health` therefore returned
+  # 400 for the whole of 2026-09-29 -- indistinguishable, in the dashboard,
+  # from the host being down -- while admin-api, which does not filter its Host
+  # header, passed. That fault is what made this look like a partial outage.
+  #
+  # The header cannot be widened with a wildcard, and the application must not
+  # be relaxed: the restriction is a Host-header-injection defence, not an
+  # inconvenience. So the prober is told what to send.
+  #
+  # The value is a literal, not a ${VAR} substitution. blackbox-exporter v0.27.0
+  # does NOT expand environment variables in its config file -- there is no
+  # --config.expand-env flag -- so a ${BLOG_PROBE_HOST} here parses as an empty
+  # scalar and the module sends no Host header at all. That was measured, not
+  # assumed: against a target that returns 400 unless the Host is exactly
+  # blog.papyrus.quest, the ${VAR} module returns 400 and this literal returns
+  # 200. The cost is that these two strings must be kept in step with
+  # BLOG_PUBLIC_BASE_URL and PORTFOLIO_PUBLIC_BASE_URL; PipelineWiringTests
+  # asserts that they match, so a drift fails the build rather than silently
+  # disabling the alert.
+  http_2xx_blog_host:
+    prober: http
+    timeout: 5s
+    http:
+      method: GET
+      valid_status_codes: [200]
+      preferred_ip_protocol: ip4
+      follow_redirects: true
+      headers:
+        Host: blog.papyrus.quest
+
+  http_2xx_portfolio_host:
+    prober: http
+    timeout: 5s
+    http:
+      method: GET
+      valid_status_codes: [200]
+      preferred_ip_protocol: ip4
+      follow_redirects: true
+      headers:
+        Host: papyrus.quest
+
   tcp_connect:
     prober: tcp
     timeout: 5s

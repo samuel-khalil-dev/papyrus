@@ -12,7 +12,7 @@
 | PostgreSQL row-level security (RLS) | **Deferred** | RLS is intentionally not enabled; application-level enforcement remains the sole layer. |
 | Full multi-tenant SaaS | **Deferred** | Tenant provisioning, operator lifecycle, billing, identity management, and a tenant-facing administration model are not included. |
 | Local PostgreSQL integration-test workflow | **Deferred** | PostgreSQL integration tests run in CI; a fresh workstation is not guaranteed to have a configured local test database listener. |
-| Automated test baseline | **Implemented** | **This row is the canonical test count; other documents link here rather than restating it.** 454 non-integration .NET test cases pass without a database, of which 280 are whole-file encoding cases in `SourceEncodingTests` (one per source file, asserting UTF-8) and 174 assert behaviour. CI adds 22 PostgreSQL integration tests, for 476 unique .NET test cases. The separate Playwright browser suite contains 10 tests and is not part of the .NET count. |
+| Automated test baseline | **Implemented** | **This row is the canonical test count; other documents link here rather than restating it.** 456 non-integration .NET test cases pass without a database, of which 280 are whole-file encoding cases in `SourceEncodingTests` (one per source file, asserting UTF-8) and 176 assert behaviour. CI adds 22 PostgreSQL integration tests, for 478 unique .NET test cases. The separate Playwright browser suite contains 10 tests and is not part of the .NET count. |
 | Architecture fitness tests (layer and migration ownership) | **Implemented** | NetArchTest rules constrain Core, Contracts, Web.Shared, the public delivery hosts, and Application; migration-ownership tests assert that only Admin startup migrates. |
 | Presentation-to-Infrastructure boundary | **Implemented** | Scoped and enforced by [ADR-0010](../02-architecture/decisions/adr-0010-scoped-presentation-to-infrastructure-access.md). Three `LayerDependencyTests` rules keep the read-only public hosts off Infrastructure outside their entry point, deny them the `Ef*Store` adapters, and stop Admin Presentation code outside `Endpoints/` and `AdminUi/` from reaching Infrastructure. |
 | RFC 7807 `ProblemDetails` error responses | **Implemented** | Every Admin error response that carries a body is `application/problem+json`; 404 and 204 responses are bodiless. Enforced by `AdminApiTests` for the media missing-file, malformed-body, rejected-upload, and referenced-asset delete paths. |
@@ -34,4 +34,4 @@ test — or adding any source file, since the encoding guard contributes one cas
 per file — requires updating this marker and those three documents in the same
 change.
 
-<!-- test-baseline: non-integration=454 integration=22 total=476 encoding=280 behavioural=174 behaviour-total=196 playwright=10 -->
+<!-- test-baseline: non-integration=456 integration=22 total=478 encoding=280 behavioural=176 behaviour-total=198 playwright=10 -->

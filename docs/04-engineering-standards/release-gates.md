@@ -136,9 +136,12 @@ a later sub-task, it is marked **Pending** rather than fabricated.
   The collector, Prometheus, Grafana, and blackbox-exporter configuration lives
   in [`ops/observability/`](../../ops/observability) and is started by the
   `deploy` job in [`release.yml`](../../.github/workflows/release.yml) with
-  `docker compose -f docker-compose.yml -f ops/observability/docker-compose.observability.yml up -d`.
-  It is no longer hand-placed on the host. `promtool check config` validated the
-  scrape configuration and all rules.
+  `docker compose -f docker-compose.yml -f ops/observability/docker-compose.observability.yml up -d`
+  followed by the four observability service names. Naming them is load-bearing:
+  `up` without a service list reconciles every service in the *merged* config,
+  which recreated the entire application stack under the observability project
+  and collided with the deployed database. It is no longer hand-placed on the
+  host. `promtool check config` validated the scrape configuration and all rules.
 - **Production verification checklist:** the required production observability
   platform (OTLP collector, Prometheus alert evaluator, Grafana, retention
   policy) and the exact verification steps to close this gate are documented in
@@ -148,6 +151,49 @@ a later sub-task, it is marked **Pending** rather than fabricated.
   and recovery, and the audit-volume-drop runbook exercise still require
   executing that checklist against the live production deployment; they are not
   closed by the configuration work above.
+- **2026-09-29 — the availability probes were silently blind for two of three
+  applications, and the cause is worth recording.** `PapyrusApplicationDown`
+  evaluates `min by (job) (up{job=~"admin-api|blog|portfolio"})`, and the
+  `up` series came from blackbox probes of each host's `/health`. Blog and
+  portfolio both returned 400 for the whole of that period, so `up` was `0` for
+  them at all times and the alert could never be distinguished from a real
+  outage. The 400 was `Bad Request - Invalid Hostname`: the public hosts derive
+  their allowed Host list from the configured public base URL plus loopback
+  (`SiteHostValidator.ResolveAllowedHosts`), and blackbox sends the target's own
+  hostname by default, so `http://blog:8080/health` was refused. Admin was the
+  only host passing, which is what made the fault look like a partial outage
+  rather than a configuration error.
+  The application was **not** wrong and must not be relaxed — the restriction is
+  a Host-header-injection defence. Each public host is now probed by a module
+  that sends the host it actually answers to. Those headers are literals
+  because blackbox-exporter v0.27.0 does not expand `${VAR}` in its config
+  (there is no `--config.expand-env` flag), which is a mistake this change made
+  and then measured and reverted; `PipelineWiringTests` now asserts the literals
+  match the configured public domains, and asserts the module is actually
+  selected in the scrape config, so a drift or a silent regression fails the
+  build rather than blinding the alert.
+- **The first version of that fix was itself broken, and the lesson is about how
+  it was verified rather than about YAML.** It sourced the header from
+  environment variables that the deploy job never set, so the stack would not
+  have started, and the substitution form does not work anyway. It was reported
+  as verified because the probe returned 200 when aimed at the real host — which
+  accepts loopback, and so masked an empty `Host` header. Re-testing against a
+  target that returns 400 unless the `Host` is exactly right separated the two
+  cases immediately. **A probe that returns 200 is only evidence if the target
+  would have failed otherwise**; a permissive target cannot distinguish a fix
+  from a no-op. The new test is mutation-checked for that reason.
+- **Alerts are visible but not delivered. No Alertmanager is configured, so
+  nothing notifies anyone.** The rules evaluate, `PapyrusRequestLatencyHigh`
+  has been observed in `pending`, and the health panels on the dashboard read
+  `up` — but a firing alert produces no page, no issue, and no message. This is
+  a deliberate deferral, not an oversight: at this stage the platform has no
+  delivery channel. Until one exists, **the dashboard and
+  `/api/v1/alerts` are the only way a human learns of a firing alert**, and a
+  reader who does not look will not know.
+  This gate therefore stays open on two independent counts: the probes are now
+  trustworthy, but delivery does not exist, and no alert has yet been observed
+  firing and recovering against a real outage. A green `up` series is evidence
+  that a probe works, not evidence that detection works.
 
 ### W8 — Release documentation and CI
 
