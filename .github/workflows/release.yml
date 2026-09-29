@@ -221,6 +221,10 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
+      # Required to pull the images the `images` job published to GHCR. The
+      # per-job GITHUB_TOKEN is the only registry credential; see the login
+      # step for why no stored secret is used.
+      packages: read
     environment:
       name: production
     env:
@@ -259,81 +263,36 @@ jobs:
             echo "They are the absolute public origins for the blog, portfolio, and media."
             exit 1
           fi
-      # A self-hosted runner's per-job GITHUB_TOKEN cannot pull from GHCR, so
-      # the deploy job needs its own registry credential. The previous
-      # GHCR_READ_TOKEN/GHCR_READ_USER pair was a long-lived personal access
-      # token: it never expired, it was not attributable to a single job, and
-      # it outlived every rotation policy we had.
+      # The deploy job pulls the images the `images` job just pushed to GHCR
+      # in this same workflow, on this same repository, using its own per-job
+      # GITHUB_TOKEN. No stored credential is involved.
       #
-      # The GitHub App installation is scoped to `packages: read` on this
-      # repository alone and mints a token that lives for one hour, so a
-      # compromised runner has at most a one-hour window and the credential
-      # disappears when the job ends. The App private key signs the JWT; it
-      # never leaves the runner environment, and the token it mints is
-      # narrower than the App's own key.
-      - name: Mint a short-lived GitHub App installation token
-        id: ghcr
-        env:
-          APP_ID: ${{ secrets.APP_ID }}
-          APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
-          INSTALLATION_ID: ${{ vars.APP_INSTALLATION_ID }}
-          APP_SLUG: ${{ vars.APP_SLUG }}
-        run: |
-          set -euo pipefail
-          now=$(date +%s)
-          # `openssl dgst -sign` takes a *path* to a key file, not the key
-          # itself. Passing the PEM text directly makes OpenSSL try to stat a
-          # file named after the PEM body, which fails with "unregistered
-          # scheme" and "No such file or directory" -- an error that reads like
-          # a corrupt key rather than a misuse of the flag.
-          key_file=$(mktemp)
-          # 0600 before the secret is written, not after: the runner is a
-          # persistent self-hosted host, so a world-readable key would exist
-          # even briefly.
-          chmod 600 "$key_file"
-          printf '%s\n' "$APP_PRIVATE_KEY" > "$key_file"
-          # Normalise line endings. A secret pasted from a Windows editor can
-          # arrive with CRLF, which OpenSSL refuses inside a PEM block.
-          tr -d '\r' < "$key_file" > "$key_file.clean" && mv "$key_file.clean" "$key_file"
-          trap 'shred -u "$key_file" 2>/dev/null || rm -f "$key_file"' EXIT
-
-          b64() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
-          header=$(printf '{"alg":"RS256","typ":"JWT"}' | b64)
-          payload=$(printf '{"iat":%s,"exp":%s,"iss":"%s"}' "$((now - 60))" "$((now + 540))" "$APP_ID" | b64)
-          signature=$(printf '%s.%s' "$header" "$payload" | openssl dgst -sha256 -sign "$key_file" | b64)
-          response=$(curl --fail --silent --show-error \
-            --request POST \
-            --header "Authorization: Bearer ${header}.${payload}.${signature}" \
-            --header "Accept: application/vnd.github+json" \
-            --header "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/app/installations/${INSTALLATION_ID}/access_tokens")
-          token=$(printf '%s' "$response" | jq --raw-output '.token // empty')
-          if [ -z "$token" ]; then
-            echo "::error::The GitHub App did not return an installation token."
-            printf '%s' "$response" | jq --raw-output '.message // "no message"'
-            exit 1
-          fi
-          # The mint response carries only token, expires_at, permissions, and
-          # repository_selection. There is no username in it, so the registry
-          # principal is the App's slug, configured as a variable.
-          if [ -z "$APP_SLUG" ]; then
-            echo "::error::APP_SLUG is not set."
-            echo "Set it to the GitHub App's slug under Settings -> Secrets and variables -> Actions -> Variables."
-            exit 1
-          fi
-          {
-            echo "username=${APP_SLUG}"
-            echo 'token<<PAPYRUS_EOF'
-            printf '%s' "$token"
-            echo
-            echo 'PAPYRUS_EOF'
-          } >> "$GITHUB_OUTPUT"
+      # Two earlier approaches were tried and abandoned. Both are recorded so
+      # nobody reattempts them, and the reason matters more than the outcome:
+      #
+      #   1. A long-lived personal access token (GHCR_READ_TOKEN). A PAT never
+      #      expires, is not attributable to a single job, and sat indefinitely
+      #      in the secret store.
+      #   2. A GitHub App installation token minted at run time by signing a
+      #      JWT with a stored PEM key. It failed in two releases, but both
+      #      failures were inside the mint step and before the registry was
+      #      contacted, so the App's ability to pull was never established in
+      #      either direction.
+      #
+      # The premise behind approach 2 was that a self-hosted runner's job token
+      # could not pull from GHCR. That was never true: this workflow's own
+      # `images` job pushes with exactly that token. The job token was already
+      # available and sufficient, and replacing a stored credential with a
+      # different stored credential was the wrong move.
+      #
+      # The token is scoped by `packages: read` in this job's permissions, is
+      # issued per job, and expires with the run.
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ steps.ghcr.outputs.username }}
-          password: ${{ steps.ghcr.outputs.token }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Deploy only after migration and approval checks
         if: ${{ !inputs.dry_run }}
         env:
