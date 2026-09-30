@@ -46,6 +46,12 @@ uploads the report. The `load-smoke` job runs the K6 public and admin load
 smokes. The `containers` job builds each image and scans it with Trivy for
 `HIGH`/`CRITICAL` vulnerabilities (`exit-code: 1`, `ignore-unfixed: true`).
 
+At the time of writing the `containers` job fails on one known advisory:
+`CVE-2026-84782` (`HIGH`, DTLS) in the shared runtime base image, which no
+published MCR digest yet fixes. It is a time-boxed accepted risk recorded as
+T-11 in the [threat register](threat-register.md), not a new gate and not a
+regression. The scan is not to be weakened to clear it.
+
 OpenAPI drift is verified by the dedicated
 [`openapi-schema.yml`](../../.github/workflows/openapi-schema.yml) workflow,
 which starts the Admin API, fetches `/openapi/v1.json`, and diffs it against

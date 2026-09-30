@@ -66,6 +66,7 @@ The primary trust boundaries are the HTTPS edge, admin authentication, tenant re
 | T-08 | Host-header URL poisoning | Missing public base configuration now yields relative URLs; request `Host` is never used for canonical/feed/sitemap generation. M1 additionally derives a per-host `AllowedHosts` list and refuses a foreign Host header with 400 | Configure production public base URLs and enforce trusted reverse-proxy/allowed-host configuration. `PublicHostFilterTests` proves the 400 over real requests; the loopback exemption remains unconditional until M2 scopes it | **Closed in code; release configuration gate** |
 | T-09 | Internal error-detail disclosure to API clients | Closed: the media upload handler returned `Results.BadRequest(exception.Message)`, echoing `LocalMediaService` rejection text to any authenticated caller | Every Admin error response is RFC 7807 `ProblemDetails` with fixed, client-safe `title`/`detail`; the original exception is logged server-side and never returned. Asserted in [`AdminApiTests.cs`](../../src/Papyrus.Tests/AdminApiTests.cs:1) against rejection text, the exception type name, and stack frames | **Closed; Phase 7** |
 | T-10 | Vulnerability not found by automated static analysis | The repository is **private**, and GitHub code scanning (CodeQL) is not available on private repositories: the API returns 403 "Code scanning is not enabled" and the repository reports no `security_and_analysis` configuration. There is therefore no SAST in the pipeline, and dependency scanning covers known advisories in declared packages only — it does not find a vulnerable pattern in Papyrus's own code | Compensating controls in place: `TreatWarningsAsErrors` with `EnableNETAnalyzers` and `AnalysisLevel=latest`, NetArchTest fitness rules asserting the architectural boundaries, Trivy image scanning at `HIGH`/`CRITICAL`, `dotnet list --vulnerable --include-transitive` failing the release build, and gitleaks secret scanning. If the repository is ever made public, or GitHub Code Security becomes available on the private tier, enable code scanning and treat it as a release gate | **Accepted risk; revisit if visibility changes** |
+| T-11 | DTLS heap disclosure or crash in the shared runtime base image (`CVE-2026-84782`, HIGH, CWE-125) | `libssl3t64 3.0.13-0ubuntu3.15` is present in the pinned `mcr.microsoft.com/dotnet/aspnet:10.0@sha256:2d584d81…` runtime that all three images inherit, so the advisory is live in every scanned image and Trivy fails the `containers` job in [`ci.yml`](../../.github/workflows/ci.yml) and the `images` job in [`release.yml`](../../.github/workflows/release.yml). It cannot be removed today: no digest published on MCR carries `libssl3t64 >= 3.0.13-0ubuntu3.16`, and the currently published `10.0` tag resolves to the pinned digest, so the pin is not what holds the fix back. Accepted for a fixed 14 days because the defect is in DTLS and no Papyrus image terminates a DTLS session — see the dated decision below | Re-pin all three `Dockerfile.*` runtime stages to an MCR digest carrying `libssl3t64 >= 3.0.13-0ubuntu3.16`, as a self-contained change on its own branch and pull request. Until then the Trivy step keeps `severity: HIGH,CRITICAL` with `exit-code: 1`, no `.trivyignore` is added, and `ignore-unfixed: true` is not used to suppress an advisory that ships a fix | **Accepted risk; hard review by 2026-10-14, then blocks release** |
 
 ### Required review cadence
 
@@ -117,3 +118,99 @@ This decision must be revisited when any of the following occurs:
 
 **Approved by:** Project owner  
 **Date:** 2026-08-25
+
+---
+
+## Time-boxed risk acceptance — T-11, `CVE-2026-84782`
+
+### Decision
+
+- **Decision date:** 2026-09-30
+- **Decision owner:** Project owner
+- **Accepted risk:** T-11 — `CVE-2026-84782` (`HIGH`, CWE-125) in OpenSSL's DTLS
+  retransmission path, inherited through `libssl3t64 3.0.13-0ubuntu3.15` by all
+  three runtime images from the pinned
+  `mcr.microsoft.com/dotnet/aspnet:10.0@sha256:2d584d81…` base.
+- **Advisory references:** upstream OpenSSL disclosure; Ubuntu `USN-8847-1`,
+  published 2026-09-29.
+- **Review by:** **2026-10-14** — a hard expiry, not a target date. This is the
+  only date on which the acceptance can end without new evidence.
+- **Fix:** `libssl3t64` `3.0.13-0ubuntu3.15` → `3.0.13-0ubuntu3.16`.
+- **Decision:** accepted for the fixed window above. Upstream describes a
+  suspended mid-message DTLS handshake write causing retransmission from a stale
+  buffer offset, which can disclose heap memory to the peer as plaintext
+  handshake data or crash the process. Ubuntu's own summary claims only
+  incorrect handshake behaviour or denial of service, and does not claim
+  information disclosure. Both branches require a DTLS peer; there is none, so
+  neither is reachable in any Papyrus image.
+
+### Scope of the acceptance
+
+**Accepted:** the Trivy `containers` job in
+[`ci.yml`](../../.github/workflows/ci.yml) and the `images` job in
+[`release.yml`](../../.github/workflows/release.yml) continue to fail on
+`CVE-2026-84782` until the base image is re-pinned. That failure is expected
+and is not treated as a regression.
+
+**Not accepted, and not waived:**
+
+- the Trivy gate itself — it is not waived, relaxed, or narrowed;
+- any change to scan configuration, scan severity, or scan exit code;
+- a `.trivyignore` entry for this or any other advisory;
+- a release on its own. This record authorises nothing by itself; a release
+  still requires every other gate in [release-gates.md](release-gates.md).
+
+### Evidence relied on
+
+- **Non-reachability, from the repository.** A search for `DTLS`, `Quic`, and
+  `QUIC` across `.cs`, `.json`, `.yml`, `.yaml`, `.md`, and `.csproj` returns
+  zero matches: no QUIC/HTTP3 package, no `SslProtocols` override.
+- **No outbound `HttpClient` in non-test source.** The only `HttpClient`
+  references are OpenTelemetry *metrics* instrumentation and test
+  `WebApplicationFactory` clients.
+- **PostgreSQL does not use TLS.** It connects as `Host=db;Port=5432` with no
+  `sslmode` configured anywhere, so that traffic is plaintext on the Compose
+  network. `OTEL_EXPORTER_OTLP_ENDPOINT` defaults to empty and, when set, points
+  at the in-network collector.
+- **The one outbound-TLS operation is outside the scanned images.**
+  `docker login`/pull against GHCR runs on the self-hosted runner's host Docker
+  client, not inside a Papyrus image.
+- **Fix unavailability, verified rather than assumed.** The `linux/amd64` child
+  was pulled and `dpkg` read directly: `libssl3t64 3.0.13-0ubuntu3.15`.
+  Adjacent tags were checked and ruled out — `10.0-noble` and `latest` resolve
+  to the same digest, `10.0.6` is a different digest shipping the older
+  `3.0.13-0ubuntu3.9`, and `10.0.16`, `10.0.17`, and `nightly` return 404. No
+  MCR digest carries `>= 3.0.13-0ubuntu3.16`. The `10.0` tag digest is
+  byte-identical to the pinned digest, so a tag-based reference would not have
+  moved either: the pin costs nothing here, and Microsoft has not republished.
+- **`ignore-unfixed` is irrelevant to this advisory.** The Trivy step already
+  sets `ignore-unfixed: true`, but the advisory ships a fix, so the scan
+  correctly continues to fail. The flag must not be used to suppress this or
+  any advisory that ships a fix.
+
+### Limits of this assessment
+
+Non-reachability was established from the upstream advisory text plus an
+exhaustive repository search. It was **not** established by dynamic test,
+because there is no DTLS traffic to exercise. If DTLS or QUIC is ever added to
+any Papyrus image, this assessment is void and must be redone.
+
+### Preconditions
+
+This acceptance is valid only while all of the following hold:
+
+1. No DTLS or QUIC endpoint is added to any Papyrus image.
+2. The Trivy step keeps `severity: HIGH,CRITICAL` with `exit-code: 1`.
+3. `ignore-unfixed: true` is not relied upon to suppress this advisory or any
+   advisory that ships a fix.
+4. No `.trivyignore` entry is added for `CVE-2026-84782`.
+
+If any precondition fails, the acceptance lapses immediately and T-11 returns to
+an open finding.
+
+### On expiry
+
+On **2026-10-14**, if `libssl3t64 >= 3.0.13-0ubuntu3.16` is still not present
+in the runtime image, the next release is **blocked** pending the re-pin. The
+risk escalates from accepted risk to an open finding and requires explicit
+re-approval by the decision owner; it does not renew silently.
