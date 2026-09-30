@@ -178,6 +178,70 @@ public sealed class PipelineWiringTests
     }
 
     /// <summary>
+    /// The Grafana dashboard is mounted by FILE provisioning, so Grafana never
+    /// resolves the <c>${DS_PROMETHEUS}</c> placeholder that it substitutes when
+    /// a dashboard is imported through the UI, and the datasource provisioning
+    /// declares no <c>uid</c> for Grafana to be asked about. Every panel then
+    /// binds to a datasource that does not exist and renders empty — while
+    /// Prometheus reports healthy, the collector is up, and the dashboard is
+    /// served, so every other signal in the stack stays green.
+    /// <para>
+    /// Both files are read because either half can drift on its own: reading only
+    /// the dashboard would pass while the provisioning stopped declaring a uid,
+    /// and reading only the provisioning would pass while the dashboard went back
+    /// to the placeholder.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void Dashboard_panels_bind_to_the_provisioned_prometheus_datasource()
+    {
+        var root = FindRepositoryRoot();
+        var provisioning = File.ReadAllText(Path.Combine(
+            root, "ops", "observability", "grafana", "provisioning", "datasources", "prometheus.yml"));
+        var dashboard = File.ReadAllText(Path.Combine(
+            root, "docs", "observability", "dashboards", "papyrus-dashboard.json"));
+
+        // The provisioning side: a generated uid does not survive a restart or a
+        // fresh volume, so it has to be pinned and the dashboard has to name it.
+        var declared = System.Text.RegularExpressions.Regex.Match(
+            provisioning, @"(?m)^\s*uid:\s*(?<uid>\S+)\s*$");
+        Assert.True(
+            declared.Success,
+            "prometheus.yml declares no uid, so Grafana generates one and no file-provisioned dashboard can bind to it.");
+        var provisionedUid = declared.Groups["uid"].Value;
+
+        // The dashboard side: every Prometheus datasource block must carry the
+        // provisioned uid literally. The built-in grafana annotation datasource is
+        // not Prometheus and is deliberately left out.
+        using var document = System.Text.Json.JsonDocument.Parse(dashboard);
+        var bindings = DatasourceBindings(document.RootElement)
+            .Where(binding => binding.Type == "prometheus")
+            .ToArray();
+        Assert.True(
+            bindings.Length > 0,
+            "papyrus-dashboard.json declares no Prometheus datasource, so no panel can resolve one.");
+
+        foreach (var binding in bindings)
+        {
+            // ${DS_PROMETHEUS} is only substituted at UI-import time, and there is
+            // no __inputs block to drive the substitution for file provisioning.
+            Assert.True(
+                !binding.Uid.Contains('$', StringComparison.Ordinal),
+                $"papyrus-dashboard.json binds a datasource to '{binding.Uid}'. File provisioning does not substitute a Grafana import-time variable, so that block can never resolve.");
+            Assert.True(
+                binding.Uid == provisionedUid,
+                $"papyrus-dashboard.json binds a datasource to uid '{binding.Uid}' but prometheus.yml provisions '{provisionedUid}'; every panel would render empty.");
+        }
+
+        // Finally the literal both files are required to share, so that renaming
+        // the datasource is a deliberate edit to the test rather than a rename
+        // that silently changes what a shipped dashboard binds to.
+        Assert.True(
+            provisionedUid == "papyrus-prometheus",
+            $"prometheus.yml provisions uid '{provisionedUid}'; the dashboard must be shipped naming 'papyrus-prometheus'.");
+    }
+
+    /// <summary>
     /// The public hosts reject any Host header that is not their configured
     /// public base URL or loopback, so blackbox has to send the right one or the
     /// probe returns 400 and <c>up</c> reads 0 forever — which looks exactly
@@ -281,6 +345,55 @@ public sealed class PipelineWiringTests
         var block = next < 0 ? compose[start..] : compose[start..next];
         Assert.NotEqual(0, block.Length);
         return block;
+    }
+
+    /// <summary>
+    /// Every <c>datasource</c> object in the dashboard, at any depth, so a
+    /// binding added to a panel, a target, or a template variable is covered
+    /// without this having to know the dashboard's shape.
+    /// </summary>
+    private static IEnumerable<(string Type, string Uid)> DatasourceBindings(
+        System.Text.Json.JsonElement element)
+    {
+        if (element.ValueKind == System.Text.Json.JsonValueKind.Object)
+        {
+            foreach (var property in element.EnumerateObject())
+            {
+                if (property.NameEquals("datasource")
+                    && property.Value.ValueKind == System.Text.Json.JsonValueKind.Object
+                    && property.Value.TryGetProperty("type", out var type)
+                    && type.ValueKind == System.Text.Json.JsonValueKind.String
+                    && type.GetString() is { } declaredType)
+                {
+                    // A block without a uid binds to the default datasource by
+                    // Grafana's own rule, which the caller reports as an empty uid
+                    // rather than silently passing it.
+                    var uid = property.Value.TryGetProperty("uid", out var uidElement)
+                        && uidElement.ValueKind == System.Text.Json.JsonValueKind.String
+                            ? uidElement.GetString() ?? string.Empty
+                            : string.Empty;
+                    yield return (declaredType, uid);
+                }
+
+                foreach (var nested in DatasourceBindings(property.Value))
+                {
+                    yield return nested;
+                }
+            }
+
+            yield break;
+        }
+
+        if (element.ValueKind == System.Text.Json.JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray())
+            {
+                foreach (var nested in DatasourceBindings(item))
+                {
+                    yield return nested;
+                }
+            }
+        }
     }
 
     private static string ReadProgram(string relativeProgramPath)

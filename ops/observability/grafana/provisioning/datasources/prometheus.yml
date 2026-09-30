@@ -1,6 +1,21 @@
 apiVersion: 1
 datasources:
   - name: Prometheus
+    # The uid is fixed rather than left to Grafana to generate.
+    #
+    # The dashboard is mounted from docs/observability/dashboards/ by FILE
+    # provisioning (see ../dashboards/papyrus.yml). File provisioning does not
+    # resolve the ${DS_PROMETHEUS} placeholder that a dashboard imported through
+    # the UI would substitute at import time, and there is no __inputs block to
+    # drive that substitution. The dashboard therefore has to name this uid
+    # literally, which requires it to be stable and declared here.
+    #
+    # Without it, Grafana generates a uid that does not survive a restart or a
+    # fresh volume, every panel in the dashboard binds to a datasource that does
+    # not exist, and the dashboard renders with empty panels. Nothing fails
+    # loudly: Prometheus is healthy and the dashboard is served, so the failure
+    # is only visible as absent data.
+    uid: papyrus-prometheus
     type: prometheus
     access: proxy
     url: http://prometheus:9090
