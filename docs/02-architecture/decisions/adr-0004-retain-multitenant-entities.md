@@ -19,7 +19,7 @@ A separate, already-made decision (the RLS evaluation history below) establishes
 
 The application-level enforcement mechanics described below and implemented in [`PapyrusDbContext`](../../../src/Papyrus.Infrastructure/PapyrusDbContext.cs:32) are:
 
-- A scoped [`TenantContext`](../../../src/Papyrus.Infrastructure/MultiTenancy/TenantContext.cs:7) resolves the tenant from the `X-Tenant-Id` header (or the configured default, `main`), validates it against a strict `^[a-z0-9][a-z0-9-]{0,62}$` pattern, and normalizes it.
+- A scoped [`TenantContext`](../../../src/Papyrus.Infrastructure/MultiTenancy/TenantContext.cs:7) resolves the tenant from the `X-Tenant-Id` header (or the configured default, `main`), validates it against a strict `^[a-z0-9][a-z0-9-]{0,62}$` pattern, and normalises it.
 - EF Core global query filters scope every tenant-owned entity (`Project`, `BlogPost`, `ContentCategory`, `ContentTag`, `ProjectTag`, `BlogPostTag`) to the current tenant and exclude soft-deleted rows.
 - [`EnforceTenantBoundary()`](../../../src/Papyrus.Infrastructure/PapyrusDbContext.cs:52) stamps `TenantId` on added entities and throws on any attempt to save an entity whose tenant differs from the current context, so the filter is not the sole control.
 

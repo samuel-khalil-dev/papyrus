@@ -39,7 +39,7 @@ packages and 26 KB.
 
 `@radix-ui/react-dialog` is the only Radix package retained, because
 `components/ui/dialog.tsx` uses it for focus trapping, Escape handling, and modal
-ARIA behavior, which are correctness requirements rather than styling. The
+ARIA behaviour, which are correctness requirements rather than styling. The
 remaining hand-rolled primitives are built on native elements on purpose:
 `components/ui/select.tsx` renders a native `<select>` because the form contract
 requires `multiple` selection and native mobile controls, and

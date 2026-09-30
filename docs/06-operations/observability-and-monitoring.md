@@ -24,7 +24,7 @@ The applications receive `OTEL_EXPORTER_OTLP_ENDPOINT` from compose. The release
 
 Telemetry is implemented in `src/Papyrus.ServiceDefaults/Telemetry` and registered by the shared ServiceDefaults used by Admin, Blog, and Portfolio. `TelemetryModule` registers the options, redactor, cardinality guard, sampling policy, and logger-backed audit sink. W3C propagation is forced, so a request's `traceparent`/`tracestate` context can be followed across hosts.
 
-| Signal | Source and behavior |
+| Signal | Source and behaviour |
 | --- | --- |
 | `Papyrus.Request` | `ActivityKind.Server`, created by `TelemetryRequestMiddleware` for a sampled request; tags `papyrus.service`, `papyrus.endpoint`, and `http.status_code` |
 | `Papyrus.AuditEvent` | `ActivityKind.Internal`, created by `StructuredAuditEventSink` for every audit record; tags `papyrus.audit=true`, tenant, action, target, and outcome |
@@ -66,7 +66,7 @@ Use the deployment platform's configuration mechanism to provide these values. T
 
 ## Live alert families (Current)
 
-The dashboard definition is tracked at [`observability/dashboards/papyrus-dashboard.json`](../observability/dashboards/papyrus-dashboard.json). Telemetry behavior and investigation steps are in [observability-and-monitoring.md](observability-and-monitoring.md); response procedures are in [runbooks.md](runbooks.md).
+The dashboard definition is tracked at [`observability/dashboards/papyrus-dashboard.json`](../observability/dashboards/papyrus-dashboard.json). Telemetry behaviour and investigation steps are in [observability-and-monitoring.md](observability-and-monitoring.md); response procedures are in [runbooks.md](runbooks.md).
 
 | Alert | Signal / expression shape | Threshold / `for` | Severity |
 | --- | --- | --- | --- |
@@ -91,7 +91,7 @@ The request signals come from `Papyrus.Request` and its service, endpoint, and s
 
 The application emits activities and structured logs, not Prometheus counters directly. The following are **collector-derived recording views**, not application counters, and no application instrumentation with these names exists:
 
-- `http_server_request_duration_seconds_count` and `_bucket` normalize the HTTP server duration signal and carry `papyrus_service` and `http_response_status_code`. They back request rate, latency, 5xx, and 429 alerts. The Prometheus exporter exposes resource attributes through `target_info` rather than as labels, so the collector's `transform/metric_labels` processor copies `service.name` onto each data point to produce the `papyrus_service` label the contract requires.
+- `http_server_request_duration_seconds_count` and `_bucket` normalise the HTTP server duration signal and carry `papyrus_service` and `http_response_status_code`. They back request rate, latency, 5xx, and 429 alerts. The Prometheus exporter exposes resource attributes through `target_info` rather than as labels, so the collector's `transform/metric_labels` processor copies `service.name` onto each data point to produce the `papyrus_service` label the contract requires.
 - `papyrus_audit_events_total` counts `Papyrus.AuditEvent` spans and may be grouped by `papyrus_audit_outcome`.
 - `papyrus_audit_log_records_total` counts the same audit records from the logger side (EventId `1001`). It is the availability-independent view: the span can be dropped by sampling, the log record cannot.
 - `papyrus_audit_redacted_total` counts audit spans whose redacted allowlist fields equal `[redacted]`.
@@ -108,10 +108,84 @@ This checklist documents the production observability platform required to close
 
 | Component | Purpose | Required for gate |
 | --- | --- | --- |
-| OTLP collector (e.g. OpenTelemetry Collector) | Receives `Papyrus.Request` and `Papyrus.AuditEvent` activities from Admin, Blog, and Portfolio via `OTEL_EXPORTER_OTLP_ENDPOINT`; normalizes to Prometheus recording views | W7, O4 |
+| OTLP collector (e.g. OpenTelemetry Collector) | Receives `Papyrus.Request` and `Papyrus.AuditEvent` activities from Admin, Blog, and Portfolio via `OTEL_EXPORTER_OTLP_ENDPOINT`; normalises to Prometheus recording views | W7, O4 |
 | Prometheus (or compatible) | Evaluates the alert expressions in the alert families above | W7 |
-| Grafana | Serves the Papyrus dashboard (Grafana/Prometheus datasource; dashboard definition tracked at [`observability/dashboards/papyrus-dashboard.json`](../observability/dashboards/papyrus-dashboard.json)) | W7, O4 |
+| Grafana | Serves the Papyrus dashboard (Prometheus datasource; dashboard definition tracked at [`observability/dashboards/papyrus-dashboard.json`](../observability/dashboards/papyrus-dashboard.json)) | W7, O4 |
 | Retention policy | Retains audit/telemetry signals per the deployment's compliance window | O4 |
+
+#### The dashboard datasource must be a fixed uid, not the import-time placeholder
+
+The dashboard is mounted into Grafana by **file provisioning**
+(`ops/observability/grafana/provisioning/dashboards/papyrus.yml`), not imported
+through the UI. File provisioning does **not** resolve the `${DS_PROMETHEUS}`
+placeholder that a hand-imported dashboard would substitute at import time, and
+there is no `__inputs` block to drive that substitution. The dashboard therefore
+has to name the datasource `uid` **literally**, which requires the `uid` to be
+stable and declared in the provisioning file.
+
+Two files must agree, and they are:
+
+| File | Role |
+| --- | --- |
+| `ops/observability/grafana/provisioning/datasources/prometheus.yml` | Declares `uid: papyrus-prometheus` on the `Prometheus` datasource. Without it, Grafana generates a uid that is arbitrary and does not survive a fresh volume. |
+| `docs/observability/dashboards/papyrus-dashboard.json` | Names `papyrus-prometheus` in all 26 panel datasource blocks. This file is a **runtime artifact**, not a document: it is mounted into Grafana by the deploy job and is the definition Grafana actually loads. |
+
+Neither file can be changed alone into a working state, and the two values must
+be identical strings.
+
+**This was broken and is now fixed (2026-09-29).** The dashboard previously used
+the placeholder in all 26 blocks and the provisioned datasource set no `uid`.
+The file carries 27 `datasource` keys in total; the 27th is the built-in
+`Annotations & Alerts` entry, which is bound to Grafana's internal
+`-- Grafana --` datasource and does not name the Prometheus uid. Two other
+figures for this same file also circulate and are true of different layers: its
+`panels[]` array holds **15** entries, three of which are `row` containers that
+declare no datasource, leaving **12** data panels; those 12 carry **26** bindings
+between them — a panel-level block, one per `targets[]` entry, and additional
+nested blocks inside `fieldConfig` overrides — plus the `app` template variable's
+own block, which is the 26th. Do not reconcile the two figures by picking one.
+
+The failure it caused on a fresh volume was silent and expensive to diagnose:
+the dashboard rendered, the panels were simply empty, and nothing in the
+application stack could observe it. A green Prometheus, a healthy collector, and
+an empty dashboard are each individually consistent with a correct deployment.
+It is the same shape as the blind-availability-probe defect recorded under
+`v0.1.3` — a monitoring surface that looks healthy because the thing being
+monitored is not being checked.
+
+**The same defect against an existing `grafana-data` volume is not silent, and
+that was measured rather than inferred.** The update path looks the datasource
+row up by **id and uid**, so a volume still holding a previously generated uid
+matches nothing, provisioning raises `ErrDataSourceNotFound`, and Grafana
+12.1.0 aborts at startup with `Datasource provisioning error: data source not
+found`, leaving the container exited. **Grafana down is therefore the symptom to
+look for during an incident, and `logs grafana` is where the evidence is** — not
+an empty dashboard.
+
+It survived because the 2026-09-02 verification established only that the
+dashboard *parsed* and used "the documented Prometheus datasource placeholder".
+Both statements were true and neither asked the operational question. The fix was
+verified against a real Grafana 12.1.0 container with the tracked provisioning
+files, reading back what Grafana had actually stored: before the fix the panels
+held the literal `${DS_PROMETHEUS}` while the datasource uid was a generated
+`PBFA97CFB590B2093`; after it, both are `papyrus-prometheus`.
+
+**What is still unverified:** whether the panels return *data*. Datasource
+binding is now correct, but binding is not connectivity. O4's "live dashboard
+data" item remains open and will now test Prometheus reachability rather than
+panel binding.
+
+A regression guard for the pairing is still owed. The existing
+`PipelineWiringTests` asserts similar cross-file wiring for this stack — the
+alert rules against the collector config, and the blackbox probe host headers
+against the configured public domains — and a test asserting that the
+provisioned datasource `uid` appears in the dashboard and that the placeholder
+is absent would fit that pattern. A test written for the dashboard half alone
+would pass while the datasource half regressed, so it must read both files.
+
+If you import a dashboard into a local Grafana by hand, the import dialog will
+offer to substitute a datasource — that path is not what production uses, and
+the substituted file must not be committed back.
 
 ### Verification checklist (close W7 and O4)
 
@@ -144,6 +218,14 @@ Execute each item against the **production** deployment and record the result (e
 
 - [ ] Confirm the Grafana dashboard renders live data for request rate, latency, 5xx, 429, audit volume, redaction, sampling, cardinality, and application/PostgreSQL health.
 - [ ] Record a sanitized dashboard screenshot or export as evidence.
+
+Before running this, confirm the panel bindings are live rather than assuming
+they are. In the Grafana UI, a panel whose datasource `uid` does not resolve
+renders empty and is indistinguishable from "no traffic yet", which is how the
+unbound-datasource defect survived from review to review. The quick check is the
+datasource `uid` recorded against a panel in the dashboard JSON matching the
+`uid` on the provisioned datasource, and the slower check is the Prometheus
+datasource health indicator in Grafana's datasource settings.
 
 #### Alert delivery/recovery (O4)
 

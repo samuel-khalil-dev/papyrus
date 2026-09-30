@@ -24,6 +24,10 @@
 
 **Current:** the Admin media policy rejects SVG by default unless a reviewed sanitizer is introduced; validates decoded content; and serves uploads as non-executable media. Uploads are raster-only, magic-byte validated (structure, dimension, and size checked), capped at 5 MB, written atomically with generated tenant-scoped names, and served traversal-safe. Uploaded files are **not** scanned by antivirus or re-encoded — this limitation is an accepted risk (T-04a) for the personal-site scope and must be revisited if the deployment serves untrusted third-party uploads. See the [threat register](threat-register.md) (T-04, T-04a) and the [C4 component view](../02-architecture/c4-diagrams.md) for the operational detail. The media policy decision is covered by the [threat register](threat-register.md) (T-04, T-04a) and the [C4 component view](../02-architecture/c4-diagrams.md) (the auth portion is superseded by the header-authenticated SPA).
 
+## Supply chain and base images
+
+**Current:** all three images inherit one pinned `mcr.microsoft.com/dotnet/aspnet:10.0` runtime digest and are scanned by Trivy at `HIGH`/`CRITICAL`. One accepted advisory, `CVE-2026-84782` (T-11), is live in that base with no available fix; the time-boxed acceptance is recorded in the [threat register](threat-register.md).
+
 ## Compliance
 Any feature collecting visitor data ships its consent/compliance update in the same milestone. Visitor data subject to a deletion request (newsletter subscribers, stored contact messages if any) supports hard deletion on an admin-triggered erasure action.
 

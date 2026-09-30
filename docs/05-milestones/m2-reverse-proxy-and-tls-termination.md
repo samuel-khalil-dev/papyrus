@@ -51,4 +51,4 @@ Nothing in the platform yet defines how Portfolio, Blog, and Admin are actually 
 
 ## Test plan
 - Automated smoke test per host verifying TLS validity and correct backend routing.
-- Manual verification of certificate auto-renewal behavior.
+- Manual verification of certificate auto-renewal behaviour.

@@ -33,7 +33,7 @@ Start the complete stack:
 dotnet run --project src/Papyrus.AppHost
 ```
 
-Aspire starts PostgreSQL, the Admin API, the Vite Admin UI, Blog, and Portfolio. The Admin API initializes the local database and seed data. Blog and Portfolio wait for the Admin API and never run migrations themselves. The standard local ports are:
+Aspire starts PostgreSQL, the Admin API, the Vite Admin UI, Blog, and Portfolio. The Admin API initialises the local database and seed data. Blog and Portfolio wait for the Admin API and never run migrations themselves. The standard local ports are:
 
 | Surface | Address |
 | --- | --- |

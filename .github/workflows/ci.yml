@@ -165,15 +165,37 @@ jobs:
               'Error', 'Warning', 'Failed',
           }
 
-          # Every document that publishes a figure from the canonical row, and
-          # the figures each must contain. Six independent restatements is how
+          # Every document that restates a figure from the canonical marker, and
+          # WHICH figures it must quote -- named by the marker's own keys, never
+          # by value. Three independent restatements of the same figures is how
           # a three-case drift survived review once, so all of them are checked
-          # rather than the marker alone. These must match the
-          # test-baseline marker in docs/00-overview/feature-matrix.md.
+          # rather than the marker alone.
+          #
+          # An earlier version of this check pinned the expected numbers here as
+          # string literals and only asserted that each literal appeared
+          # somewhere in the file. That cannot detect the drift it was written
+          # for: when the suite moved 454 -> 456, the pinned 454 was still
+          # present in the prose, so the check passed while the documents
+          # disagreed with the run and with the marker. Deriving the expected
+          # value from the marker means a restatement is compared against what
+          # the run actually measured, and the numbers are written down in
+          # exactly one place.
+          #
+          # The keys are the marker's. Adding a figure to the marker does not
+          # require touching this table; adding a restatement does.
           RESTATEMENTS = {
-              'docs/README.md': ('454', '280', '174', '22', '476', '10'),
-              'docs/00-overview/limitations.md': ('454', '280', '174', '22', '476', '10'),
-              'docs/Papyrus_Roadmap.md': ('454', '280', '174', '22', '476', '196', '10'),
+              'docs/README.md': (
+                  'non-integration', 'encoding', 'behavioural',
+                  'integration', 'total', 'behaviour-total', 'playwright',
+              ),
+              'docs/00-overview/limitations.md': (
+                  'non-integration', 'encoding', 'behavioural',
+                  'integration', 'total', 'behaviour-total', 'playwright',
+              ),
+              'docs/Papyrus_Roadmap.md': (
+                  'non-integration', 'encoding', 'behavioural',
+                  'integration', 'total', 'behaviour-total', 'playwright',
+              ),
           }
 
           trx_files = sorted(Path('TestResults').rglob('*.trx'))
@@ -228,33 +250,171 @@ jobs:
               for key, value in re.findall(r'([a-z-]+)=(\d+)', match.group('body'))
           }
 
+          absent = sorted(set(measured) - set(recorded))
+          if absent:
+              print('The test-baseline marker is missing figures: '
+                    + ', '.join(absent))
+              sys.exit(1)
+
+          # The marker is the only place a figure is written down, so a marker
+          # that has fallen behind the run is a different defect from prose that
+          # has: here the marker is what needs editing, and the documents below
+          # still quote the right figure. `recorded` cannot have a `None` for any
+          # measured key -- the `absent` guard above has already exited on that
+          # -- so the pair is always both sides of a disagreement.
           drift = [
               (key, value, recorded.get(key))
               for key, value in measured.items()
               if recorded.get(key) != value
           ]
-          for path, expected in RESTATEMENTS.items():
+
+          # Operator experience, not coverage: every row below this one already
+          # reaches `drift` as a measured/recorded disagreement, so this guard
+          # adds no correctness of its own. It exists so the marker-drift case
+          # fails with the name of the figure rather than a bare KeyError.
+
+          # A restatement is checked against the figure the run measured, not
+          # against the marker. Comparing the two sources transitively would let
+          # a wrong-but-consistent marker excuse wrong prose, and this check
+          # exists precisely to catch a document nobody re-read.
+          #
+          # KNOWN LIMITATION: this asks whether a figure appears anywhere in a
+          # document, not whether it appears in the sentence that states it, and
+          # it does not check the sentence either. So a document that drops a
+          # restatement still passes if the same number occurs elsewhere in the
+          # file for an unrelated reason, and a document that quotes the right
+          # figure once and a wrong one elsewhere has the same problem. That is
+          # reachable today: `457` occurs twice in Papyrus_Roadmap.md, so the
+          # sentence stating it can be deleted and this check still passes. No
+          # boundary can fix it -- the number is genuinely present -- only
+          # tying a figure to the claim that carries it, which means parsing
+          # prose per figure and rewriting the table every time a sentence is
+          # reworded. The drift this guard was written for -- a suite change
+          # that moves a figure and leaves the documents behind -- is caught, and
+          # so are the identifier-shaped tokens the boundary below rejects,
+          # which is where the collisions actually came from.
+          #
+          # Exposure is a property of the document, not of the digit count of the
+          # figure. Two of the seven figures are two digits (`playwright` and
+          # `integration`), but a three-digit figure is just as satisfiable by an
+          # unrelated number if the document happens to contain one -- a year,
+          # a line count, a milestone span. Tightening the boundary below is
+          # what reduces exposure, and it can only go so far.
+          #
+          # The boundary has to model what a number *is* in this corpus, not
+          # just where a digit run starts. `\w` covers letters, digits and
+          # underscore, so a digit glued to a word character is not a figure.
+          # `-` and `#` join the left class because the figure-shaped tokens in
+          # these documents are identifiers, not numbers: `ADR-0010`, the
+          # `M0`..`M32` milestone labels, the `O10` risk register. Accepting
+          # those makes the guard unfailable -- deleting the real `playwright`
+          # restatement left ADR-0010, M10 and O10 standing in for it, and
+          # `integration` was satisfied by any of M0..M32. `[` is in the class
+          # on both sides, so an `ADR-0010` cannot enter through its link text
+          # either.
+          #
+          # `-` is deliberately NOT in the right class. It looks harmless and is
+          # not: it rejects a figure glued to a hyphen, and Papyrus_Roadmap.md
+          # states the browser-suite figure as `10-test Playwright`. The left
+          # rule already blocks `M10` and `ADR-0010` on the character preceding
+          # the digits, so excluding `-` on the right buys nothing and costs a
+          # false failure on a correct document.
+          #
+          # A trailing period is a residual gap. `456.` at the end of a sentence
+          # is indistinguishable from `1.456` to this pattern, so it is
+          # rejected. That is latent only because no document currently ends a
+          # figure with a period; the first edit that writes "... 456." fails
+          # here, and the fix belongs in the prose, not in the boundary.
+          NUMBER = re.compile(r'(?<![\w.\-#\]])(\d+)(?![\w.\]])')
+
+          def quoted(body: str, value: int) -> bool:
+              return any(int(match.group(1)) == value for match in NUMBER.finditer(body))
+
+          # A key named in RESTATEMENTS that this run does not produce would
+          # otherwise raise KeyError below and surface as a traceback, which
+          # tells the reader nothing about which table to edit.
+          unknown = sorted(
+              {key for keys in RESTATEMENTS.values() for key in keys} - set(measured)
+          )
+          if unknown:
+              print(
+                  'RESTATEMENTS names figures this run does not produce: '
+                  + ', '.join(unknown)
+                  + '\nThe figures this run produces are: '
+                  + ', '.join(sorted(measured))
+                  + '\nUse one of those names, or add the figure to `measured` first.'
+              )
+              sys.exit(1)
+
+          for path, keys in RESTATEMENTS.items():
               body = Path(path).read_text(encoding='utf-8')
-              missing = [value for value in expected if value not in body]
-              if missing:
-                  drift.append((path, f"missing {', '.join(missing)}", None))
+              wrong = [
+                  f"{key}={measured[key]} (marker says {recorded[key]})"
+                  for key in keys
+                  if not quoted(body, measured[key])
+              ]
+              if wrong:
+                  drift.append((path, 'stale or missing figure: ' + '; '.join(wrong), None))
 
           if drift:
               print('The documented test baseline does not match this run.\n')
-              width = max(len(str(key)) for key, _, _ in drift)
-              print(f"  {'figure'.ljust(width)}  measured  recorded")
-              for key, value, was in drift:
-                  print(f"  {str(key).ljust(width)}  {str(value).rjust(8)}  {str(was).rjust(8)}")
+              # Two kinds of row, so they are labelled rather than left to be
+              # inferred from a key that is sometimes a figure name and
+              # sometimes a path. The label column is sized to the labels alone
+              # (12 characters) instead of across the whole table, so a
+              # 30-character document path cannot set the width for a
+              # three-character figure name.
+              rows = []
+              marker_stale = False
+              for key, value, recorded_value in drift:
+                  if recorded_value is None:
+                      rows.append(('restatement', f'{key}: {value}'))
+                  else:
+                      marker_stale = True
+                      rows.append(
+                          ('marker', f'{key}={value} (marker says {recorded_value})')
+                      )
+              width = max(len(label) for label, _ in rows)
+              for label, detail in rows:
+                  print(f'  {label.ljust(width)}  {detail}')
+              print()
+              if marker_stale:
+                  # When the marker is stale, the marker is the thing to fix and
+                  # it is the one place the figure is written down; every
+                  # restatement flagged alongside it will follow once it is
+                  # corrected, so naming it is all the operator has to do. When
+                  # the marker is correct, the prose is what moved.
+                  print(
+                      'The figures marked `marker` are the stale ones. Correct the '
+                      "'<!-- test-baseline: ... -->' marker in "
+                      'docs/00-overview/feature-matrix.md to the measured values.'
+                      '\nEvery `restatement` flagged here quotes a figure this run '
+                      'measured and the marker did not, so it will be satisfied by '
+                      'the marker correction alone -- edit the documents for the '
+                      'figures already in the marker, and for these only if the '
+                      'measured value is genuinely the new one.'
+                  )
+              else:
+                  print(
+                      'The marker is correct; only the prose is behind. The rows '
+                      'marked `restatement` are the documents that do not quote '
+                      'the figures this run measured.'
+                      '\nUpdate each document listed, and leave the marker in '
+                      'docs/00-overview/feature-matrix.md alone.'
+                  )
               print(
                   '\nThe test suite ran cleanly; only the documentation is behind. '
-                  "Update the '<!-- test-baseline: ... -->' marker in "
-                  'docs/00-overview/feature-matrix.md, and keep the figures quoted in '
-                  'docs/README.md, docs/00-overview/limitations.md and '
-                  'docs/Papyrus_Roadmap.md in step with it.'
+                  'Keep the figures quoted in docs/README.md, '
+                  'docs/00-overview/limitations.md and docs/Papyrus_Roadmap.md in '
+                  'step with the marker.'
+                  '\n\nA figure is satisfied only by a standalone number: a digit '
+                  'inside a longer number does not count, so 17 is not found in '
+                  '176, and an identifier that merely contains the digits -- '
+                  'ADR-0010, M10, O10 -- does not count either.'
                   '\n\nEncoding cases move with the source tree: every tracked '
                   '.cs/.csproj/.json/.props/.targets/.md file is one '
                   'SourceEncodingTests case, so adding or deleting any file -- not '
-                  "only any test -- changes both 'total' and 'encoding'. That is "
+                  'only any test -- changes both \'total\' and \'encoding\'. That is '
                   'expected; update the marker in the same change.'
               )
               sys.exit(1)

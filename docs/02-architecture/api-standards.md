@@ -6,7 +6,7 @@ The Admin API is OpenAPI contract-first; CI fails on drift between implementatio
 ## Versioning
 Public contract under `/api/v1`. A breaking change requires a new version segment.
 
-## Endpoint organization
+## Endpoint organisation
 Feature-grouped Minimal API endpoint classes via `MapGroup`, split further past ~300 lines.
 
 ## Error handling
@@ -48,7 +48,7 @@ For parameters, validation rules, response shapes, and status codes, use the can
 
 ### Compatibility
 
-**Current:** the legacy `/api` routes remain compatibility behavior. They are intentionally not represented as a second published contract; their bounded pagination and compatibility behavior are covered by tests and the architecture/security documentation.
+**Current:** the legacy `/api` routes remain compatibility behaviour. They are intentionally not represented as a second published contract; their bounded pagination and compatibility behaviour are covered by tests and the architecture/security documentation.
 
 ### Contract rules
 

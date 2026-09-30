@@ -58,7 +58,7 @@ Consult the [threat register](../04-engineering-standards/threat-register.md) (i
 
 ### Testing
 
-- [ ] New behavior covered (unit/contract/integration) and named well
+- [ ] New behaviour covered (unit/contract/integration) and named well
 - [ ] CTests cover edge cases and error paths; no tests that always pass
 
 ### Performance
@@ -69,7 +69,34 @@ Consult the [threat register](../04-engineering-standards/threat-register.md) (i
 ### Docs
 
 - [ ] Code ↔ [feature matrix](../00-overview/feature-matrix.md) / [limitations](../00-overview/limitations.md) in sync
-- [ ] Changelog and release-gate status updated when behavior changes
+- [ ] Changelog and release-gate status updated when behaviour changes
+- [ ] Scratch and build output is gitignored **and** listed in the `SourceEncodingTests` exclusion set
+
+### Cross-file wiring between operational config files
+
+Three pairs of files must agree. Each fails silently — the monitoring surface
+still looks healthy while reporting nothing real — and each was found by reading
+rather than by a failing check. All three are now asserted by
+`PipelineWiringTests`.
+
+| Pair | Asserted? | Consequence of drift | Where the contract is documented |
+| --- | --- | --- | --- |
+| `ops/observability/prometheus/papyrus-alerts.yml` ↔ `ops/observability/collector/config.yaml` | Yes | Alert expressions query metrics the collector never derives, so the rule can never fire | [W7 / O4](../04-engineering-standards/release-gates.md) |
+| `ops/observability/blackbox-exporter/config.yml` ↔ the configured public base URLs | Yes | Probes send the wrong `Host` header, the target returns 400, and `up` reads as a steady outage rather than a real one | [`v0.1.3` changelog](../00-overview/changelog.md) |
+| `ops/observability/grafana/provisioning/datasources/prometheus.yml` ↔ `docs/observability/dashboards/papyrus-dashboard.json` | Yes | Panels bind to a datasource that does not exist and render empty. Shipped broken, found 2026-09-29, fixed 2026-09-29, now asserted | [Datasource binding](../06-operations/observability-and-monitoring.md) |
+
+On the third pair, the two `uid` values — `papyrus-prometheus` in both files —
+are held identical by
+`Dashboard_panels_bind_to_the_provisioned_prometheus_datasource`, which was
+mutation-checked against four distinct failures: the `uid` removed from the
+provisioning, a dashboard block reverted to `${DS_PROMETHEUS}`, the two uids
+diverging from each other, and every Prometheus datasource removed from the
+dashboard. The constraint that shaped it still stands, and any replacement must
+honour it: a test reading only the dashboard would pass while the datasource
+half regressed, so the test must read both files. Note that
+`docs/observability/dashboards/papyrus-dashboard.json` is a **runtime artifact**,
+not a document: it is mounted into Grafana by the deploy job, and a "docs-only"
+change scope does not cover it.
 
 ## Report format
 

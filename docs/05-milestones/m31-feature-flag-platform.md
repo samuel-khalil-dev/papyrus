@@ -4,7 +4,7 @@
 Enable safe, reversible rollout of new capabilities without requiring a redeploy.
 
 ## Background
-Every prior milestone ships directly into production behavior at deploy time.
+Every prior milestone ships directly into production behaviour at deploy time.
 
 ## Scope
 

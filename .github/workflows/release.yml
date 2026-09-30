@@ -342,6 +342,533 @@ jobs:
             up --detach --remove-orphans \
             otel-collector prometheus blackbox-exporter grafana
 
+      # Grafana reads its DATASOURCE provisioning files once per process, at
+      # startup. The `updateIntervalSeconds: 30` on the dashboard provider
+      # (ops/observability/grafana/provisioning/dashboards/papyrus.yml) resyncs
+      # dashboards only -- it does not re-read datasources. So a committed change
+      # to ops/observability/grafana/provisioning/datasources/prometheus.yml is
+      # completely inert until the container restarts, because the provisioning
+      # directory is bind-mounted read-only and the datasource definitions live
+      # in the persistent `grafana-data` volume.
+      #
+      # The step above cannot deliver that restart on its own: the container's
+      # compose configuration is unchanged by an edit to a bind-mounted file, and
+      # `up --detach` leaves an unchanged container alone. The datasource keeps
+      # whatever uid it was provisioned under, every query target in the
+      # dashboard is bound to that uid, and all 26 of them render empty.
+      #
+      # Nothing fails loudly. Prometheus stays healthy, the dashboard is still
+      # served, and the `curl /api/health` check below passes on a dashboard
+      # showing no data at all -- which is exactly why this flag is here rather
+      # than left to the verification step to catch. Do not remove it as
+      # apparently redundant with the step above.
+      #
+      # --force-recreate is a whole-invocation flag, not a per-service one, so it
+      # cannot be appended to the step above: that would force-recreate all four
+      # observability services, including Prometheus and its TSDB. It is applied
+      # here, to an invocation whose only named service is grafana, which is what
+      # confines it to grafana. Prometheus is reached only as a dependency of
+      # grafana and is recreated only if its own configuration has diverged
+      # (`--always-recreate-deps` is deliberately not passed), so its TSDB is not
+      # disturbed. `--remove-orphans` is not passed either: this step adds no
+      # services to reconcile, and omitting it keeps the step's blast radius to
+      # the one container it names.
+      #
+      # PRE-FLIGHT. This step must run before the recreate above it, and that
+      # ordering is the whole point of it, so do not move or merge it.
+      #
+      # The recreate step has no rollback. The application stack is already
+      # deployed and verified healthy by the steps above, so anything that goes
+      # wrong after this one leaves the deployment in a split state: application
+      # updated and healthy, Grafana destroyed, job red. On production today that
+      # is not reachable, because the volume was migrated out of band on
+      # 2026-09-30, but the step is unsafe for ANY future target -- a staging
+      # environment built from an older tag, a restored backup, a rebuilt host
+      # with a carried-over volume. Against one of those the recreate does not
+      # merely fail to converge: Grafana 12.1.0's provisioning update matches a
+      # datasource row by BOTH id and uid, raises ErrDataSourceNotFound when
+      # neither matches a stale volume, and ABORTS AT STARTUP, so the container
+      # exits rather than coming up serving empty panels.
+      #
+      # The check is possible because the name-scoped read works against a
+      # RUNNING Grafana: the container from the start step above is up by now,
+      # so its datasource table can be read before anything is torn down. That
+      # converts the failure mode from "Grafana is destroyed" into "the build
+      # goes red and Grafana is left untouched" -- the difference between an
+      # incident and a rejected deploy.
+      #
+      # It is deliberately a pre-flight and NOT a check on the final state. The
+      # final state is already asserted by the uid gate after the recreate, and
+      # moving this check there would be strictly worse: by then the container
+      # is gone. Rejecting the deploy is the correct outcome; recovering Grafana
+      # mid-deploy is not this job's job.
+      #
+      # THE FRESH-DEPLOYMENT RULE, which is the subtle part. A pre-flight that
+      # fails on a fresh environment would be worse than no check at all, so the
+      # rule is:
+      #
+      #   not running                 -> ALLOW, silently. A brand new host has no
+      #                                    container yet. A host whose Grafana
+      #                                    died previously is not this step's
+      #                                    fault and the recreate is what brings
+      #                                    it back. Either way there is no
+      #                                    observable state to assert against.
+      #   running, datasource absent  -> ALLOW, and say so. This is the
+      #                                    first-deploy-to-a-fresh-volume case:
+      #                                    the datasource cannot exist yet because
+      #                                    provisioning is what creates it, and
+      #                                    the recreate below is the event that
+      #                                    creates it. The uid gate afterwards
+      #                                    is what then proves it was created
+      #                                    with the right uid.
+      #   running, uid correct        -> ALLOW.
+      #   running, uid wrong          -> FAIL, and do not recreate. A row that
+      #                                    exists under a different uid is the one
+      #                                    state that provably takes Grafana
+      #                                    down, and it is the only one the
+      #                                    recreate cannot repair.
+      #   running, not authenticated  -> FAIL. Allow and then let the uid gate
+      #                                    report it after the recreate would burn
+      #                                    the recreate first; the fault is in
+      #                                    configuration, not in the volume, so
+      #                                    nothing would be gained and Grafana
+      #                                    would be restarted for no reason.
+      #   running, unparseable body   -> FAIL. Same reasoning, and a response
+      #                                    this step cannot read is one the uid
+      #                                    gate cannot read either.
+      #
+      # A brief 000 (Grafana still starting) resolves to the same ALLOW as
+      # "not running", which is correct: a first deployment must not be blocked
+      # by a container that is not up yet, and the uid gate downstream is the
+      # step that is entitled to wait.
+      #
+      # Credentials: the basic-auth pair is supplied through `curl --user` and is
+      # referenced only as "$GRAFANA_ADMIN_USER:$GRAFANA_ADMIN_PASSWORD", which
+      # the shell expands into the argument list and never writes to stdout or
+      # stderr. No `set -x`, no curl `-v`/`--trace`, no echo of either variable,
+      # and the response body is captured in a variable and never printed. The
+      # declared uid is read out of a tracked file, not out of a credential.
+      - name: Read the stored Grafana datasource uid before destroying anything
+        if: ${{ !inputs.dry_run }}
+        env:
+          GRAFANA_ADMIN_USER: ${{ vars.GRAFANA_ADMIN_USER }}
+          GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+        run: |
+          # Named once so the assertion, the URL, and the operator-facing
+          # messages cannot drift apart.
+          ds_name='Prometheus'
+          ds_path='http://127.0.0.1:3000/api/datasources/name/Prometheus'
+          provisioning_file='ops/observability/grafana/provisioning/datasources/prometheus.yml'
+
+          # The expected uid is read out of the tracked provisioning file
+          # rather than restated here. This is the file bind-mounted into the
+          # deploy checkout, so it is readable at this point, and it is the same
+          # file Grafana itself reads at startup -- so the gate cannot assert a
+          # uid that provisioning was never asked to create. A literal in this
+          # step would be a fourth copy of the value; deriving it makes the
+          # provisioning file the single source, which is what
+          # PipelineWiringTests already enforces for the dashboard.
+          #
+          # Fails loudly if the extraction finds nothing or more than one
+          # candidate, because a silent fallback would be a guess: if this file
+          # ever stops parsing, the correct outcome is a red build, not a gate
+          # that compares the real uid against an empty string and calls it a
+          # mismatch.
+          expected_uid=$(python3 - "$provisioning_file" <<'PY'
+          import re
+          import sys
+          from pathlib import Path
+
+          try:
+              lines = Path(sys.argv[1]).read_text(encoding='utf-8').splitlines()
+          except OSError as error:
+              sys.exit(f'Cannot read the Grafana datasource provisioning file: {error}')
+
+          # Anchored to a non-comment line, so the `uid:` mentioned in the
+          # comment block above it -- which explains WHY the uid is pinned at
+          # all -- cannot be picked up instead of the declaration itself.
+          declared = re.findall(r'(?m)^[ \t]*uid:[ \t]*(?P<uid>\S+)[ \t]*$', '\n'.join(lines))
+          if not declared:
+              sys.exit('prometheus.yml declares no uid, so Grafana generates one and the dashboard cannot bind to it.')
+          if len(declared) > 1:
+              sys.exit(f'prometheus.yml declares {len(declared)} uids, so it is not a single-datasource provisioning file.')
+          sys.stdout.write(declared[0])
+          PY
+          ) || { echo "::error::Could not read the expected datasource uid from $provisioning_file. This step derives the uid it asserts from that file, so it cannot run without it."; exit 1; }
+
+          # The body goes to a file rather than to a variable because a 401 body
+          # can be a Grafana sign-in page, and `$(...)` strips every newline from
+          # it. Read back with `json.load`, that is a JSONDecodeError reported as
+          # "the body is not readable as JSON" -- a message pointing at a proxy
+          # that does not exist. A file preserves the body byte for byte, and
+          # python3 is the only thing that ever sees it, so nothing is printed.
+          body_file=$(mktemp) || { echo "::error::Could not create a temporary file for the Grafana pre-flight response."; exit 1; }
+
+          # Deliberately a single probe, NOT the retry loop the gate below uses.
+          # A Grafana that is not up yet is an ALLOW outcome here, not a failure,
+          # so there is nothing here to wait for: see the fresh-deployment rule
+          # in the comment above this step.
+          http_code=$(curl --silent --output "$body_file" --write-out '%{http_code}' \
+            --user "$GRAFANA_ADMIN_USER:$GRAFANA_ADMIN_PASSWORD" \
+            "$ds_path") || http_code=000
+          echo "Grafana pre-flight: /api/datasources/name/$ds_name answered HTTP $http_code."
+
+          if [ "$http_code" = "000" ]; then
+            # ALLOW. See the fresh-deployment rule above. Not a failure, so not
+            # an error annotation, and deliberately not a warning either: on a
+            # first deployment this is the normal, expected reading, and an
+            # annotation here would make every fresh deploy look suspect.
+            echo "Grafana pre-flight: nothing is listening on 127.0.0.1:3000, so there is no stored datasource state to assert against. Treating this as a fresh host and proceeding. The uid gate after the recreate is what proves the datasource was created with the right uid."
+            exit 0
+          fi
+
+          if [ "$http_code" = "401" ] || [ "$http_code" = "403" ]; then
+            # FAIL. This is a configuration fault, not a volume fault, and it is
+            # not something the recreate below can influence. Failing here keeps
+            # Grafana running on its existing container rather than restarting
+            # it for a reason unrelated to the volume.
+            echo "::error::Grafana pre-flight: /api/datasources/name/$ds_name answered HTTP $http_code. The GRAFANA_ADMIN_USER variable and GRAFANA_ADMIN_PASSWORD secret supplied to this job were not accepted. This is a configuration fault, not a volume fault, and the recreate below cannot fix it, so Grafana has been left untouched. Check the repository variable and secret, then re-run."
+            exit 1
+          fi
+
+          if [ "$http_code" = "404" ]; then
+            # ALLOW, and say so. This is the first-deploy-to-a-fresh-volume case.
+            # Grafana answers 404 for a name it does not hold, and on a fresh
+            # volume it holds nothing: provisioning is what creates the
+            # datasource, and the recreate below is that event. There is no
+            # stored uid to be stale, so the recreate cannot hit
+            # ErrDataSourceNotFound here. Not an error annotation for the same
+            # reason as the 000 branch -- a fresh deploy is a success.
+            echo "Grafana pre-flight: no datasource named '$ds_name' is stored, so there is no uid that could be stale. Treating this as a fresh volume and proceeding; the recreate below is the event that provisions the datasource, and the uid gate after it is what proves it was created with uid '$expected_uid'."
+            exit 0
+          fi
+
+          if [ "$http_code" != "200" ]; then
+            # FAIL. A 400, a 500, a redirect: the name is being rejected, the API
+            # is broken, or something is in front of Grafana. Any of those means
+            # this step's view of the volume is unreliable, and establishing
+            # whether the recreate is safe is this step's only job.
+            echo "::error::Grafana pre-flight: /api/datasources/name/$ds_name answered HTTP $http_code, which is not 200, 401, 403, or 404, so the stored datasource state could not be read. The recreate below is refused because the volume's state is unknown and that step is the one in this job that cannot be rolled back. Expected a 200 carrying the datasource, an absent datasource on a fresh volume, a credentials rejection, or no listener at all."
+            exit 1
+          fi
+
+          # 200 with a body, so a datasource row exists. Read the uid out of it as
+          # JSON rather than by position: `json.load(...).get("uid")` addresses the
+          # field by name, so it is unaffected by the key order Grafana's DTO
+          # happens to marshal in and by anything an operator has put in the
+          # operator-editable `jsonData` blob, which a positional read would
+          # pick up instead of the datasource's own uid. Exit 2 and exit 3 keep
+          # "the body is not readable as JSON" distinguishable from "the body is
+          # readable but carries no uid", because those are different faults for
+          # the operator and collapsing them is what made the old messages lie.
+          actual_uid=$(python3 - "$body_file" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          try:
+              document = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
+          except (OSError, ValueError):
+              sys.exit(2)
+
+          uid = document.get('uid') if isinstance(document, dict) else None
+          if not isinstance(uid, str) or not uid:
+              sys.exit(3)
+
+          sys.stdout.write(uid)
+          PY
+          )
+          parse_status=$?
+
+          if [ "$parse_status" -eq 2 ]; then
+            # FAIL. A 200 whose body is not the datasource object. The uid gate
+            # below would report this too, but only after the recreate, by which
+            # point the container is gone. Refusing here keeps Grafana up.
+            echo "::error::Grafana pre-flight: /api/datasources/name/$ds_name answered 200 but the body is not readable as a JSON object, so the stored uid could not be determined. The recreate below is refused because a row whose uid this step cannot read is not a state the recreate can repair. Check for a proxy or auth shim in front of Grafana that returns its own 200, and read 'docker compose --file docker-compose.yml --file ops/observability/docker-compose.observability.yml logs grafana'."
+            exit 1
+          fi
+
+          if [ "$parse_status" -eq 3 ]; then
+            # FAIL. A datasource object that carries no usable uid. A row stored
+            # under no uid at all is not a state the recreate can repair either,
+            # because provisioning matches on uid.
+            echo "::error::Grafana pre-flight: the datasource named '$ds_name' exists but its response carries no usable 'uid' field, so the stored uid could not be determined. The recreate below is refused: Grafana's provisioning update matches the datasource row by uid, so a row whose uid this step cannot read is not one the recreate can converge. Read 'docker compose --file docker-compose.yml --file ops/observability/docker-compose.observability.yml logs grafana' and confirm this Grafana version's datasource DTO still returns a uid."
+            exit 1
+          fi
+
+          if [ "$actual_uid" != "$expected_uid" ]; then
+            # FAIL. The one state that provably takes Grafana down, and the only
+            # one the recreate below cannot repair.
+            echo "::error::Grafana pre-flight: the datasource named '$ds_name' is stored under uid '$actual_uid', but $provisioning_file declares uid '$expected_uid' and papyrus-dashboard.json binds its 26 panels to '$expected_uid'. Recreating Grafana now would take it DOWN, not merely fail to converge: Grafana 12.1.0's provisioning update matches the datasource row by both id and uid, so against a stale volume nothing matches, ErrDataSourceNotFound is raised, and the container aborts at startup and exits. The recreate below is refused and Grafana has been left untouched. Reconcile the stored uid in that volume -- Grafana stopped and the database backed up first -- or recreate the volume and accept the loss of Grafana's local state, then re-run this workflow. The Grafana API cannot do this migration itself: PUT by uid answers 404 and by id answers 403."
+            exit 1
+          fi
+
+          echo "Grafana pre-flight: the datasource named '$ds_name' is stored under uid '$expected_uid'. The recreate below is safe to proceed with."
+      # The env block is repeated because Compose interpolates the whole merged
+      # project before it selects services, so the `:?` guards on the grafana
+      # service fail this step too if the variables are absent.
+      - name: Restart Grafana to apply datasource provisioning
+        if: ${{ !inputs.dry_run }}
+        env:
+          GRAFANA_ADMIN_USER: ${{ vars.GRAFANA_ADMIN_USER }}
+          GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+        run: |
+          docker compose \
+            --file docker-compose.yml \
+            --file ops/observability/docker-compose.observability.yml \
+            up --detach --force-recreate \
+            grafana
+
+      # Reading the datasource back is the only post-deploy check that can tell a
+      # working dashboard from a completely unbound one. The other post-deploy
+      # probe, `curl /api/health` below, returns 200 on a dashboard in which
+      # every panel is empty, and Prometheus reports itself healthy either way, so
+      # a uid that resolves to nothing is invisible to every other gate in this
+      # job. That invisibility is the defect's actual failure mode, and it is why
+      # the ${DS_PROMETHEUS} binding shipped twice. This step is what turns that
+      # silent breakage into a red build, so do not remove it as apparently
+      # redundant with the health loop -- it is not checking the same thing.
+      #
+      # It matters most on the production volume, where the restart above may not
+      # converge. Against a fresh volume the datasource is an insert and the
+      # declared uid is honoured. Against `grafana-data`, which still held a row
+      # provisioned under a previously generated uid, provisioning raised
+      # ErrDataSourceNotFound and the container exited -- see the not-running
+      # branch in the body below for the full mechanism and its exact log
+      # signature. That volume was migrated out of band on 2026-09-30, so the
+      # recreate converges there now; the pre-flight step above is what keeps
+      # that true for any other target, and this step is what observes the
+      # outcome. Treat a failure here as a true positive: the remediation is to
+      # reconcile the stored uid in the volume (or to recreate the volume,
+      # accepting the loss of Grafana's local state), not to relax the assertion.
+      #
+      # The probe is by NAME, not by uid, and that is deliberate. Grafana's
+      # provisioning update looks a datasource up by name and org, so the
+      # name-scoped endpoint returns the row the update path would have acted on
+      # and reports the uid it actually holds. A lookup by uid would instead
+      # answer 404 for a stale volume and could never name the uid found, which
+      # would collapse the two distinct faults into one useless message.
+      #
+      # FOUR OUTCOMES, FOUR MESSAGES. The previous version of this step had
+      # three failure branches, and two of them described states the container
+      # cannot be in: the non-401/403 branch claimed the datasource was "not
+      # provisioned" and sent the operator to inspect a provisioning file that
+      # is correct, when the actual reading was a connection refused on a
+      # container that had exited; and the mismatch branch claimed the update
+      # "preserves the STORED uid", which is code the stale-volume path never
+      # reaches. Both are gone. The body below distinguishes not-running,
+      # not-authenticated, wrong-uid, and unreadable-response explicitly, and
+      # each message states which one it is. Do not collapse them again: an
+      # operator has to be able to tell those four apart from the message alone.
+      #
+      # Tooling: curl, coreutils, and python3, deliberately. curl and grep are
+      # already load-bearing in the health loop below. jq is NOT assumed -- it
+      # appears nowhere in this repository's workflows and its presence on the
+      # runner is unverified, so depending on it here would leave this gate's
+      # behaviour unknown until the first time it ran. python3 IS assumed, and
+      # verifiably so: it is already load-bearing in the vulnerability step of
+      # the dependency-scan job, in ci.yml, and in openapi-schema.yml, so it adds
+      # no new requirement to the self-hosted runner. The original reason for
+      # avoiding jq was to avoid depending on an unverified tool, and a JSON read
+      # by field NAME replaces one unverified assumption -- Grafana's struct-field
+      # marshalling order -- with a guarantee the parser actually provides. The
+      # positional grep it replaces is documented in the body below.
+      #
+      # Credentials: the basic-auth pair is supplied through `curl --user` and is
+      # referenced only as "$GRAFANA_ADMIN_USER:$GRAFANA_ADMIN_PASSWORD", which
+      # the shell expands into the argument list and never writes to stdout or
+      # stderr. There is no `set -x`, no curl `-v`/`--trace`, and no echo of
+      # either variable, so the only output is this step's own messages, none of
+      # which interpolate a credential. The response body is written to a
+      # temporary file that only python3 ever reads, and is never printed, on
+      # success or on failure.
+      - name: Verify the provisioned Grafana datasource uid matches the dashboard
+        if: ${{ !inputs.dry_run }}
+        env:
+          GRAFANA_ADMIN_USER: ${{ vars.GRAFANA_ADMIN_USER }}
+          GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+        run: |
+          # Named once so the assertion, the URL, and the operator-facing
+          # messages cannot drift apart.
+          ds_name='Prometheus'
+          ds_path='http://127.0.0.1:3000/api/datasources/name/Prometheus'
+          provisioning_file='ops/observability/grafana/provisioning/datasources/prometheus.yml'
+
+          # Derived from the tracked provisioning file rather than restated, for
+          # the reason given in the pre-flight step above: the same file, the
+          # same extraction, the same loud failure when it stops parsing. Two
+          # steps in one job reading one source is the point; deriving it in
+          # both would still be two extra copies of nothing.
+          expected_uid=$(python3 - "$provisioning_file" <<'PY'
+          import re
+          import sys
+          from pathlib import Path
+
+          try:
+              lines = Path(sys.argv[1]).read_text(encoding='utf-8').splitlines()
+          except OSError as error:
+              sys.exit(f'Cannot read the Grafana datasource provisioning file: {error}')
+
+          declared = re.findall(r'(?m)^[ \t]*uid:[ \t]*(?P<uid>\S+)[ \t]*$', '\n'.join(lines))
+          if not declared:
+              sys.exit('prometheus.yml declares no uid, so Grafana generates one and the dashboard cannot bind to it.')
+          if len(declared) > 1:
+              sys.exit(f'prometheus.yml declares {len(declared)} uids, so it is not a single-datasource provisioning file.')
+          sys.stdout.write(declared[0])
+          PY
+          ) || { echo "::error::Could not read the expected datasource uid from $provisioning_file. This step derives the uid it asserts from that file, so it cannot run without it."; exit 1; }
+
+          # The retry loop, because the container was just recreated above and
+          # the API may not be listening yet. Unlike the pre-flight probe this
+          # one is entitled to wait: a slow start is not a failure, it is the
+          # recreate doing its job, and the outcome of this step is what decides
+          # whether the recreate converged.
+          #
+          # It records the LAST response body and its status code rather than
+          # discarding them, because "did not converge" and "never converged" are
+          # different faults and the loop cannot tell them apart on its own:
+          # `curl --fail` throws the status away and exits non-zero for a
+          # connection refusal and for a 401 alike, so a loop that only kept
+          # "success or not" would report a downed Grafana as a credentials
+          # problem and a credentials problem as a downed Grafana. Retrying is
+          # still worthwhile -- 45 attempts of one second covers a container that
+          # takes a moment to bind -- but the last observation is what the
+          # messages below are written from.
+          response=''
+          http_code=000
+          for attempt in $(seq 1 45); do
+            response=$(curl --silent \
+              --user "$GRAFANA_ADMIN_USER:$GRAFANA_ADMIN_PASSWORD" \
+              --write-out $'\n%{http_code}' \
+              "$ds_path")
+            http_code=$(printf '%s' "$response" | tail -n 1)
+            response=$(printf '%s' "$response" | sed '$d')
+            if [ "$http_code" = "200" ]; then
+              break
+            fi
+            sleep 1
+          done
+
+          # Read the uid out of the body as JSON, addressed BY NAME. This
+          # replaces a positional `grep ... | head -n 1 | cut -d'"' -f 4`, which
+          # happened to be correct on 12.1.0 only because that DTO marshals in
+          # struct-field order and `jsonData` is empty for this datasource. That
+          # is an undocumented coincidence, and `jsonData` is operator-editable
+          # through the Grafana UI -- `editable: false` in provisioning blocks
+          # edits at provisioning time only. A `jsonData` carrying a `uid` key
+          # would have been read as the datasource's own uid, and the gate would
+          # have passed or failed on the wrong field with no error. `json.load`
+          # does not care about key order and does not descend into `jsonData`,
+          # so the assumption it replaces is one the tool actually guarantees.
+          #
+          # The body is read from a file for the reason given in the pre-flight
+          # step: `$(...)` strips newlines, which turns a multi-line non-JSON
+          # error body into a different non-JSON body and makes the message
+          # point at the wrong cause. Exit 2 and exit 3 keep "not readable as
+          # JSON" distinct from "readable, but no uid in it", because an
+          # operator has to be able to tell those apart and both used to arrive
+          # as the same misleading "uid mismatch against an empty string".
+          body_file=$(mktemp) || { echo "::error::Could not create a temporary file for the datasource response."; exit 1; }
+          printf '%s' "$response" > "$body_file"
+          actual_uid=$(python3 - "$body_file" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          try:
+              document = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
+          except (OSError, ValueError):
+              sys.exit(2)
+
+          uid = document.get('uid') if isinstance(document, dict) else None
+          if not isinstance(uid, str) or not uid:
+              sys.exit(3)
+
+          sys.stdout.write(uid)
+          PY
+          )
+          parse_status=$?
+
+          # THE FOUR REACHABLE FAULTS, in the order they are distinguished. The
+          # messages are written so an operator can tell from the one line alone
+          # which of "not running", "not authenticated", "wrong uid", and
+          # "unreadable response" they are looking at.
+          if [ "$http_code" = "000" ]; then
+            # (i) NOT RUNNING. This is the fault the old message got wrong: it
+            # was sent by every non-401/403 outcome, including this one, and it
+            # told the operator to go and check a provisioning file that is
+            # perfectly correct. It is not correct with respect to the VOLUME.
+            # On a stale uid the recreate above does not merely fail to
+            # converge -- provisioning matches the datasource row by both id and
+            # uid, nothing matches, ErrDataSourceNotFound is raised, and the
+            # container ABORTS AT STARTUP. curl's connection-refused and the
+            # `000` status are what that looks like from here.
+            echo "::error::Grafana is NOT RUNNING. The recreate above did not leave a container serving: /api/datasources/name/$ds_name could not be connected to, so curl reports http_code 000 after $attempt attempts. On a volume whose stored datasource uid is stale this is the expected outcome, because Grafana 12.1.0's provisioning update matches the datasource row by both id and uid, raises ErrDataSourceNotFound when neither matches, and aborts at startup: 'provisioning.ProvisioningServiceImpl run error: Datasource provisioning error: data source not found'. The container exits, so there are no panels to render empty and nothing is serving to inspect."
+            echo "::error::Confirm with 'docker compose --file docker-compose.yml --file ops/observability/docker-compose.observability.yml logs grafana'. Then reconcile the stored uid in the grafana-data volume (Grafana stopped and the database backed up first, as the production volume was migrated on 2026-09-30), or recreate the volume and accept the loss of Grafana's local state. Do not relax the uid assertion, and do not go looking in $provisioning_file: it is correct, and it is the stored value that is stale. The Grafana API cannot perform this migration -- PUT by uid answers 404 and by id answers 403."
+            exit 1
+          fi
+
+          if [ "$http_code" = "401" ] || [ "$http_code" = "403" ]; then
+            # (ii) NOT AUTHENTICATED. Unchanged in substance from the previous
+            # version: this was already the one message that named the real
+            # fault. It is kept deliberately.
+            echo "::error::Grafana is RUNNING but rejected this job's credentials: /api/datasources/name/$ds_name answered HTTP $http_code. That is an authentication failure, not a provisioning failure, and it is not the stale-uid fault. The GRAFANA_ADMIN_USER repository variable and the GRAFANA_ADMIN_PASSWORD secret supplied to this job were not accepted. Check the variable and the secret. The datasource uid was not read, so nothing is asserted about it."
+            exit 1
+          fi
+
+          if [ "$http_code" = "404" ]; then
+            # Reachable in principle (the datasource genuinely is not there) but
+            # not after a successful recreate, so it is named rather than folded
+            # into the not-running branch. The message says the recreate did not
+            # converge, without claiming to know why.
+            echo "::error::Grafana is RUNNING and answered HTTP 404: no datasource named '$ds_name' is provisioned at all, so there is no uid to compare and every panel in papyrus-dashboard.json -- which binds to '$expected_uid' -- would resolve to nothing. The recreate above did not converge. Check that $provisioning_file is bind-mounted into the deploy checkout and still declares the '$ds_name' datasource, and read 'docker compose --file docker-compose.yml --file ops/observability/docker-compose.observability.yml logs grafana' for provisioning errors."
+            exit 1
+          fi
+
+          if [ "$http_code" != "200" ]; then
+            echo "::error::Grafana is RUNNING but /api/datasources/name/$ds_name answered HTTP $http_code, which is not one this gate knows how to read, so the datasource uid was not read and nothing is asserted about it. The datasource may exist and be unreadable through this endpoint. Read 'docker compose --file docker-compose.yml --file ops/observability/docker-compose.observability.yml logs grafana'."
+            exit 1
+          fi
+
+          if [ "$parse_status" -eq 2 ]; then
+            # (iv) UNREADABLE RESPONSE. A 200 whose body is not the datasource
+            # object. Previously this fell through to a comparison against an
+            # empty string and was reported as a uid MISMATCH, which named a
+            # stale volume as the cause when the cause was an unreadable body.
+            echo "::error::Grafana is RUNNING and answered HTTP 200, but the body is not readable as a JSON object, so this gate could not determine the datasource uid. This is NOT a uid mismatch and NOT the stale-volume fault: it means the response was not the datasource object Grafana 12.1.0 returns. Check for a proxy or auth shim in front of Grafana that answers 200 with its own body, and read 'docker compose --file docker-compose.yml --file ops/observability/docker-compose.observability.yml logs grafana'."
+            exit 1
+          fi
+
+          if [ "$parse_status" -eq 3 ]; then
+            # (iv, continued) READABLE, BUT NO UID IN IT. Distinct from the case
+            # above, and reported distinctly: the body is Grafana's datasource
+            # object but it carries no usable uid field, which is a DTO change
+            # or a shim, not a stale row.
+            echo "::error::Grafana is RUNNING and answered HTTP 200, and the body is the datasource object, but it carries no usable 'uid' field, so this gate could not determine the stored uid. This is NOT a uid mismatch: the stored uid was never read. Confirm that this Grafana version's datasource DTO still returns a uid, and read 'docker compose --file docker-compose.yml --file ops/observability/docker-compose.observability.yml logs grafana'."
+            exit 1
+          fi
+
+          if [ "$actual_uid" != "$expected_uid" ]; then
+            # (iii) GENUINE WRONG UID. A real, reachable mismatch: the row exists
+            # and holds a uid that is not the one provisioning declared. Note
+            # what this message does NOT say any more. It used to claim that
+            # "Grafana's provisioning update preserves the STORED uid and does
+            # not adopt the incoming one". That is not what happens: the update
+            # matches on both id and uid, so against a stale volume it never
+            # reaches any uid-preserving code -- it raises ErrDataSourceNotFound
+            # and the container exits, which is the 000 branch above. So on a
+            # stale volume this branch is NOT the failure you are looking at; if
+            # you have landed here, Grafana is up and serving and the row really
+            # does hold a different uid, which the pre-flight step would have
+            # refused to let happen by recreating over it. The remediation below
+            # is still the right one -- reconcile the stored uid -- but it is
+            # reached by a different route than the old message claimed.
+            echo "::error::Grafana is RUNNING and serving, and the datasource named '$ds_name' is stored under uid '$actual_uid', but $provisioning_file declares uid '$expected_uid' and papyrus-dashboard.json binds its 26 panels to '$expected_uid'. Every one of those bindings resolves to nothing and every panel renders empty. Grafana being up and serving is the tell here: a stale volume takes Grafana DOWN (see the not-running branch), so this is a row that genuinely holds a different uid rather than a volume the recreate could not converge. Reconcile the stored uid in the grafana-data volume, or recreate the volume and accept the loss of Grafana's local state, then re-run. Do not relax the assertion."
+            exit 1
+          fi
+
+          echo "Grafana datasource '$ds_name' provisioned with uid $expected_uid."
+
       - name: Verify the observability stack is serving
         if: ${{ !inputs.dry_run }}
         run: |

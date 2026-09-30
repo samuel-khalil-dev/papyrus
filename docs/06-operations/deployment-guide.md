@@ -75,7 +75,19 @@ The job token was already available and sufficient. Preferring it was a smaller 
 
 ### What has not been verified
 
-The `deploy` job's pull path is only exercised by a real tagged release. A dry run performs the registry login but gates every step that actually pulls behind `if: ${{ !inputs.dry_run }}`, and its configuration check runs `docker compose config`, which never contacts a registry. **A green dry run is not evidence that the pull works.** Treat the first successful real release as the verification.
+Superseded on 2026-09-29: this section previously recorded that the `deploy`
+job's pull path "is only exercised by a real tagged release" and instructed the
+reader to "treat the first successful real release as the verification." Four
+real releases have since been tagged and deployed — `v0.1.0` through `v0.1.3` —
+and `v0.1.2` and `v0.1.3` each pulled images with the per-job `GITHUB_TOKEN` and
+deployed them. **The pull path is therefore verified in production.** The
+original warning is kept because the underlying asymmetry still holds and is
+worth preserving for anyone changing the credential path: a dry run performs the
+registry login but gates every step that actually pulls behind
+`if: ${{ !inputs.dry_run }}`, and its configuration check runs
+`docker compose config`, which never contacts a registry. **A green dry run is
+still not evidence that a change to the pull path works.** The first *real*
+release after such a change is the verification.
 
 ## Secrets (Current)
 

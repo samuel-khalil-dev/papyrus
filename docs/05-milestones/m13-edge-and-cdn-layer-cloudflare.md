@@ -40,4 +40,4 @@ The reverse proxy (M2) handles TLS/routing but nothing yet caches static assets 
 
 ## Test plan
 - Automated verification that Admin responses carry no-cache headers and are not served from edge cache.
-- Manual verification of Turnstile challenge behavior.
+- Manual verification of Turnstile challenge behaviour.

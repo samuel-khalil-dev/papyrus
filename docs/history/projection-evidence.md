@@ -75,12 +75,12 @@ subqueries, is in [`projection-sql.txt`](projection-sql.txt:7).
   projection rather than loaded with an `Include` graph.
 - **Pagination:** versioned Admin requests clamp page size to 1–100, calculate
   totals server-side, and apply `Skip/Take` before materialization. Legacy `/api`
-  behavior remains unchanged.
+  behaviour remains unchanged.
 - **Tenant filtering:** every root query includes the model-level
   `TenantId = @ef_filter__TenantId` predicate. Relationship subqueries in the
   public capture also include the same tenant parameter, so cross-tenant rows
   are not joined.
-- **Read-only behavior:** all reviewed read paths use `AsNoTracking()`.
+- **Read-only behaviour:** all reviewed read paths use `AsNoTracking()`.
 - **Projection translation issue fixed:** the original public tag query applied
   `Distinct()` to a DTO record and then ordered it. PostgreSQL translation could
   not translate that shape. It now distincts an anonymous scalar pair before
@@ -159,7 +159,7 @@ table this section summarizes, is archived as
 
 The plans use tenant/slug indexes for the small seeded tenant and perform
 in-memory quicksorts for the `COALESCE(PublishedAt, CreatedAt)` and name
-ordering expressions. No sequential scan, buffer read, N+1 behavior, or
+ordering expressions. No sequential scan, buffer read, N+1 behaviour, or
 unexpected cross-tenant join was observed. Larger tenants may benefit from
 expression/order-specific indexes and functional/trigram search indexes; no
 migration was added because the current plans do not justify a schema change at
@@ -168,8 +168,11 @@ this dataset size.
 ## Change made
 
 The versioned Admin category, tag, project, and blog-post collection handlers
-were changed from load-all-then-page behavior to server-side count plus
-projected page queries in [`AdminApiEndpoints`](../../src/Papyrus.Api.Admin/AdminApiEndpoints.cs:35).
+were changed from load-all-then-page behaviour to server-side count plus
+projected page queries. The entry point that maps them is
+[`AdminApiEndpoints`](../../src/Papyrus.Api.Admin/AdminApiEndpoints.cs:14); the
+handlers themselves now live in
+[`Endpoints/`](../../src/Papyrus.Api.Admin/Endpoints/AdminEndpointSupport.cs:97).
 The public Blog and Portfolio hosts were also corrected to register the
 application query handlers in [`Program.cs`](../../src/Papyrus.Web.Blog/Program.cs:1)
 and [`Program.cs`](../../src/Papyrus.Web.Portfolio/Program.cs:1), which was
@@ -184,9 +187,15 @@ changed.
   non-integration tests locally. CI adds the 14 PostgreSQL integration tests
   for 84 unique .NET tests total.
 
-> **Note on date and test count:** this evidence is dated 2026-08-25. The
-> documented 70/70 result is the current local non-integration baseline; CI
-> separately adds 14 PostgreSQL integration tests.
+> **Note on date and test count:** this evidence is dated 2026-08-25 and the
+> counts above are **what the suite measured on that date, not the current
+> baseline**. They are recorded here as part of the evidence for this
+> projection work and are not restated as current, because they have not been
+> re-verified. The current figures live in the `<!-- test-baseline: ... -->`
+> marker in [`../00-overview/feature-matrix.md`](../00-overview/feature-matrix.md)
+> and are machine-checked in CI; this file is deliberately not one of the
+> documents that check compares, because an archived measurement must be allowed
+> to keep the numbers it actually recorded.
 - PostgreSQL SQL translation harness — passed and produced
   [`projection-sql.txt`](projection-sql.txt:1).
 - Runtime PostgreSQL latency and `EXPLAIN (ANALYZE, BUFFERS)` capture — passed

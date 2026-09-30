@@ -7,9 +7,9 @@
 - [Papyrus logo](../assets/Papyrus_Logo.svg)
 - [Papyrus background](../assets/Papyrus_Background.svg)
 
-Use these real files rather than purely descriptive color-only framing; the color tokens below describe the palette system, not a substitute for the shipped brand artwork.
+Use these real files rather than purely descriptive colour-only framing; the colour tokens below describe the palette system, not a substitute for the shipped brand artwork.
 
-## Color tokens
+## Colour tokens
 
 | Token | Default | Role |
 |---|---|---|

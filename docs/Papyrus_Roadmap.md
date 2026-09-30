@@ -48,11 +48,11 @@ in this repository, so the relationship is stated explicitly here.
 
 | Schema | Scope | Status | Primary audience |
 | --- | --- | --- | --- |
-| **Phases 0–7** — Platform Bootstrap & Hardening | Structural foundation: security, layering, contracts, delivery pipeline, test depth, observability, release readiness | **Completed / verified baseline** (Phase 7 release tag intentionally open) | Contributors, reviewers, auditors |
+| **Phases 0–7** — Platform Bootstrap & Hardening | Structural foundation: security, layering, contracts, delivery pipeline, test depth, observability, release readiness | **Complete.** `v0.1.0`–`v0.1.3` are tagged and deployed; two operational gates (W7, O4) stay open and are tracked there, not here | Contributors, reviewers, auditors |
 | **Milestones M0–M32** — Product Feature Evolution | Visible product capability: routing, theming, localization, content, AI, growth | **Target sequence.** M0 and M1 are complete; M2–M32 have not started as a tracked sequence | Product planning, roadmap review |
 
-**Phases 0–7 answer "is the platform sound?"** They are complete or near-complete
-and are verified by the numbers in
+**Phases 0–7 answer "is the platform sound?"** They are complete and are
+verified by the numbers in
 [Actual Progress](#actual-progress-as-of-last-verified-state) below: build
 warnings, test counts, migration ownership, load-test p95 figures, and release
 gate status.
@@ -182,9 +182,7 @@ in Section 3 is the *target sequence*. Where a milestone (notably M5, M6, and
 M8) has adjacent work that already shipped, Section 3 states exactly how much and
 what is still open, so nothing is double-counted here.
 
-Phases 0–6 are **complete**; Phase 7 (release readiness and
-GitHub showcase) is **in progress** with only roadmap item 4 (tagging a release)
-still open; Phase 8 is a decision gate and not started.
+Phases 0–7 are **complete**; Phase 8 is a decision gate and not started.
 
 ### Phases and subtasks shipped
 
@@ -198,20 +196,28 @@ still open; Phase 8 is a decision gate and not started.
   structured audit events), tenant-safe redaction/cardinality/sampling,
   dashboards and alert families, performance budgets, runbooks, and the
   Postgres RLS decision ADR are all done.
-- **Phase 7:** items 1–3 complete — the public documentation set, five
+- **Phase 7:** all four items complete — the public documentation set, five
   sanitized showcase assets under `docs/assets` (blog, portfolio, admin,
-  health, Aspire), and the contribution/disclosure/license/changelog/
-  feature-matrix documentation are published. Item 4 (release tag) is
-  intentionally open: it is authorized only after all release gates and
-  rollback drills pass.
+  health, Aspire), the contribution/disclosure/license/changelog/
+  feature-matrix documentation, and the release tag. `v0.1.0` through `v0.1.3`
+  were tagged on 2026-09-29 and 2026-09-30 and each was deployed to production
+  by the release workflow.
+
+  Tagging did not close the outstanding operational gates. W7 and O4 were still
+  open when `v0.1.3` shipped, and the gates are a record of production evidence
+  that is still owed, not a statement that the pipeline was unsafe to run: the
+  observability platform is deployed and its probes are trustworthy, but no
+  Alertmanager is configured, so a firing alert notifies nobody, and no alert
+  has been observed firing *and* recovering against a real outage. That drill is
+  what W7 waits on.
 
 ### Key verified figures
 
-- **Tests:** 476 unique .NET test cases in CI (454 provider-independent /
+- **Tests:** 479 unique .NET test cases in CI (457 provider-independent /
   non-integration plus 22 PostgreSQL-backed integration), plus a separate
-  10-test Playwright browser smoke suite. 280 of the 454 non-integration cases
-  are whole-file encoding cases in `SourceEncodingTests`; 174 assert behaviour,
-  and 196 cases in total are behavioural. The warnings-as-errors build is
+  10-test Playwright browser smoke suite. 280 of the 457 non-integration cases
+  are whole-file encoding cases in `SourceEncodingTests`; 177 assert behaviour,
+  and 199 cases in total are behavioural. The warnings-as-errors build is
   0 warnings / 0 errors. The
   [feature matrix](00-overview/feature-matrix.md) is the canonical count.
 - **Migrations:** five EF Core migrations applied; the Admin API is the sole
@@ -243,15 +249,27 @@ Tracked per-gate in `04-engineering-standards/release-gates.md`:
 
 - **W6 (deployment/operations):** evidence attached (2026-09-02 local release
   drill — PASS).
-- **W7 (observability/alerting):** partial — code/config evidence attached;
-  production collector verification pending.
+- **W7 (observability/alerting):** partial — the observability platform is now
+  tracked in `ops/observability/` and deployed by the pipeline, and the
+  availability probes are trustworthy. Still open: no Alertmanager is
+  configured, so a firing alert notifies nobody, and no alert has been observed
+  firing *and* recovering against a real outage. Production redaction
+  inspection and cross-host trace correlation are likewise unverified.
 - **W8 (release documentation/CI):** evidence attached (2026-09-03 gitleaks
   scan — no leaks found).
-- **O4 (telemetry/audit evidence):** partial — local artifact/config evidence;
-  production telemetry verification pending.
+- **O4 (telemetry/audit evidence):** partial — the collector and the
+  `OTEL_EXPORTER_OTLP_ENDPOINT` publication are tracked and deployed. Still
+  open: live dashboard data, alert delivery and recovery, and retention
+  verification against the live deployment.
 - **O7 (restore/load drills):** closed (2026-08-29).
 - **O8 (performance budgets):** evidence attached (2026-09-03 re-measurement).
 - **O9 (release artifacts/sanitized publication):** evidence attached
   (2026-09-03 gitleaks scan).
 - **O10 (architecture evidence):** evidence attached (S30.0 architecture
   tests).
+
+Two gates therefore remain open against a system that has already shipped four
+releases. The gates record production evidence that is still owed; they are not
+a claim that a release was unsafe to cut, and `v0.1.3` was tagged with both
+open. Closing W7 is the next operational priority, because the single largest
+gap is that a real outage would still produce no notification.
