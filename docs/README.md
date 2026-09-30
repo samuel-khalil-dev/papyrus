@@ -60,9 +60,10 @@ place, and no parallel, untracked documentation tree is kept. See
   canonical host plus loopback. M2–M32 have not started.
 - The local baseline is 457 passing non-integration .NET test cases and a
   zero-warning, zero-error warnings-as-errors build. 280 of those 457 are
-  whole-file encoding cases in `SourceEncodingTests`; 176 assert behaviour. CI
-  runs 22 PostgreSQL-backed integration tests, for 479 unique .NET test cases;
-  those tests require the test database infrastructure. The
+  whole-file encoding cases in `SourceEncodingTests`; 177 assert behaviour.
+  Counting CI's integration tests as well, 199 cases in total are behavioural.
+  CI runs 22 PostgreSQL-backed integration tests, for 479 unique .NET test
+  cases; those tests require the test database infrastructure. The
   [feature matrix](00-overview/feature-matrix.md) is the canonical count.
 - 10 Playwright browser tests are tracked; they are not part of the .NET count.
 - Five EF Core migrations are applied. The admin migration job is the sole

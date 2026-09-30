@@ -128,19 +128,39 @@ Two files must agree, and they are:
 | File | Role |
 | --- | --- |
 | `ops/observability/grafana/provisioning/datasources/prometheus.yml` | Declares `uid: papyrus-prometheus` on the `Prometheus` datasource. Without it, Grafana generates a uid that is arbitrary and does not survive a fresh volume. |
-| `docs/observability/dashboards/papyrus-dashboard.json` | Names `papyrus-prometheus` in all 27 panel datasource blocks. This file is a **runtime artifact**, not a document: it is mounted into Grafana by the deploy job and is the definition Grafana actually loads. |
+| `docs/observability/dashboards/papyrus-dashboard.json` | Names `papyrus-prometheus` in all 26 panel datasource blocks. This file is a **runtime artifact**, not a document: it is mounted into Grafana by the deploy job and is the definition Grafana actually loads. |
 
 Neither file can be changed alone into a working state, and the two values must
 be identical strings.
 
 **This was broken and is now fixed (2026-09-29).** The dashboard previously used
-the placeholder in all 27 blocks and the provisioned datasource set no `uid`. The
-failure was silent and expensive to diagnose: the dashboard rendered, the panels
-were simply empty, and nothing in the application stack could observe it. A green
-Prometheus, a healthy collector, and an empty dashboard are each individually
-consistent with a correct deployment. It is the same shape as the
-blind-availability-probe defect recorded under `v0.1.3` — a monitoring surface
-that looks healthy because the thing being monitored is not being checked.
+the placeholder in all 26 blocks and the provisioned datasource set no `uid`.
+The file carries 27 `datasource` keys in total; the 27th is the built-in
+`Annotations & Alerts` entry, which is bound to Grafana's internal
+`-- Grafana --` datasource and does not name the Prometheus uid. Two other
+figures for this same file also circulate and are true of different layers: its
+`panels[]` array holds **15** entries, three of which are `row` containers that
+declare no datasource, leaving **12** data panels; those 12 carry **26** bindings
+between them — a panel-level block, one per `targets[]` entry, and additional
+nested blocks inside `fieldConfig` overrides — plus the `app` template variable's
+own block, which is the 26th. Do not reconcile the two figures by picking one.
+
+The failure it caused on a fresh volume was silent and expensive to diagnose:
+the dashboard rendered, the panels were simply empty, and nothing in the
+application stack could observe it. A green Prometheus, a healthy collector, and
+an empty dashboard are each individually consistent with a correct deployment.
+It is the same shape as the blind-availability-probe defect recorded under
+`v0.1.3` — a monitoring surface that looks healthy because the thing being
+monitored is not being checked.
+
+**The same defect against an existing `grafana-data` volume is not silent, and
+that was measured rather than inferred.** The update path looks the datasource
+row up by **id and uid**, so a volume still holding a previously generated uid
+matches nothing, provisioning raises `ErrDataSourceNotFound`, and Grafana
+12.1.0 aborts at startup with `Datasource provisioning error: data source not
+found`, leaving the container exited. **Grafana down is therefore the symptom to
+look for during an incident, and `logs grafana` is where the evidence is** — not
+an empty dashboard.
 
 It survived because the 2026-09-02 verification established only that the
 dashboard *parsed* and used "the documented Prometheus datasource placeholder".

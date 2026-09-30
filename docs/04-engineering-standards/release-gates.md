@@ -169,18 +169,30 @@ fire-and-recover drill unverified.**
   (`ops/observability/docker-compose.observability.yml`, `volumes:`), so against
   an existing volume the provisioning is an *update* of a datasource row that
   already exists, and Grafana preserves the **stored** uid rather than adopting
-  the incoming one. The deployed instance keeps its previously generated uid, the
-  dashboard's panels remain bound to that unresolved value, and they render
-  empty. The check therefore exercised the branch that could not have failed and
-  skipped the one that will; re-running it on another fresh volume will not close
-  this. **Until the production path is exercised — by a recreate of the Grafana
-  container against the existing volume, or by discarding that volume — this
-  item is fixed in the file but not delivered in the deployment, and the O4
-  "live dashboard data" gate must be treated as unmet on that basis.** A targeted
+  the incoming one. What that does to the container was then measured on
+  Grafana 12.1.0 against the production image rather than inferred. The update
+  path looks the row up by **id and uid**, so a stale stored uid matches nothing,
+  provisioning raises `ErrDataSourceNotFound`, and the process aborts at
+  startup:
+
+      provisioning.ProvisioningServiceImpl run error:
+      Datasource provisioning error: data source not found
+
+  **The container exits. Grafana does not come up serving unbound panels — it is
+  down**, so the symptom to look for is a container that will not start, and an
+  operator has to read `logs grafana` rather than only the dashboard. The check
+  therefore exercised the branch that could not have failed and skipped the one
+  that will; re-running it on another fresh volume will not close this. **Until
+  the production path is exercised — by a recreate of the Grafana container
+  against the existing volume, or by discarding that volume — this item is fixed
+  in the file but not delivered in the deployment, and the O4 "live dashboard
+  data" gate must be treated as unmet on that basis.** A targeted
   `up --detach --force-recreate` limited to the Grafana service has since been
-  added to the `deploy` job, which is the right shape for it, but that step has
-  not yet been run against the production volume and the claim above does not
-  rest on it.
+  added to the `deploy` job, which is the right shape for it, but it has not been
+  exercised by a real release yet and the claim above does not rest on it. That
+  step is only safe on a volume whose stored uid is already `papyrus-prometheus`;
+  the production volume was migrated out of band on 2026-09-30, and shipping the
+  step over an unmigrated one takes Grafana down rather than leaving it unbound.
   **The regression guard now exists** —
   `PipelineWiringTests.Dashboard_panels_bind_to_the_provisioned_prometheus_datasource`
   asserts that the two `uid` values agree, so a later edit to either file fails

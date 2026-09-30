@@ -167,9 +167,9 @@ jobs:
 
           # Every document that restates a figure from the canonical marker, and
           # WHICH figures it must quote -- named by the marker's own keys, never
-          # by value. Six independent restatements is how a three-case drift
-          # survived review once, so all of them are checked rather than the
-          # marker alone.
+          # by value. Three independent restatements of the same figures is how
+          # a three-case drift survived review once, so all of them are checked
+          # rather than the marker alone.
           #
           # An earlier version of this check pinned the expected numbers here as
           # string literals and only asserted that each literal appeared
@@ -186,11 +186,11 @@ jobs:
           RESTATEMENTS = {
               'docs/README.md': (
                   'non-integration', 'encoding', 'behavioural',
-                  'integration', 'total', 'playwright',
+                  'integration', 'total', 'behaviour-total', 'playwright',
               ),
               'docs/00-overview/limitations.md': (
                   'non-integration', 'encoding', 'behavioural',
-                  'integration', 'total', 'playwright',
+                  'integration', 'total', 'behaviour-total', 'playwright',
               ),
               'docs/Papyrus_Roadmap.md': (
                   'non-integration', 'encoding', 'behavioural',

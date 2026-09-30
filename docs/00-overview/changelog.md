@@ -26,14 +26,22 @@ with the earlier tag recording only its own delta. `0.1.2` is that release.
   the dashboard would pass while the provisioning half regressed. The documented
   claim that the live dashboard still returns data is unchanged by this; binding
   is not connectivity, and that remains an O4 checklist item.
-- **The measured test baseline moved from 456 to 457 non-integration cases** and
-  the total from 478 to 479, with the encoding (280), behavioural (176),
-  behavioural-including-integration (198), Playwright (10), and 22 integration
-  figures unchanged. The new case is an architectural wiring test, so only those
-  two figures move. The canonical `<!-- test-baseline: ... -->` marker in
+- **The measured test baseline moved from 456 to 457 non-integration cases**
+  and the total from 478 to 479. The encoding figure (280), the Playwright
+  figure (10), and the 22 integration cases are unchanged, but the behavioural
+  figure moved from 176 to **177** and the behavioural-including-integration
+  figure from 198 to **199**. An earlier draft of this entry recorded those two
+  as unchanged on the reasoning that the new case is architectural wiring rather
+  than a behavioural case; that reasoning was wrong. `behavioural` is every
+  non-integration case that is not a whole-file `SourceEncodingTests` case, so
+  adding any test raises it, and `behaviour-total` is `behavioural` plus the
+  integration cases. The `verify` job failed on PR #92 against the unchanged
+  guard, which is the only authority on this arithmetic. The canonical
+  `<!-- test-baseline: ... -->` marker in
   [`00-overview/feature-matrix.md`](feature-matrix.md) and every restatement in
   `docs/README.md`, `00-overview/limitations.md`, and `Papyrus_Roadmap.md` now
-  agree with the run.
+  agree with the run, and the correction is the figures only — no prose in those
+  documents needed rewording beyond the digits.
 
 ### Documentation reconciliation after the first four releases - 2026-09-29
 
@@ -147,10 +155,21 @@ with the earlier tag recording only its own delta. `0.1.2` is that release.
   sentence still said "Ten". A later review reproduced the false negative
   directly — a document saying "Ten Playwright" alongside an unrelated `10`
   passes — and the changelog, the feature matrix, and the workflow comment have
-  all been corrected to describe the real limitation. The `playwright` figure is
-  the most exposed of the seven for exactly this reason: it is small, so it is
-  the one most likely to appear incidentally for an unrelated reason. The other
-  six are three-digit figures that are unlikely to collide.
+  all been corrected to describe the real limitation. Exposure is a property of
+  the document, not of the digit count of the figure: a figure is satisfiable by
+  any unrelated number the document happens to contain, so the roadmap's
+  milestone identifiers can stand in for one of its figures. A token like
+  `ADR-0010` is no longer a route in, because a figure may not be adjoined to a
+  word character, a hyphen, or a link bracket. This paragraph previously went on
+  to claim that the `playwright` figure was the most exposed of the seven
+  *because* it is small, and that "the other six are three-digit figures that are
+  unlikely to collide". That was wrong, and wrong on the same false premise: two
+  of the seven figures are two digits (`playwright` and `integration`), and a
+  three-digit figure is just as satisfiable by an unrelated number the document
+  happens to contain. The paragraph is replaced rather than deleted, because
+  [`00-overview/feature-matrix.md`](feature-matrix.md) now carries the corrected
+  account next to the marker the guard reads, and this file should not be the one
+  place that still told the earlier story.
 - **Two changelog defects were introduced and then found in this same pass, and
   are recorded because the file is evidence.** Restructuring the release
   sections placed 23 historical entries under `[0.1.2]`, and the `[0.1.0]` entry
@@ -216,16 +235,29 @@ turned out to be an error in the review itself and is recorded as such.
   (`ops/observability/docker-compose.observability.yml`, `volumes:`), so on the
   existing deployment the provisioning is an *update* of a datasource row that
   already exists, and on that path Grafana preserves the **stored** uid rather
-  than adopting the incoming one. The deployed instance therefore keeps whatever
-  uid it generated originally, the dashboard's panels stay bound to that
-  unresolved value, and they render empty. The verification exercised the one
-  branch that could not have failed and skipped the one that will. A fresh
-  volume is not a stand-in for the production volume, and re-running that check
-  will not close this. A targeted `up --detach --force-recreate` limited to the
+  than adopting the incoming one. What that does to the container was then
+  measured on Grafana 12.1.0 against the production image rather than inferred:
+  the update path looks the row up by **id and uid**, so a stale stored uid
+  matches nothing, provisioning raises `ErrDataSourceNotFound`, and the process
+  aborts at startup with
+
+      provisioning.ProvisioningServiceImpl run error:
+      Datasource provisioning error: data source not found
+
+  and the container exits. **Grafana is down; it does not come up serving panels
+  left unbound.** The symptom an operator meets is a container that will not
+  start, and the evidence is `logs grafana` rather than an empty dashboard. The
+  verification exercised the one branch that could not have failed and skipped
+  the one that will. A fresh volume is not a stand-in for the production volume,
+  and re-running that check will not close this. A targeted
+  `up --detach --force-recreate` limited to the
   Grafana service has since been added to the `deploy` job in
   [`.github/workflows/release.yml`](../../.github/workflows/release.yml), which
-  is the right shape for it, but that step has not yet been run against the
-  production volume and nothing recorded here rests on it.
+  is the right shape for it, but that step has not been exercised by a real
+  release yet and nothing recorded here rests on it. It is also only safe on a
+  volume whose stored uid is already `papyrus-prometheus`; the production volume
+  was migrated out of band on 2026-09-30, and shipping the step over an
+  unmigrated one takes Grafana down rather than leaving it unbound.
   **A regression guard now exists.**
   [`PipelineWiringTests.Dashboard_panels_bind_to_the_provisioned_prometheus_datasource`](../../src/Papyrus.Tests/Architecture/PipelineWiringTests.cs)
   reads both files and asserts the two `uid` values agree, that no binding
