@@ -342,6 +342,151 @@ jobs:
             up --detach --remove-orphans \
             otel-collector prometheus blackbox-exporter grafana
 
+      # Grafana reads its DATASOURCE provisioning files once per process, at
+      # startup. The `updateIntervalSeconds: 30` on the dashboard provider
+      # (ops/observability/grafana/provisioning/dashboards/papyrus.yml) resyncs
+      # dashboards only -- it does not re-read datasources. So a committed change
+      # to ops/observability/grafana/provisioning/datasources/prometheus.yml is
+      # completely inert until the container restarts, because the provisioning
+      # directory is bind-mounted read-only and the datasource definitions live
+      # in the persistent `grafana-data` volume.
+      #
+      # The step above cannot deliver that restart on its own: the container's
+      # compose configuration is unchanged by an edit to a bind-mounted file, and
+      # `up --detach` leaves an unchanged container alone. The datasource keeps
+      # whatever uid it was provisioned under, every query target in the
+      # dashboard is bound to that uid, and all 26 of them render empty.
+      #
+      # Nothing fails loudly. Prometheus stays healthy, the dashboard is still
+      # served, and the `curl /api/health` check below passes on a dashboard
+      # showing no data at all -- which is exactly why this flag is here rather
+      # than left to the verification step to catch. Do not remove it as
+      # apparently redundant with the step above.
+      #
+      # --force-recreate is a whole-invocation flag, not a per-service one, so it
+      # cannot be appended to the step above: that would force-recreate all four
+      # observability services, including Prometheus and its TSDB. It is applied
+      # here, to an invocation whose only named service is grafana, which is what
+      # confines it to grafana. Prometheus is reached only as a dependency of
+      # grafana and is recreated only if its own configuration has diverged
+      # (`--always-recreate-deps` is deliberately not passed), so its TSDB is not
+      # disturbed. `--remove-orphans` is not passed either: this step adds no
+      # services to reconcile, and omitting it keeps the step's blast radius to
+      # the one container it names.
+      #
+      # The env block is repeated because Compose interpolates the whole merged
+      # project before it selects services, so the `:?` guards on the grafana
+      # service fail this step too if the variables are absent.
+      - name: Restart Grafana to apply datasource provisioning
+        if: ${{ !inputs.dry_run }}
+        env:
+          GRAFANA_ADMIN_USER: ${{ vars.GRAFANA_ADMIN_USER }}
+          GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+        run: |
+          docker compose \
+            --file docker-compose.yml \
+            --file ops/observability/docker-compose.observability.yml \
+            up --detach --force-recreate \
+            grafana
+
+      # Reading the datasource back is the only post-deploy check that can tell a
+      # working dashboard from a completely unbound one. The other post-deploy
+      # probe, `curl /api/health` below, returns 200 on a dashboard in which
+      # every panel is empty, and Prometheus reports itself healthy either way, so
+      # a uid that resolves to nothing is invisible to every other gate in this
+      # job. That invisibility is the defect's actual failure mode, and it is why
+      # the ${DS_PROMETHEUS} binding shipped twice. This step is what turns that
+      # silent breakage into a red build, so do not remove it as apparently
+      # redundant with the health loop -- it is not checking the same thing.
+      #
+      # It matters most on the production volume, where the restart above may not
+      # converge. Against a fresh volume the datasource is an insert and the
+      # declared uid is honoured. Against `grafana-data`, which already holds a
+      # row provisioned under a previously generated uid, provisioning is an
+      # update, and Grafana preserves the STORED uid rather than adopting the
+      # incoming one. The outcome of the restart step is therefore genuinely
+      # unknown until it is observed, and this step is what observes it. Expect
+      # the first production run to fail this check if the stored uid is stale,
+      # and treat that failure as a true positive: the remediation is to
+      # reconcile the stored uid in the volume (or to recreate the volume,
+      # accepting the loss of Grafana's local state), not to relax the assertion.
+      #
+      # The probe is by NAME, not by uid, and that is deliberate. Grafana's
+      # provisioning update looks a datasource up by name and org, so the
+      # name-scoped endpoint returns the row the update path would have acted on
+      # and reports the uid it actually holds. A lookup by uid would instead
+      # answer 404 for a stale volume and could never name the uid found, which
+      # would collapse the two distinct faults into one useless message.
+      #
+      # Tooling: curl plus coreutils grep/head/cut, deliberately. curl and grep
+      # are already load-bearing in the health loop below, so depending on them
+      # adds no new requirement to the self-hosted runner. jq is NOT assumed -- it
+      # appears nowhere in this repository's workflows and its presence on the
+      # runner is unverified, so depending on it here would leave this gate's
+      # behaviour unknown until the first time it ran. The field is grepped out
+      # of the response instead, which needs no JSON parser.
+      #
+      # Credentials: the basic-auth pair is supplied through `curl --user` and is
+      # referenced only as "$GRAFANA_ADMIN_USER:$GRAFANA_ADMIN_PASSWORD", which
+      # the shell expands into the argument list and never writes to stdout or
+      # stderr. There is no `set -x`, no curl `-v`/`--trace`, and no echo of
+      # either variable, so the only output is this step's own messages, none of
+      # which interpolate a credential. The response body is captured in a
+      # variable and is never printed, on success or on failure.
+      - name: Verify the provisioned Grafana datasource uid matches the dashboard
+        if: ${{ !inputs.dry_run }}
+        env:
+          GRAFANA_ADMIN_USER: ${{ vars.GRAFANA_ADMIN_USER }}
+          GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+        run: |
+          # Named once so the assertion, the URL, and the operator-facing
+          # messages cannot drift apart.
+          expected_uid=papyrus-prometheus
+
+          # The same retry idiom as the health loop below, because the container
+          # was just recreated above and the API may not be listening yet. On the
+          # last attempt the body is deliberately left in $response instead of
+          # being discarded, so a datasource that is merely absent reports itself
+          # rather than looking like a uid mismatch against an empty string.
+          response=''
+          for attempt in {1..45}; do
+            if response=$(curl --fail --silent \
+                  --user "$GRAFANA_ADMIN_USER:$GRAFANA_ADMIN_PASSWORD" \
+                  http://127.0.0.1:3000/api/datasources/name/Prometheus); then
+              break
+            fi
+            sleep 1
+          done
+
+          actual_uid=$(printf '%s' "$response" \
+            | grep --only-matching '"uid"[[:space:]]*:[[:space:]]*"[^"]*"' \
+            | head -n 1 \
+            | cut -d'"' -f 4)
+
+          if [ -z "$response" ]; then
+            # The retry loop cannot tell "not up yet" from "rejected the
+            # credentials", because --fail discards the status code. One extra
+            # probe reports it, so the message names the real fault instead of
+            # sending the operator to the wrong file.
+            http_code=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+              --user "$GRAFANA_ADMIN_USER:$GRAFANA_ADMIN_PASSWORD" \
+              http://127.0.0.1:3000/api/datasources/name/Prometheus) || http_code=000
+            echo "::error::Grafana answered /api/datasources/name/Prometheus with HTTP $http_code and no datasource body. Every panel in papyrus-dashboard.json binds to '$expected_uid' and will render empty."
+            if [ "$http_code" = "401" ] || [ "$http_code" = "403" ]; then
+              echo "::error::That is an authentication failure, not a provisioning failure: the GRAFANA_ADMIN_USER variable and GRAFANA_ADMIN_PASSWORD secret supplied to this job were not accepted. Check the repository variable and secret."
+            else
+              echo "::error::The datasource named 'Prometheus' is not provisioned. Confirm ops/observability/grafana/provisioning/datasources/prometheus.yml still declares uid: $expected_uid, and read 'docker compose --file docker-compose.yml --file ops/observability/docker-compose.observability.yml logs grafana' for provisioning errors."
+            fi
+            exit 1
+          fi
+
+          if [ "$actual_uid" != "$expected_uid" ]; then
+            echo "::error::Grafana provisioned the 'Prometheus' datasource with uid '$actual_uid', but papyrus-dashboard.json binds its panels to '$expected_uid'. Every such binding would resolve to nothing and every panel would render empty. This is the expected outcome against an existing grafana-data volume: Grafana's provisioning update preserves the STORED uid and does not adopt the incoming one, so the restart above does not converge. Reconcile the stored uid in that volume, or recreate the volume and accept the loss of Grafana's local state."
+            exit 1
+          fi
+
+          echo "Grafana datasource 'Prometheus' provisioned with uid $expected_uid."
+
       - name: Verify the observability stack is serving
         if: ${{ !inputs.dry_run }}
         run: |
