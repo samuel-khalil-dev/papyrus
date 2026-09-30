@@ -39,6 +39,6 @@ Content is currently authored entirely manually in the Tiptap editor with no ass
 - [ ] A saved revision correctly reflects the AiAssisted flag when applicable.
 
 ## Test plan
-- End-to-end test for each action's streaming behavior.
+- End-to-end test for each action's streaming behaviour.
 - Test verifying no action can save content without an explicit user action.
 - Verification that ContentRevision.AiAssisted is set correctly.

@@ -60,7 +60,7 @@ The `Application → Infrastructure` dependency was inverted to align with
 `IContentLifecycleStore`) and thin facades; `Papyrus.Infrastructure` implements
 them with EF Core adapters (`Ef*Store`). The application layer no longer depends
 on `PapyrusDbContext`. The test harness registers
-`PapyrusSaveChangesInterceptor` so soft-delete and audit behavior is exercised
+`PapyrusSaveChangesInterceptor` so soft-delete and audit behaviour is exercised
 through the real mechanism. This is an implementation alignment with the
 existing ADR and does not change the release-gate evidence recorded below.
 
@@ -114,7 +114,8 @@ a later sub-task, it is marked **Pending** rather than fabricated.
 
 ### W7 — Observability and alerting
 
-**Status: Partial local evidence attached; production collector exercise pending.**
+**Status: Platform deployed and probes trustworthy; alert delivery and the
+fire-and-recover drill unverified.**
 
 - [`observability-and-monitoring.md`](../06-operations/observability-and-monitoring.md)
   — how to operate and query the shared `Papyrus` ActivitySource, structured
@@ -128,10 +129,66 @@ a later sub-task, it is marked **Pending** rather than fabricated.
   audit logging without an exporter, and audit survival at 0% diagnostic
   sampling. The dashboard JSON
   ([`observability/dashboards/papyrus-dashboard.json`](../observability/dashboards/papyrus-dashboard.json))
-  parsed successfully, its panels use the
-  documented Prometheus datasource placeholder, and a synthetic W3C
-  `traceparent` health request returned HTTP 200. The runbook and alert-family
-  mapping were reviewed against the dashboard contract.
+  parsed successfully, and a synthetic W3C `traceparent` health request returned
+  HTTP 200. The runbook and alert-family mapping were reviewed against the
+  dashboard contract.
+- **2026-09-29 — the dashboard's datasource was unbound, and parsing was not
+  evidence of anything. Now fixed in the file and verified on a fresh volume;
+  the deployed instance is not yet corrected.** The
+  2026-09-02 entry recorded that the dashboard's panels "use the documented
+  Prometheus datasource placeholder". That is true of the file and was the reason
+  the defect survived: the dashboard referenced `${DS_PROMETHEUS}` in every panel
+  datasource block it declared, which is a Grafana *import-time* variable. The
+  dashboard is mounted by file provisioning
+  (`ops/observability/grafana/provisioning/dashboards/papyrus.yml`), which does
+  not resolve it, and the provisioned datasource set no `uid` to resolve it to.
+  Every panel therefore had no datasource to bind to. The dashboard still
+  rendered, so nothing failed: a green Prometheus, a healthy collector, and a
+  dashboard of empty panels are each consistent with a correct deployment, which
+  is precisely why O4's "live dashboard data" item was the one that would have
+  caught it and had not yet been executed.
+  The provisioned datasource now declares `uid: papyrus-prometheus`
+  (`ops/observability/grafana/provisioning/datasources/prometheus.yml`) and the
+  dashboard names that same uid in every datasource block it declares
+  (`docs/observability/dashboards/papyrus-dashboard.json`, which is a runtime
+  artifact rather than a document): 26 blocks, being the per-panel, per-`target`,
+  and nested-`fieldConfig` blocks of its 12 data panels plus the `app` template
+  variable's own block. The built-in `Annotations & Alerts` entry is bound to
+  Grafana's internal `-- Grafana --` datasource and is not one of the 26. Note
+  that this file's `panels[]` array has 15 entries — the other figure that
+  circulates — because three of them are `row` containers that declare no
+  datasource; the two counts measure different layers and neither is wrong.
+  **The fix was verified against a real Grafana 12.1.0 container, but only on a
+  fresh volume — the one case that can succeed — and the production upgrade path
+  is not verified.** Reading back what Grafana had actually stored, the fresh
+  insert honours the declared `uid`: before the fix the panels held the literal
+  `${DS_PROMETHEUS}` against a generated datasource uid of `PBFA97CFB590B2093`,
+  and after it every block reports `papyrus-prometheus`. That run does not
+  transfer to the deployed instance. Grafana reads its provisioning files once
+  per process and stores its state in the named volume `grafana-data`
+  (`ops/observability/docker-compose.observability.yml`, `volumes:`), so against
+  an existing volume the provisioning is an *update* of a datasource row that
+  already exists, and Grafana preserves the **stored** uid rather than adopting
+  the incoming one. The deployed instance keeps its previously generated uid, the
+  dashboard's panels remain bound to that unresolved value, and they render
+  empty. The check therefore exercised the branch that could not have failed and
+  skipped the one that will; re-running it on another fresh volume will not close
+  this. **Until the production path is exercised — by a recreate of the Grafana
+  container against the existing volume, or by discarding that volume — this
+  item is fixed in the file but not delivered in the deployment, and the O4
+  "live dashboard data" gate must be treated as unmet on that basis.** A targeted
+  `up --detach --force-recreate` limited to the Grafana service has since been
+  added to the `deploy` job, which is the right shape for it, but that step has
+  not yet been run against the production volume and the claim above does not
+  rest on it.
+  **The regression guard now exists** —
+  `PipelineWiringTests.Dashboard_panels_bind_to_the_provisioned_prometheus_datasource`
+  asserts that the two `uid` values agree, so a later edit to either file fails
+  the build instead of silently reintroducing this.
+  **Whether the panels return data is still unverified** and remains an O4
+  checklist item; binding is correct in the file, but binding is not
+  connectivity. The full description is in
+  [`06-operations/observability-and-monitoring.md`](../06-operations/observability-and-monitoring.md).
 - **Production observability stack is now tracked and deployed by the pipeline.**
   The collector, Prometheus, Grafana, and blackbox-exporter configuration lives
   in [`ops/observability/`](../../ops/observability) and is started by the
@@ -219,7 +276,8 @@ a later sub-task, it is marked **Pending** rather than fabricated.
 
 ### O4 — Telemetry/audit signal evidence
 
-**Status: Partial local evidence attached; production telemetry configuration pending.**
+**Status: Collector, dashboard provisioning, and retention tracked and deployed;
+live data, alert delivery, and retention configuration unverified.**
 
 - [`observability-and-monitoring.md`](../06-operations/observability-and-monitoring.md)
   documents the telemetry/audit signals and how to investigate an
@@ -269,7 +327,7 @@ a later sub-task, it is marked **Pending** rather than fabricated.
 - Migration-ownership drill: the solution build passed with 0 warnings/errors;
   the two `MigrationOwnershipTests` passed; source inspection found the sole
   production `MigrateAsync()` call in Infrastructure and the sole Admin startup
-  initialization call in `Papyrus.Api.Admin`. No applied migration was edited or
+  initialisation call in `Papyrus.Api.Admin`. No applied migration was edited or
   deleted, and no database update was run as part of the drill.
 - Media-volume drill: the initial write exposed that a new named volume was root
   owned and not writable by the non-root Admin container. `Dockerfile.admin` now

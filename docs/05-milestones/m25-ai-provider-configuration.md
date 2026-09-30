@@ -40,6 +40,6 @@ AI-assisted features require a real LLM provider, but hardcoding one vendor/mode
 - [ ] The key is confirmed absent from audit-log and export output.
 
 ## Test plan
-- Unit test for IAiProviderResolver's fallback behavior with zero valid profiles.
+- Unit test for IAiProviderResolver's fallback behaviour with zero valid profiles.
 - Integration test for the activation gate rejecting an unverified profile.
 - Automated check confirming ApiKey is absent from audit-log and export output.

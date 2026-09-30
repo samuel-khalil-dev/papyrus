@@ -2,7 +2,7 @@
 
 ## Defined patterns
 
-| Pattern | Where | Behavior |
+| Pattern | Where | behaviour |
 |---|---|---|
 | Hero entrance | Portfolio, once per session | Horizontal scroll-unroll reveal |
 | Section reveal | Portfolio, on scroll | Fade + rise via IntersectionObserver |

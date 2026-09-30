@@ -2,7 +2,7 @@
 
 Authoritative reference for the Papyrus platform: a personal brand system composed of a Portfolio (landing/root domain), a Blog (subdomain), and an Admin control plane. Follows the Diátaxis framework.
 
-## Organization
+## organisation
 
 | Section | Purpose |
 |---|---|
@@ -40,11 +40,15 @@ place, and no parallel, untracked documentation tree is kept. See
 
 ## Current status
 
-- Phases 0–6 are complete. Phase 7 is release readiness and showcase work: items
-  1–3 are published and item 4 (the release tag) is intentionally open.
-- **No release has been tagged.** All release gates are closed except two that
-  require production evidence: W7 (production observability collector
-  verification) and O4 (production telemetry configuration). See
+- Phases 0–7 are complete. Phase 8 is a decision gate and is not started.
+- **Four releases are tagged** — `v0.1.0`, `v0.1.1`, `v0.1.2`, and `v0.1.3`
+  (2026-09-29 to 2026-09-30), each deployed to production by the release
+  workflow. Tagging did not close the outstanding gates: **W7** (observability
+  — no Alertmanager is configured, so a firing alert notifies nobody, and no
+  alert has been observed firing *and* recovering against a real outage) and
+  **O4** (production telemetry verification) remain open. The gates are the
+  record of what production evidence is still owed, not a claim that the
+  pipeline is unsafe. See
   [`04-engineering-standards/release-gates.md`](04-engineering-standards/release-gates.md).
 - **Milestone M0 (Architectural Guardrails) is complete.** All four
   Definition-of-Done items are met: endpoint grouping, uniform RFC 7807
@@ -54,13 +58,13 @@ place, and no parallel, untracked documentation tree is kept. See
   ([m1-routing-truth.md](05-milestones/m1-routing-truth.md)): each public host
   validates its own site identity at startup and serves only its configured
   canonical host plus loopback. M2–M32 have not started.
-- The local baseline is 454 passing non-integration .NET test cases and a
-  zero-warning, zero-error warnings-as-errors build. 280 of those 454 are
-  whole-file encoding cases in `SourceEncodingTests`; 174 assert behaviour. CI
-  runs 22 PostgreSQL-backed integration tests, for 476 unique .NET test cases;
+- The local baseline is 457 passing non-integration .NET test cases and a
+  zero-warning, zero-error warnings-as-errors build. 280 of those 457 are
+  whole-file encoding cases in `SourceEncodingTests`; 176 assert behaviour. CI
+  runs 22 PostgreSQL-backed integration tests, for 479 unique .NET test cases;
   those tests require the test database infrastructure. The
   [feature matrix](00-overview/feature-matrix.md) is the canonical count.
-- Ten Playwright browser tests are tracked; they are not part of the .NET count.
+- 10 Playwright browser tests are tracked; they are not part of the .NET count.
 - Five EF Core migrations are applied. The admin migration job is the sole
   migration owner.
 
@@ -80,8 +84,9 @@ place, and no parallel, untracked documentation tree is kept. See
 
 ## Currency
 
-This is a living set, not a frozen edition. It was reconciled against the
-implemented system on 2026-09-27, when the M0 milestone document, this status
-section, and the ADR citations were last brought current. Prior documentation
+This is a living set, not a frozen edition. The consolidation it describes
+finished on 2026-09-27; the set was most recently reconciled against the
+implemented system on 2026-09-29, when the release status, the test baseline,
+and the M1 milestone record were last brought current. Prior documentation
 artifacts, including the external `papyrus-docs` package and an untracked
 in-repo memory bank, have been retired rather than maintained alongside it.

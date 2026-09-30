@@ -14,7 +14,7 @@ The theming system supports one admin-defined base theme with no visitor-facing 
 - Ensure both variants meet the accessibility standard.
 
 ### Out of scope
-- Fully free-form visitor theme customization.
+- Fully free-form visitor theme customisation.
 
 ## Domain changes
 - No new aggregate; variants computed from the existing SiteTheme record.

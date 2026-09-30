@@ -4,7 +4,282 @@
 
 All notable changes to Papyrus will be documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); entries describe repository changes and do not imply that deferred operational gates have passed.
 
+Release sections are named for the tags cut from `main`. The first four
+releases were cut within a single day while the deployment path was being
+brought up, and they are thin by design: most of the substantive work they
+carry is described in full under the release that actually reached production,
+with the earlier tag recording only its own delta. `0.1.2` is that release.
+
 ## [Unreleased]
+
+- **The Grafana datasource binding now has the regression guard it was recorded
+  as still owing.** `PipelineWiringTests` gained
+  `Dashboard_panels_bind_to_the_provisioned_prometheus_datasource`, which reads
+  both `ops/observability/grafana/provisioning/datasources/prometheus.yml` and
+  `docs/observability/dashboards/papyrus-dashboard.json` and asserts that the
+  uid the provisioning declares is the uid every Prometheus datasource block in
+  the dashboard names. It is mutation-checked against four distinct failures —
+  the `uid` removed from the provisioning, a dashboard block reverted to
+  `${DS_PROMETHEUS}`, the two uids diverging from each other, and every
+  Prometheus datasource removed from the dashboard — so none of them can pass by
+  accident. Reading both files is still the constraint: a test that read only
+  the dashboard would pass while the provisioning half regressed. The documented
+  claim that the live dashboard still returns data is unchanged by this; binding
+  is not connectivity, and that remains an O4 checklist item.
+- **The measured test baseline moved from 456 to 457 non-integration cases** and
+  the total from 478 to 479, with the encoding (280), behavioural (176),
+  behavioural-including-integration (198), Playwright (10), and 22 integration
+  figures unchanged. The new case is an architectural wiring test, so only those
+  two figures move. The canonical `<!-- test-baseline: ... -->` marker in
+  [`00-overview/feature-matrix.md`](feature-matrix.md) and every restatement in
+  `docs/README.md`, `00-overview/limitations.md`, and `Papyrus_Roadmap.md` now
+  agree with the run.
+
+### Documentation reconciliation after the first four releases - 2026-09-29
+
+- **Three documents restated a test baseline that had already moved.** The
+  canonical `<!-- test-baseline: ... -->` marker in
+  [`00-overview/feature-matrix.md`](feature-matrix.md) read 456 non-integration
+  / 176 behavioural / 478 unique, which is what CI measured. `docs/README.md`,
+  `00-overview/limitations.md`, and `Papyrus_Roadmap.md` still published
+  454 / 174 / 476, and the roadmap also still carried 196 for the
+  behavioural-including-integration figure where the measured value is 198.
+  All four files now agree.
+- **The release status was flatly contradicted by the repository.**
+  `docs/README.md` stated "**No release has been tagged.**" and both it and the
+  roadmap recorded Phase 7 item 4, the release tag, as "intentionally open".
+  Four tags exist: `v0.1.0`, `v0.1.1`, `v0.1.2`, and `v0.1.3`, cut 2026-09-29 to
+  2026-09-30, each deployed to production by the release workflow. Phases 0–7
+  are now recorded as complete, with the two still-open operational gates
+  tracked in the release-gates document rather than in the phase status.
+- **Tagging did not close the gates, and the documents now say so.** W7 and O4
+  were open when `v0.1.3` shipped. The gates record production evidence that is
+  still owed, not a claim that a release was unsafe to cut, and the largest
+  remaining gap is unchanged: no Alertmanager is configured, so a firing alert
+  notifies nobody.
+- **The changelog had no correspondence with the tags it described.** It carried
+  an `[Unreleased]` heading above entries that were in fact shipped, and then
+  jumped to `0.5.0`. The `0.1.0`–`0.1.3` sections are now present, ordered
+  newest first. `0.1.0` and `0.1.1` record that their content was carried to
+  production by `0.1.2`, rather than implying they delivered nothing.
+- **The W7 and O4 summaries were narrower than the evidence they sat beside.**
+  Both still described production verification as wholly pending while the same
+  documents recorded that the platform is tracked in `ops/observability/` and
+  deployed by the pipeline. They now separate what is deployed from what is
+  unverified, and name the Alertmanager gap and the missing alert
+  fire-and-recover drill.
+- **`docs/README.md` claimed a currency date two days stale.** The
+  "reconciled on 2026-09-27" line is corrected, and the consolidation date is
+  distinguished from the most recent reconciliation.
+- **The CI guard that would have caught the drift could not detect it.** The
+  `verify` job pins the expected figures as string literals inside
+  `.github/workflows/ci.yml` and only asserts that each literal appears
+  somewhere in each document. When the suite moved 454 → 456 the pinned `454`
+  was still present in the prose, so the check passed while three documents
+  disagreed with the run and with the marker — and the roadmap's 196 for the
+  behavioural-including-integration figure was never checked at all. The
+  expected values are now taken from the marker instead, and each document
+  declares only *which* figures it must quote, so the numbers live in one
+  place. A figure must also appear as a standalone number: `17` is not found
+  inside `176`. The guard's own limitation is recorded in the workflow and in
+  the feature matrix — it asks whether a correct figure is present, not whether
+  every mention of it is correct.
+- **Verification.** The rewritten guard was extracted from the workflow and run
+  **unmodified** against real TRX output from a local run of both test steps —
+  456 non-integration and 22 integration at the time, the two files the step
+  requires. It reported
+  `non-integration=456, integration=22, total=478, encoding=280,
+  behavioural=176, behaviour-total=198, playwright=10` and exited 0. Reverting
+  the roadmap's 198 to 196 with the same TRX files in place made it exit 1 and
+  name the stale figure, so the failure path was proven as well as the success
+  path. This closes the gap that the guard's own rewrite had introduced: it had
+  previously only been exercised against a stubbed count, which would have
+  hidden a mistake in the TRX parsing. **Those figures are the ones measured at
+  that moment, not the current baseline** — the counts below were superseded
+  when the dashboard test was added later in the same session.
+- **Verified on Linux, not only on Windows.** The verification above ran the
+  extracted guard on this machine, which cannot rule out a difference between
+  what a Linux runner reads and what a Windows working tree holds. The
+  repository's `.gitattributes` pins `*.md` and `*.yml` to `eol=lf`, but
+  `core.autocrlf=true` is set here, so the claim was checked rather than
+  assumed: staged into a `python:3.12-slim` Linux container, the guard —
+  extracted from the workflow at build time and run unmodified against the same
+  real TRX files — reported the same figures and exited 0, and reverting the
+  roadmap's 198 to 196 failed the same step. The container also confirmed zero
+  `CR` bytes in the workflow and the three documents, so the runner reads the
+  same line endings that were written. One incidental finding: the repository's
+  `.dockerignore` excludes `.github/` and `docs/`, so a container build over
+  the repository root cannot see the very files this check reads. That is
+  correct for building application images and was worked around only in the
+  throwaway simulation, not in the repository.
+- **`.aspire/` is missing from the encoding guard's exclusion list, and that
+  cost 280 test cases.** `SourceEncodingTests` enumerates the working tree and
+  excludes a fixed list of directories; `.aspire/` is gitignored but not on that
+  list. Staging the Linux simulation under `.aspire/ci-linux-sim/` therefore
+  raised the local run from 456 to 736 cases — exactly 280 more, matching the
+  staged tree's `.cs/.csproj/.json/.props/.targets/.md` count. The guard's own
+  guidance anticipates this class of movement for *tracked* files, and the
+  working-tree enumeration is deliberate so the guard fails on the machine that
+  made the mistake, which `git ls-files` could not do. A gitignored scratch
+  directory is neither tracked nor listed, so it inflates the count invisibly.
+  This was not fixed here: the staging tree has been removed, the count is back
+  to 456, and adding `.aspire/` would be correct but is a change to the test
+  suite, not to documentation. It is recorded so the next person who stages
+  anything locally knows why the number moved.
+- **The guard's limitation paragraph was itself a hazard, in the one document
+  the guard reads.** `feature-matrix.md` explained the standalone-number rule by
+  citing `17` inside `176` and by illustrating an inconsistent document as "456
+  in one place and 454 in another". Because the marker lives in that file, a
+  future run that happened to measure 454 would have satisfied the check with an
+  illustration rather than a real restatement. The paragraph no longer states
+  any live figure, and says why it must not. The same words in `ci.yml` and in
+  this changelog are harmless, because neither file is read by the guard.
+- **Adding `playwright` to the guarded set exposed a wording the guard cannot
+  check, and the first account of it was wrong.** The new table required each
+  guarded document to quote the Playwright figure as a number, and `README.md`
+  had always written it as the word "Ten". The prose now says `10`. The earlier
+  version of this entry claimed the guard "immediately broke the build" and
+  presented the correction as proof the check works. **That claim did not hold
+  up when it was tested.** The guard asks whether a figure appears *anywhere* in
+  a document, not whether it appears in the sentence that states it, so the
+  words-only version passed: `10` occurred exactly once in `README.md`, in the
+  Playwright sentence itself, and the guard found that occurrence while the
+  sentence still said "Ten". A later review reproduced the false negative
+  directly — a document saying "Ten Playwright" alongside an unrelated `10`
+  passes — and the changelog, the feature matrix, and the workflow comment have
+  all been corrected to describe the real limitation. The `playwright` figure is
+  the most exposed of the seven for exactly this reason: it is small, so it is
+  the one most likely to appear incidentally for an unrelated reason. The other
+  six are three-digit figures that are unlikely to collide.
+- **Two changelog defects were introduced and then found in this same pass, and
+  are recorded because the file is evidence.** Restructuring the release
+  sections placed 23 historical entries under `[0.1.2]`, and the `[0.1.0]` entry
+  described only one of the three changes that tag carried. Both were caught by
+  checking the file's structure against the tags rather than by reading it, and
+  both are corrected: the history now has its own section, `[0.1.0]` lists its
+  three commits with their PR numbers, and the history entries are in strictly
+  descending date order.
+
+### Full `docs/` review - 2026-09-29
+
+A review of all 82 markdown documents found five further defects, one of them
+an operational fault rather than a documentation fault. A sixth reported finding
+turned out to be an error in the review itself and is recorded as such.
+
+- **The provisioned Grafana dashboard had no datasource to bind to, and nothing
+  failed. Now fixed in the file; the deployed instance is not yet corrected.**
+  The dashboard referenced `${DS_PROMETHEUS}` in every panel datasource block it
+  declared. That is a Grafana *import-time* variable, substituted when
+  a dashboard is imported through the UI. This dashboard is mounted by **file
+  provisioning**
+  (`ops/observability/grafana/provisioning/dashboards/papyrus.yml`, `type:
+  file`), which does not perform import-time substitution, and the provisioned
+  datasource set no `uid` for the reference to resolve to. Every panel was
+  therefore bound to a datasource that did not exist.
+  The failure mode is what makes this worth recording: the dashboard still
+  rendered, so no check failed, no container restarted, and no alert fired. A
+  green Prometheus, a healthy collector, and a dashboard of empty panels are
+  each individually consistent with a correct deployment. This is the same shape
+  as the blind-probe defect already recorded under `[0.1.3]` — a monitoring
+  surface that looks healthy because the thing being monitored is not being
+  checked.
+  It survived because the 2026-09-02 verification established only that the
+  dashboard *parsed* and used "the documented Prometheus datasource placeholder".
+  Both statements were true and neither asked the operational question.
+  The provisioned datasource now declares `uid: papyrus-prometheus` and the
+  dashboard names that same uid in every datasource block it declares — 26 in
+  all, counting the per-panel and per-target blocks and the `app` template
+  variable's own block, with the built-in `Annotations & Alerts` entry bound to
+  Grafana's internal `-- Grafana --` datasource rather than to Prometheus. (Two
+  counts for this file circulate and both are true of different things: the
+  `panels[]` array holds **15** entries, three of which are `row` containers
+  that declare no datasource, leaving **12** data panels; those 12 panels carry
+  25 datasource blocks between them — a panel-level block, one per `targets[]`
+  entry, and additional nested blocks inside `fieldConfig` overrides — and the
+  `app` template variable adds 1, for 26. Grafana's own read-back reported "15
+  panels" because it counts the row containers alongside the panels that draw,
+  and it renders some panels as more than one tile. Do not reconcile the two
+  figures by picking one — they measure different layers.)
+  **The fix was verified on a fresh volume, which is the only case that can
+  succeed, and the upgrade path over existing data was not verified at all.**
+  Grafana 12.1.0 was run from the tracked provisioning files and asked what it
+  had actually stored rather than trusting that the files agreed: on a fresh
+  volume the insert honours the declared `uid`, so before the fix the panels
+  held the literal `${DS_PROMETHEUS}` against a generated datasource uid of
+  `PBFA97CFB590B2093`, and after it every block reads `papyrus-prometheus`. The
+  pre-fix run is the part that matters — it demonstrates the placeholder is
+  genuinely unresolved and that Grafana's generated uid is arbitrary and
+  volume-dependent, which is the whole failure mechanism. What that run does
+  *not* establish is the production path. Grafana reads its datasource
+  provisioning files once per process, and its data lives in the named volume
+  `grafana-data`
+  (`ops/observability/docker-compose.observability.yml`, `volumes:`), so on the
+  existing deployment the provisioning is an *update* of a datasource row that
+  already exists, and on that path Grafana preserves the **stored** uid rather
+  than adopting the incoming one. The deployed instance therefore keeps whatever
+  uid it generated originally, the dashboard's panels stay bound to that
+  unresolved value, and they render empty. The verification exercised the one
+  branch that could not have failed and skipped the one that will. A fresh
+  volume is not a stand-in for the production volume, and re-running that check
+  will not close this. A targeted `up --detach --force-recreate` limited to the
+  Grafana service has since been added to the `deploy` job in
+  [`.github/workflows/release.yml`](../../.github/workflows/release.yml), which
+  is the right shape for it, but that step has not yet been run against the
+  production volume and nothing recorded here rests on it.
+  **A regression guard now exists.**
+  [`PipelineWiringTests.Dashboard_panels_bind_to_the_provisioned_prometheus_datasource`](../../src/Papyrus.Tests/Architecture/PipelineWiringTests.cs)
+  reads both files and asserts the two `uid` values agree, that no binding
+  reverted to `${DS_PROMETHEUS}`, and that a Prometheus datasource is declared at
+  all; it was mutation-checked against each of those failure modes. **Whether
+  the panels return data is still unverified** and remains an O4 checklist
+  item: binding is now correct in the file, but binding is not connectivity, so
+  that check now tests Prometheus reachability rather than panel binding. The
+  full description is in
+  [`06-operations/observability-and-monitoring.md`](../06-operations/observability-and-monitoring.md).
+- **An archived measurement claimed to be the current baseline.**
+  `history/projection-evidence.md` recorded its 2026-08-25 result of 70
+  non-integration and 14 integration tests, and then stated in a note that
+  "the documented 70/70 result is the current local non-integration baseline".
+  The figures current at the time of this review were 456 and 22. This
+  directly contradicted
+  `documentation-maintenance.md`, which requires that a figure not re-verified is
+  not restated as current. The note now says the counts are what the suite
+  measured on that date, points at the canonical marker, and records why this
+  file is deliberately excluded from the machine-checked set: an archived
+  measurement has to be allowed to keep the numbers it actually recorded.
+- **The deployment guide's credential guidance had been overtaken.** Its "What
+  has not been verified" section said the deploy job's pull path "is only
+  exercised by a real tagged release" and instructed the reader to treat the
+  first successful real release as the verification. Four have since been
+  tagged and deployed, and `v0.1.2` and `v0.1.3` each pulled with the per-job
+  token, so the path is verified. The section now records that, while keeping
+  the underlying asymmetry — a dry run never contacts a registry — because it
+  still governs anyone who next changes the credential path.
+- **A `file:line` reference pointed past the end of its file.**
+  `history/projection-evidence.md` cited `AdminApiEndpoints.cs:35` in a file of
+  27 lines; the handlers it describes now live under
+  `src/Papyrus.Api.Admin/Endpoints/`. The reference is split between the entry
+  point that maps them and the support file that implements them. The other 31
+  `file:line` references in `docs/` all resolve.
+- **Terminology was mixed across the set.** British `behaviour` was the
+  established norm, with 22 American `behavior`/`organization`/`normalizes`
+  spellings scattered across 14 documents. All are now normalized. Technical
+  identifiers were left alone: `theme-color` in the PWA milestone is a real web
+  manifest key, not prose, and rewriting it would have made the document
+  wrong.
+- **A reported finding was wrong, and the review's own method was the cause.**
+  Four anchors in `c4-diagrams.md` were reported as broken. They are not. The
+  links use `#level-2--containers` and the headings are `## Level 2 —
+  Containers`; the em dash is stripped by GitHub's slugger, leaving the two
+  surrounding spaces to become two hyphens. The check that flagged them
+  collapsed runs of whitespace first, which GitHub does not do. Re-run with the
+  real slug algorithm, all 82 documents contain zero broken anchors. No change
+  was made. **A link check that reports a false positive costs the same trust as
+  one that misses a real break**, so the check itself was corrected rather than
+  the links.
+- Five documents were also missing a trailing newline and now have one.
+
+## [0.1.3] - 2026-09-30
 
 ### The observability stack was deploying a second copy of the application, and the availability alerts were blind for two of three hosts - 2026-09-29
 
@@ -12,6 +287,9 @@ All notable changes to Papyrus will be documented in this file. The format is ba
 - **The availability probes were blind for blog and portfolio, and looked healthy doing it.** `PapyrusApplicationDown` evaluates `up` from blackbox probes of each host's `/health`. Blog and portfolio returned 400 for the entire period, so `up` was a constant `0` and a genuine outage would have been indistinguishable from the steady state. The cause was `Bad Request - Invalid Hostname`: the public hosts derive their allowed Host list from the configured public base URL plus loopback, and blackbox sends the target's own hostname by default. Admin passed only because it does not filter its Host header, which is what made this read as a partial outage rather than a configuration fault. The application was correct and was not relaxed — the restriction is a Host-header-injection defence. Each public host is now probed by a module that sends the host it actually answers to.
 - **The first attempt at that fix was wrong, and the test that now guards it is the interesting part.** The first version sourced the `Host` header from `BLOG_PROBE_HOST`/`PORTFOLIO_PROBE_HOST` environment variables, on the belief that blackbox-exporter expands `${VAR}` in its config. It does not: v0.27.0 has no `--config.expand-env` flag, so the substitution parsed as an empty scalar and the module sent no `Host` header at all. The variable-based version was also never wired into the deploy job's environment, so the stack would not have started. The mistake was reported as verified because the probe returned 200 — but only when aimed at the real host, which accepts loopback and masked the empty header. Re-tested against a target that returns 400 unless the `Host` is exactly right, the `${VAR}` module returns 400 and the literal returns 200. The headers are now literals, `PipelineWiringTests` asserts they match the configured public domains, and the test was mutation-checked: reintroducing the `${VAR}` form, renaming the domain, or dropping the module from the scrape config each makes it fail.
 - **Alerts still do not notify anyone, and that is a deliberate deferral rather than a completed capability.** No Alertmanager is configured, so a firing alert produces no page and no issue; the dashboard and `/api/v1/alerts` are the only way a human learns of one. The rules evaluate and `up` is now trustworthy, but a green probe is evidence that a probe works, not that detection works. No alert has been observed firing and recovering against a real outage, and that drill is what the W7 gate still waits on.
+
+## [0.1.2] - 2026-09-29
+
 ### The site survived a host reboot for the first time, and the registry credential finally expires - 2026-09-29
 
 - **Production was offline for more than four hours and nothing detected it.** The application containers exited at `12:58:09Z` during a host reboot for a kernel upgrade and never returned. No service in `docker-compose.yml` declared a restart policy, so every one inherited Docker's default of `restart: no` and the Docker daemon had no instruction to restore them. The database came back only because the release dry run's migrate job happened to recreate it, which is luck rather than design. All four production services now declare `restart: unless-stopped`; the `test-db` profile is deliberately left without one. The signature to recognise next time is `Exited (255)` with an empty `State.Error` and `OOMKilled=false` and nothing but normal traffic in the logs: that is a host-initiated stop, not an application fault. The deployment guide now records that a host reboot is a normal event rather than an incident, provided the restart policy holds.
@@ -20,6 +298,42 @@ All notable changes to Papyrus will be documented in this file. The format is ba
 - **There is now no stored registry credential in use.** The deploy job pulled with a long-lived `GHCR_READ_TOKEN`/`GHCR_READ_USER` personal access token, which never expires and is not attributable to a single job. Replacing it with a GitHub App installation token was attempted and abandoned: it failed in two consecutive releases, both times inside the step that mints the token, before the registry was ever contacted. The custom App's token was therefore never successfully obtained, and nothing was ever proven about whether GHCR accepts it. The job's own per-job `GITHUB_TOKEN` with `packages: read` is what the deploy job uses now, matching the `images` job that pushes the images. Nothing is stored, nothing expires, and there is no private key to rotate. The PAT pair, the App's private key, and the App's `APP_ID`/`APP_INSTALLATION_ID`/`APP_SLUG` configuration are all deleted, and the `papyrus-contabo` App itself is removed.
 - **Two claims made during that work were wrong, and the record should say so.** First, the claim that a self-hosted runner's per-job token "cannot pull from GHCR" was never true and is contradicted by the `images` job, which pushes with exactly that token. The whole PAT-to-App detour was solving a problem that did not exist. Second, the App path was attributed to a registry refusal that had never been observed; both failures were readable OpenSSL errors about a corrupt PEM. A separate proposed fix was caught in adversarial review *before* it was committed, after it would have printed an entire private key to the CI log: the diagnostic added to catch a collapsed key would have leaked that same key, because a collapsed PEM has no first line. And a stored key was shredded on the host before the copy in the secret store was verified, leaving the release blocked. These were process failures. Verify the actual claim before building for it, and review changes that touch credentials before committing them.
 - **A four-and-a-half-hour outage still has no alerting.** Restarting the stack by hand is a recovery, not a detection. Nothing pages when the public origins stop answering, and the Prometheus alerts from the previous entry remain unverified against live data.
+
+## [0.1.1] - 2026-09-29
+
+- **The App JWT was signed from the key text, not a key file.** The abandoned
+  GitHub App path left a signing step that read the private key as a string
+  value, which is what produced the two corrupt-PEM failures recorded under
+  `0.1.2` below. The step was corrected to read the key from a file before the
+  App approach was abandoned, so the correction is recorded here rather than
+  deleted with the App.
+
+## [0.1.0] - 2026-09-29
+
+The first tagged release. It carries three changes, each of which is described
+in full under `0.1.2` below because that is the release that finally took them
+to production:
+
+- **Every service gained a restart policy** (`fix(deploy)`, #86) — the
+  `restart: unless-stopped` change recorded in the outage entry below.
+- **A short-lived App token was introduced for the registry**
+  (`fix(release)`, #85) — the first attempt at replacing the personal access
+  token, which failed and was abandoned two releases later.
+- **The outage, the green pipeline, and the credential change were written
+  down** (`docs`, #87).
+
+## Development history before 0.1.0
+
+The entries below predate the first tagged release and are recorded by date
+rather than by release, because no tag separated them at the time. The one
+exception is `0.5.0`, which carries a version but sits inside this history
+rather than among the `0.1.x` tags above: nothing was ever tagged `0.5.0`, and it
+is recorded here as the work that was already in the tree when versioning began.
+It is placed last, after the 2026-09-03 to 2026-08-25 entries, because its own
+`2026-08-25` date is the same day as the "Security and verification" entry
+immediately above it, which records the verification work carried out alongside
+it.
+
 ### The observability stack is now tracked and deployed, and three defects that stopped it producing data are fixed - 2026-09-28
 
 - **The production observability stack was not in the repository.** The OTLP collector, Prometheus, Grafana, and blackbox-exporter configuration existed only as files hand-placed on the VPS, and no release step started it. W7 and O4 claimed a platform that nothing in the repository described. The stack now lives in `ops/observability/`, which the `.gitignore` had been excluding wholesale, and the `deploy` job starts it with the same tracked, reviewed compose path as the applications.
@@ -180,28 +494,28 @@ All notable changes to Papyrus will be documented in this file. The format is ba
 
 - Reconciled the external `papyrus-docs` package against the implemented state, then consolidated it into `docs/`, retired the legacy documentation tree, and executed the final cleanup pass. The portable Grafana dashboard is now tracked in-repo under `docs/observability/dashboards/`.
 
-### Application/Infrastructure port-adapter alignment — 2026-09-08
-
-- Inverted the `Application → Infrastructure` dependency to match ADR-0002. `Papyrus.Application` now owns the persistence ports (`IPublicContentStore`, `IContentCommandStore`, `IContentQueryStore`, `ITaxonomyCommandStore`, `IContentLifecycleStore`) and thin facades; `Papyrus.Infrastructure` implements them as EF Core adapters (`Ef*Store`) and holds the EF-specific search predicates and projections. The application layer no longer depends on `PapyrusDbContext`.
-
 ### CI/CD hardening and self-hosted deployment — 2026-09-08 to 2026-09-09
 
 - Pinned third-party actions to immutable commit SHAs and official actions to current majors, granted `packages: write` for GHCR publishing, made the OpenAPI comparison CRLF-aware, pinned k6 for reproducible load baselines, added a release dry-run guard, lowercased the GHCR image prefix, and moved release deployment to a self-hosted runner with GHCR pull credentials. Added a `js-yaml` high-severity override and a `fetch-depth: 0` checkout so the gitleaks diff range resolves in a shallow clone.
+
+### Application/Infrastructure port-adapter alignment — 2026-09-08
+
+- Inverted the `Application → Infrastructure` dependency to match ADR-0002. `Papyrus.Application` now owns the persistence ports (`IPublicContentStore`, `IContentCommandStore`, `IContentQueryStore`, `ITaxonomyCommandStore`, `IContentLifecycleStore`) and thin facades; `Papyrus.Infrastructure` implements them as EF Core adapters (`Ef*Store`) and holds the EF-specific search predicates and projections. The application layer no longer depends on `PapyrusDbContext`.
 
 ### Phase 7 — Release readiness and GitHub showcase — 2026-09-03
 
 - **Public documentation (roadmap item 1):** published the architecture overview and public overview, threat-model summary, local setup and seed/demo flow, API and deployment guides, and known limitations.
 - **Showcase assets (roadmap item 2):** added five sanitized screenshots under `docs/assets` (blog, portfolio, admin, health, and Aspire) that use the local seeded demo content and contain no credentials, private URLs, or personal data.
 - **Contribution, disclosure, license, and support (roadmap item 3):** verified and completed `docs/07-governance/contribution-workflow.md`, `SECURITY.md`, `LICENSE`, and the README Support section; confirmed the feature matrix truthfully separates implemented, deferred, and release-pending work.
-- **Roadmap status reconciliation:** updated the Phase 7 header in `docs/Papyrus_Roadmap.md` from "Not started" to "In progress", recording that items 1 and 2 are complete and that item 4 (tagging a release) remains open until all release gates and rollback drills pass.
-- **Release gate:** a release tag is intentionally not created. Canonical production URLs, backup/restore/media-recovery/observability/ingress gates, and the fresh-contributor setup gate still require release-time evidence.
+- **Roadmap status reconciliation:** updated the Phase 7 header in `docs/Papyrus_Roadmap.md` from "Not started" to "In progress", recording that items 1 and 2 are complete and that item 4 (tagging a release) remains open until all release gates and rollback drills pass. Superseded: `v0.1.0` through `v0.1.3` were later tagged, and Phases 0–7 are now recorded as complete.
+- **Release gate:** a release tag is intentionally not created. Canonical production URLs, backup/restore/media-recovery/observability/ingress gates, and the fresh-contributor setup gate still require release-time evidence. Superseded in part: the tags were cut, and the public origins were subsequently configured, but the W7 and O4 evidence gates remain open.
 
 ### Phase 6 — Observability, test depth, and performance budgets — 2026-08-29
 
 - **S30.0 architecture tests:** added NetArchTest coverage for modular-monolith boundaries, layer rules, and migration ownership.
 - **S30.1/S30.2 test depth:** expanded the testing pyramid with handler, PostgreSQL integration, HTTP security/contract, and migration-drift coverage.
 - **S30.3 handler and migration-drift tests:** added application-handler and migration-drift verification.
-- **S30.4 PostgreSQL/integration tests:** added provider-behavior, index, transaction, concurrency, and filter coverage.
+- **S30.4 PostgreSQL/integration tests:** added provider-behaviour, index, transaction, concurrency, and filter coverage.
 - **S30.6 telemetry core:** added the shared `Papyrus` W3C ActivitySource, request middleware, structured `IAuditEventSink`, and telemetry options.
 - **S30.7 tenant-safe telemetry:** added fail-closed `Redactor`, bounded `CardinalityGuard`, and `TelemetrySamplingPolicy`; audit events survive 0% diagnostic sampling.
 - **S30.8 dashboard:** added the portable Grafana dashboard covering request rate/latency/error, rate-limit responses, audit events, redaction, sampling, cardinality, and app/PostgreSQL health.
@@ -218,7 +532,7 @@ All notable changes to Papyrus will be documented in this file. The format is ba
 - Added security-focused coverage and expanded the local non-integration suite to 70 .NET tests. CI runs 16 additional PostgreSQL integration tests (86 unique .NET tests total), alongside the separate 5-test Playwright suite, with a zero-warning, zero-error build.
 - Hardened URL generation, compatibility-route pagination, feed/sitemap/media cancellation, process-local store eviction, CSP/theme loading, health responses, and deployment/network release-gate documentation.
 
-## [0.5.0] - 2026-08-25
+### 0.5.0 — 2026-08-25
 
 - **Containers and CI/CD:** Added separate multi-stage images for Admin, Blog, and Portfolio, Docker Compose orchestration, health checks, non-root runtime execution, image scanning, SBOM generation, and a release migration job.
 - **REST contracts:** Added shared request/response DTOs, versioned `/api/v1` routes, pagination, validation problem details, OpenAPI metadata, and schema drift checks.
