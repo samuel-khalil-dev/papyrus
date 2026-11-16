@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:35d40304542c8689331f8cab17c65926cdf48fe711e289321d71924b230a7d29 AS build
+FROM mcr.microsoft.com/dotnet/sdk:11.0@sha256:65f3c7c6a25a239ab3e6719f2896147e7b68242ff2d8818dd70498bde6ef8bea AS build
 WORKDIR /src
 COPY Papyrus.sln ./
 COPY src/Papyrus.Web.Blog/Papyrus.Web.Blog.csproj Papyrus.Web.Blog/
@@ -19,7 +19,7 @@ COPY src/Papyrus.ServiceDefaults/ Papyrus.ServiceDefaults/
 COPY src/Papyrus.Web.Shared/ Papyrus.Web.Shared/
 RUN dotnet publish Papyrus.Web.Blog/Papyrus.Web.Blog.csproj -c Release -o /app/publish --no-restore
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:2d584d8147faddb0d678c5748d47953e5b8e18621ed4fb7049a91381d9d7746f AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:11.0@sha256:bc0d6653979efba491ab3d6f589d691f96c309c3c3ef81325efa6978e7b7f242 AS runtime
 WORKDIR /app
 ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
